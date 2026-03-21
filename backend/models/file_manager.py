@@ -4,20 +4,31 @@
 
 # Author: Josue Daniel Soto Gonzalez
 # Created on: 20/03/2026
-# Updated by: ---
-# Updated on: ---
+# Updated by: Josue Daniel Soto Gonzalez
+# Updated on: 21/03/2026
 
 
 
-
+import shutil
 import json
+from pathlib import Path
 
-from models.token_auth import Token
+from models.auth_token import Token
 
 
 
 ENCODING = "utf-8"
 INDENT = 2
+
+IMAGE_FORMATS = (".png", ".jpg", ".jpeg")
+POSTS_FOLDER = "posts"
+
+
+
+
+
+
+
 
 
 
@@ -75,3 +86,27 @@ def read_json_file(filename:str = "data.json") -> list[Token]:
             tokens.append(Token(**token_data))
 
     return tokens
+            
+
+
+def get_image(image_path: Path):
+
+    # Copies an image for publication into a temporary file
+
+    # Inputs
+    # image_path: String of the path for the image file
+    # Effects
+    # Image will be copied and stored locally for publication in the folder specified by POSTS_FOLDER
+
+
+    if not isinstance(image_path, Path):
+        raise TypeError("Image path invalid.")
+    
+    if image_path.suffix.lower() not in IMAGE_FORMATS:
+        raise TypeError(f"Invalid image format (valid formats: {IMAGE_FORMATS})")
+    
+    destiny = Path(POSTS_FOLDER)
+    destiny.mkdir(parents=True, exist_ok=True)
+    shutil.copy(image_path, destiny / image_path.name)
+
+

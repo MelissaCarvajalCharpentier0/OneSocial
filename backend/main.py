@@ -1,7 +1,12 @@
 from mastodon import Mastodon
+from pathlib import Path
+import tkinter as tk
+from tkinter import filedialog
+
 from models.file_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
+
 
 
 def test_mastodon_auth():
@@ -46,4 +51,27 @@ def test_wordpress_auth():
     # Guardar JSON actualizado con token
     write_json_file(tokens, "data.json")
 
-test_wordpress_auth()
+
+def test_image():
+    root = tk.Tk()
+    root.withdraw()  # oculta la ventana principal
+
+    ruta_str = filedialog.askopenfilename(
+        title="Selecciona un archivo",
+        filetypes=[
+            ("Archivos png", "*.png"),
+            ("Archivos jpg", "*.jpg"),
+            ("Archivos jpeg", "*.jpeg")
+        ]
+    )
+
+    print("Ruta seleccionada:", ruta_str)
+
+    ruta = Path(ruta_str) if ruta_str else None
+
+    get_image(ruta)
+
+
+
+
+test_image()
