@@ -4,8 +4,9 @@
 
 # Author: Josue Daniel Soto Gonzalez
 # Created on: 20/03/2026
-# Updated by: Josue Daniel Soto Gonzalez
-# Updated on: 21/03/2026
+# Updated by: Pamela Fernandez Mora
+# Updated on: 23/03/2026
+
 
 
 
@@ -15,21 +16,12 @@ from pathlib import Path
 
 from models.auth_token import Token
 
-
-
 ENCODING = "utf-8"
 INDENT = 2
 
 IMAGE_FORMATS = (".png", ".jpg", ".jpeg")
 POSTS_FOLDER = "posts"
-
-
-
-
-
-
-
-
+COUNTER_FILE = Path("models/post_counter.txt")
 
 
 def write_json_file(data: list[Token], filename:str = "data.json"):
@@ -86,7 +78,18 @@ def read_json_file(filename:str = "data.json") -> list[Token]:
             tokens.append(Token(**token_data))
 
     return tokens
-            
+        
+
+def get_next_post_id():
+    if not COUNTER_FILE.exists():
+        COUNTER_FILE.write_text("0")
+
+    current = int(COUNTER_FILE.read_text())
+    next_id = current + 1
+
+    COUNTER_FILE.write_text(str(next_id))
+
+    return next_id
 
 
 def get_image(image_path: Path):
@@ -107,6 +110,10 @@ def get_image(image_path: Path):
     
     destiny = Path(POSTS_FOLDER)
     destiny.mkdir(parents=True, exist_ok=True)
-    shutil.copy(image_path, destiny / image_path.name)
 
+    post_id = get_next_post_id()
+    new_name = f"post_{post_id}{image_path.suffix.lower()}"
+    shutil.copy(image_path, destiny / new_name)
 
+    print(f"Imagen guardada como: {new_name}")
+    return new_name
