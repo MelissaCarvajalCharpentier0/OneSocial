@@ -1,36 +1,41 @@
-# file_manager.py
-# File manager for the project to write json files and read json files
+"""
 
+=============================================================================================
 
-# Author: Josue Daniel Soto Gonzalez
-# Created on: 20/03/2026
-# Updated by: ---
-# Updated on: ---
+Name: file_manager.py
+Description: Module for managing file operations in the project.
+Author: Josué Soto, Pamela Fernández
+Date: March 2026
+Version: 1.0
 
+=============================================================================================
 
-
+"""
 
 import json
+from pathlib import Path
+import shutil
 
 from models.token_auth import Token
-
-
 
 ENCODING = "utf-8"
 INDENT = 2
 
+IMAGE_FORMATS = (".png", ".jpg", ".jpeg")
+POSTS_FOLDER = "post/img_posts"
+COUNTER_FILE = Path("models/post_counter.txt")
 
 
 def write_json_file(data: list[Token], filename:str = "data.json"):
-
-    # Writes the data of the social networks' tokens to a unified json file
-
-    # Inputs
-    # filename: String of the filename
-    # data: List of Token objects for the credentials of each social network
-    # Effects
-    # Data from "data" written to a json file specified by filename
-
+    """
+    - Input: 
+        - data: list[Token] - List of Token objects for the credentials of each social network
+        - filename: str - The name of the JSON file to write the data to
+    - Effects: 
+        - Data from "data" written to a json file specified by filename
+    - Description: 
+        - Writes the data of the social networks' tokens to a unified json file 
+    """
 
     if not isinstance(filename, str):
         raise TypeError("Filename invalid.")
@@ -49,14 +54,16 @@ def write_json_file(data: list[Token], filename:str = "data.json"):
 
 
 def read_json_file(filename:str = "data.json") -> list[Token]:
-
-    # Writes the data of the social networks' tokens to a unified json file
-
-    # Inputs
-    # filename: String of the filename
-    # Outputs
-    # list[Token]: List of valid tokens read in json file
-    # [!] Note: If an invalid token is read it will be ignored
+    """
+    - Input: 
+        - filename: str - The name of the JSON file to read the data from
+    - Output: 
+        - tokens: list[Token] - A list of Token objects containing the credentials for each social network
+    - Effects: 
+        - If an invalid token is read it will be ignored   
+    - Description: 
+        - Reads the data of the social networks' tokens from a unified json file and returns a list of valid Token objects  
+    """
 
 
     if not isinstance(filename, str):
@@ -75,3 +82,53 @@ def read_json_file(filename:str = "data.json") -> list[Token]:
             tokens.append(Token(**token_data))
 
     return tokens
+
+
+def get_next_post_id():
+    """
+    - Output: 
+        - next_id: int - The next post ID
+    - Effects:
+        - Updates the post counter file
+    - Description: 
+        - Retrieves the next post ID by reading and updating a counter stored in a text file. This ensures that each post has a unique identifier.
+    """
+
+    if not COUNTER_FILE.exists():
+        COUNTER_FILE.write_text("0")
+
+    current = int(COUNTER_FILE.read_text())
+    next_id = current + 1
+
+    COUNTER_FILE.write_text(str(next_id))
+
+    return next_id
+
+
+def get_image(image_path: Path):
+    """
+    - Input: 
+        - image_path: Path - The path object for the image file
+    - Output: 
+        - new_name: str - The name of the copied image file
+    - Effects: 
+        - The image will be copied and stored locally for publication in the folder specified by POSTS_FOLDER   
+    - Description: 
+        - Validates the image path and format, then copies the image to a designated folder with a new name based on a unique post ID. Returns the new name of the copied image file.
+    """
+
+    if not isinstance(image_path, Path):
+        raise TypeError("Image path invalid.")
+    
+    if image_path.suffix.lower() not in IMAGE_FORMATS:
+        raise TypeError(f"Invalid image format (valid formats: {IMAGE_FORMATS})")
+    
+    destiny = Path(POSTS_FOLDER)
+    destiny.mkdir(parents=True, exist_ok=True)
+
+    post_id = get_next_post_id()
+    new_name = f"post_{post_id}{image_path.suffix.lower()}"
+    shutil.copy(image_path, destiny / new_name)
+
+    print(f"Imagen guardada como: {new_name}")
+    return new_name

@@ -1,3 +1,17 @@
+"""
+
+=============================================================================================
+
+Name: wordpress_auth.py
+Description: Module for handling WordPress authentication and token management.
+Author: Pamela Fernández
+Date: March 2026
+Version: 1.0
+
+=============================================================================================
+
+"""
+
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import urllib.parse
 import webbrowser
@@ -12,7 +26,25 @@ server = None
 
 
 class CallbackHandler(BaseHTTPRequestHandler):
+    """
+    - Input: 
+        - baseHTTPRequestHandler: Class from http.server for handling HTTP requests
+    - Description: 
+        - Handler for the OAuth callback that captures the authorization code and sends a response to the user.
+    """
+
     def do_GET(self):
+        """
+        - Input: 
+            - self: Instance of CallbackHandler that handles the GET request from the OAuth redirect
+        - Output: 
+            - HTTP response - Sends an HTML response to the user's browser confirming successful login and allowing them to close the window.
+        - Description: 
+            - Parses the incoming GET request to extract the authorization code from the query parameters.
+            - Sends a simple HTML response to the user's browser confirming that the login was successful and they can close the window.
+            - Shuts down the local HTTP server after processing the request to stop listening for further requests.
+        """
+        
         global auth_code
 
         query = urllib.parse.urlparse(self.path).query
@@ -53,7 +85,17 @@ class CallbackHandler(BaseHTTPRequestHandler):
 
 
 def get_authorization_code(client_id):
-    """Levanta servidor temporal y abre navegador para capturar el code OAuth"""
+    """
+    - Input: 
+        - client_id: str - The WordPress application's client ID used for OAuth authentication
+    - Output: 
+        - auth_code: str - The authorization code received from WordPress after user login, used to exchange for an access token
+    - Description: 
+        - Starts a local HTTP server to listen for the OAuth redirect from WordPress after the user logs in.
+        - Opens the user's default web browser to the WordPress authorization URL where they can log in and authorize the application.
+        - Waits for the incoming request to capture the authorization code, then shuts down the server and returns the code.
+    """
+
     global server, auth_code
     auth_code = None
 
@@ -64,6 +106,7 @@ def get_authorization_code(client_id):
         f"?client_id={client_id}"
         f"&redirect_uri={REDIRECT_URI}"
         f"&response_type=code"
+        f"&scope=global"
     )
 
     print("Abriendo navegador para login WordPress...")
@@ -76,6 +119,18 @@ def get_authorization_code(client_id):
 
 
 def exchange_code_for_token(client_id, client_secret, code):
+    """
+    - Input: 
+        - client_id: str - The WordPress application's client ID used for OAuth authentication
+        - client_secret: str - The WordPress application's client secret used for OAuth authentication
+        - code: str - The authorization code received from WordPress after user login, used to exchange for an access token 
+    - Output: 
+        - response.json(): dict - The JSON response containing the access token and related information received from WordPress after exchanging the authorization code
+    - Description: 
+        - Makes a POST request to the WordPress token endpoint to exchange the authorization code for an access token.
+        - Sends the client ID, client secret, authorization code, grant type, and redirect URI as form data in the request.
+        - If the request is successful, returns the JSON response containing the access token; otherwise, prints an error message and returns None.
+    """
     response = requests.post(
         "https://public-api.wordpress.com/oauth2/token",
         data={
@@ -95,7 +150,18 @@ def exchange_code_for_token(client_id, client_secret, code):
 
 
 def ensure_wordpress_token(account):
-    """Devuelve el access_token; si no existe, lo genera con OAuth"""
+    """
+    - Input:
+        - account: Token - The account object for which to ensure a valid WordPress access token is available. 
+        This object should contain the client ID and client secret needed for OAuth authentication if an access token is not already present.
+    - Output:
+        - account.access_token: str - The access token for the WordPress account, obtained through OAuth authentication if not already present
+    - Description: 
+        - Checks if the account already has an access token; if so, returns it.
+        - If not, verifies that the account has the necessary client ID and client secret to perform OAuth authentication.
+        - Initiates the OAuth flow to obtain an authorization code, then exchanges it for an access token.
+        - Stores the obtained access token and related information in the account object and returns the access token.
+    """
 
     if account.access_token:
         return account.access_token
@@ -118,12 +184,23 @@ def ensure_wordpress_token(account):
         return None
 
     account.access_token = token_data.get("access_token")
+    account.refresh_token = token_data.get("refresh_token")
+    account.token_type = token_data.get("token_type")
+    account.scope = token_data.get("scope")
+
     return account.access_token
 
 
 
 def verify_wordpress_access(account):
-    """Verifica que el token funcione"""
+    """
+    - Input: 
+        - account: Token - The account object for which to verify access. This object should contain the access token needed to access the WordPress API.
+    - Output: 
+        - True if the access token is valid and can be used to access the WordPress API, False otherwise
+    - Description: 
+        - Checks if the access token for the given WordPress account is valid and can be used to access the WordPress API.
+    """
 
     if not account.access_token:
         print("No hay token")
