@@ -24,6 +24,7 @@ from tkinter import filedialog
 from models.file_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
+
 from post.functions_post import *
 from post.post_on_socials import *
 
