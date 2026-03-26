@@ -4,7 +4,7 @@
 
 Name: encrypt.py
 Description: Module for encrypting JSON files using the Fernet symmetric encryption method.
-Author: Josué Soto, Pamela Fernández, Matías Leer, Melissa Carvajal
+Author: Melissa Carvajal
 Date: MArch 2026
 Version: 1.0
 
@@ -36,9 +36,9 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
 
-def derive_key(password: bytes, salt: bytes) -> bytes:
+def derive_key(password: bytes, salt: bytes):
     """
-    - Input: password (bytes), salt (bytes)
+    - Input: password (bytes), salt (bytes), because  they are encoded before being passed to this function
     - Output: derived key (bytes)
     - Description: Derives a key from the given password and salt using the Scrypt key
     """
@@ -53,7 +53,7 @@ def derive_key(password: bytes, salt: bytes) -> bytes:
 
 
 def encrypt_value(value, fernet):
-    """"
+    """
     - Input: value (str or other), fernet (Fernet object)
     - Output: encrypted value (str or original value)
     - Description: Encrypts the value if it's a string, otherwise returns it unchanged.
@@ -74,8 +74,11 @@ def encrypt_json(data, fernet):
         for key, value in data.items():
             encrypted_dict[key] = encrypt_json(value, fernet)
         return encrypted_dict
-    else:
-        return encrypt_value(data, fernet)
+
+    if isinstance(data, list):
+        return [encrypt_json(item, fernet) for item in data]
+
+    return encrypt_value(data, fernet)
 
 
 def process_file(input_path, output_path, password):
@@ -88,7 +91,7 @@ def process_file(input_path, output_path, password):
         data = json.load(f)
     salt = os.urandom(16)
 
-    key = derive_key(password.encode(), salt)
+    key = derive_key(password.encode('utf-8'), salt)
     fernet = Fernet(key)
 
     encrypted_data = encrypt_json(data, fernet)
