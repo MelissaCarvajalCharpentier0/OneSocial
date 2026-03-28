@@ -165,9 +165,6 @@ def upload_image_wp(token, site, image_path):
             }
         )
 
-    print("Status:", response.status_code)
-    print("Response:", response.text)
-
     if response.status_code != 200:
         return None
 
@@ -202,3 +199,49 @@ def publish_post_wordpress_with_image(account, title, content, image_path):
     content_with_image = f'<img src="{image_url}" /><br>{content}'
 
     return publish_post_wordpress(account.access_token, get_sites(account.access_token), title, content_with_image)
+
+
+def publish_post_wordpress_with_featured_image(account, title, content, image_path):
+    """
+    - Input: 
+        - account: Account - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+        - image_path: Path - The file path to the image to be set as the featured image of the post
+    - Output: 
+        - response.json(): dict - The JSON response from the WordPress API after attempting to publish 
+        the post with the featured image, containing details of the created post if successful.
+    - Description: 
+        - Publishes a post to WordPress with a featured image using the provided account, title, content, 
+        and image file path. The function first uploads the image to WordPress and retrieves its media ID. 
+        It then constructs the post data to include the title, content, and the media ID as the featured image. 
+        Finally, it sends a POST request to create the post with the specified details.
+    """
+
+    site_id = get_sites(account.access_token)
+    media = upload_image_wp(account.access_token, site_id, image_path)
+
+    if not media:
+        print("Falló subida de imagen")
+        return None
+
+    media_id = media["media"][0]["ID"]
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{site_id}/posts/new"
+
+    headers = {
+        "Authorization": f"Bearer {account.access_token}"
+    }
+
+    data = {
+        "title": title,
+        "content": content,
+        "status": "publish",
+        "featured_image": media_id
+    }
+
+    response = requests.post(url, headers=headers, data=data)
+
+    if response.status_code != 200:
+        print("Error:", response.text)
+        return None
+    return response.json()

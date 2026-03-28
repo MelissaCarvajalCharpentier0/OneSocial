@@ -211,4 +211,33 @@ def test_post_wordpress_text():
         )
 
 
-test_post_wordpress_text()
+def test_post_wordpress_with_featured_image():
+    """
+    - Effects: 
+        - Publishes a post to WordPress with the given title, content, and featured image for 
+        each WordPress account found in "data.json".
+    - Description: 
+        - Reads the post information (title, content, and image) and the account tokens from "data.json". 
+        For each WordPress account, it calls the function to publish a post with the specified title, content, 
+        and featured image. The function ensures that the account has a valid access token before uploading the 
+        media and creating the post. This function specifically tests the ability to set a featured image for the 
+        post on WordPress.         
+    """
+
+    info_post = create_post_title_content_image()
+    tokens = read_json_file("data.json")
+
+    for account in tokens:
+
+        if account.provider != "WordPress":
+            continue
+
+        publish_post_wordpress_with_featured_image(
+            account,
+            title=info_post["title"],
+            content=info_post["content"],
+            image_path=Path(POSTS_FOLDER) / info_post["image"]
+        )
+
+
+test_post_wordpress_with_featured_image()
