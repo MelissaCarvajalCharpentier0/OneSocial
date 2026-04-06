@@ -1,14 +1,16 @@
-# auth_token.py
-# Token structure for social networks' credentials
+"""
 
+=============================================================================================
 
-# Author: Josue Daniel Soto Gonzalez
-# Created on: 20/03/2026
-# Updated by: ---
-# Updated on: ---
+Name: token_auth.py
+Description: Module for general Token structure for authentification
+Author: Josué Soto
+Date: March 2026
+Version: 1.1
 
+=============================================================================================
 
-
+"""
 
 from dataclasses import dataclass
 from typing import Optional
@@ -43,6 +45,17 @@ class Token:
 
 
     def to_dict(self):
+        """
+    - Input: 
+        - data: list[Token] - List of Token objects for the credentials of each social network
+        - filename: str - The name of the JSON file to write the data to
+    - Effects: 
+        - Data from "data" written to a json file specified by filename
+    - Description: 
+        - Writes the data of the social networks' tokens to a unified json file 
+    """
+
+
         return {
             "provider": self.provider,
             "provider_user_id": self.provider_user_id,
@@ -66,8 +79,8 @@ class Token:
         }
 
 
-
-# Implementacion base de tokens
+"""
+# Ejemplo de Implementacion base de tokens (heredan de Token)
 @dataclass
 class Token_ejemplo(Token):
 
@@ -78,6 +91,5 @@ class Token_ejemplo(Token):
         data = super().to_dict()
         data["campo_ejemplo"] = self.campo_ejemplo
 
-        raise NotImplementedError("Token no implementado")
-        #return data
-
+        return data
+"""
