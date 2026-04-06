@@ -6,7 +6,7 @@ Name: file_manager.py
 Description: Module for managing file operations in the project.
 Author: Josué Soto, Pamela Fernández
 Date: March 2026
-Version: 1.0
+Version: 1.4
 
 =============================================================================================
 
@@ -28,13 +28,9 @@ COUNTER_FILE = Path("models/post_counter.txt")
 
 def write_json_file(data: list[Token], filename:str = "data.json"):
     """
-    - Input: 
-        - data: list[Token] - List of Token objects for the credentials of each social network
-        - filename: str - The name of the JSON file to write the data to
-    - Effects: 
-        - Data from "data" written to a json file specified by filename
-    - Description: 
-        - Writes the data of the social networks' tokens to a unified json file 
+    - Input: data (list[Token]), filename (str)
+    - Effects: Data from "data" written to a json file specified by filename
+    - Description: Writes the data of the social networks' tokens to a unified json file
     """
 
     if not isinstance(filename, str):
@@ -53,18 +49,32 @@ def write_json_file(data: list[Token], filename:str = "data.json"):
 
 
 
-def read_json_file(filename:str = "data.json") -> list[Token]:
+def write_json(data: list[Token]):
     """
-    - Input: 
-        - filename: str - The name of the JSON file to read the data from
-    - Output: 
-        - tokens: list[Token] - A list of Token objects containing the credentials for each social network
-    - Effects: 
-        - If an invalid token is read it will be ignored   
-    - Description: 
-        - Reads the data of the social networks' tokens from a unified json file and returns a list of valid Token objects  
+    - Input: data (list[Token])
+    - Output: Data from "data" written to a json object for direct dump with json library
+    - Description: Writes the data of the social networks' tokens to a unified json object
     """
 
+    if not isinstance(data, list):
+        raise TypeError("Data invalid.")
+    for token in data:
+        if not isinstance(token, Token):
+            raise TypeError("Token invalid.")
+
+    return [token.to_dict() for token in data]
+
+
+
+def read_json_file(filename:str = "data.json") -> list[Token]:
+    """
+    - Input: filename (str)
+    - Output: tokens (list[Token])
+    - Description: Reads the data of the social networks' tokens from a unified json file and returns a list of valid Token objects
+
+    < Note > 
+    If an invalid token or value is read it will be ignored  
+    """
 
     if not isinstance(filename, str):
         raise TypeError("Filename invalid.")
@@ -84,14 +94,11 @@ def read_json_file(filename:str = "data.json") -> list[Token]:
     return tokens
 
 
-def get_next_post_id():
+def get_next_post_id() -> int:
     """
-    - Output: 
-        - next_id: int - The next post ID
-    - Effects:
-        - Updates the post counter file
-    - Description: 
-        - Retrieves the next post ID by reading and updating a counter stored in a text file. This ensures that each post has a unique identifier.
+    - Output: next_id (int)
+    - Effects: Reads the data of the social networks' tokens from a unified json file and returns a list of valid Token objects
+    - Description: Retrieves the next post ID by reading and updating a counter stored in a text file. This ensures that each post has a unique identifier.
     """
 
     if not COUNTER_FILE.exists():
@@ -105,16 +112,12 @@ def get_next_post_id():
     return next_id
 
 
-def get_image(image_path: Path):
+def get_image(image_path: Path) -> str:
     """
-    - Input: 
-        - image_path: Path - The path object for the image file
-    - Output: 
-        - new_name: str - The name of the copied image file
-    - Effects: 
-        - The image will be copied and stored locally for publication in the folder specified by POSTS_FOLDER   
-    - Description: 
-        - Validates the image path and format, then copies the image to a designated folder with a new name based on a unique post ID. Returns the new name of the copied image file.
+    - Input: image_path (Path)
+    - Output: new_name (str)
+    - Effects: The image will be copied and stored locally for publication in the folder specified by POSTS_FOLDER
+    - Description: Validates the image path and format, then copies the image to a designated folder with a new name based on a unique post ID. Returns the new name of the copied image file.
     """
 
     if not isinstance(image_path, Path):
