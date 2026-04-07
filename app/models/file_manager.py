@@ -6,7 +6,7 @@ Name: file_manager.py
 Description: Module for managing file operations in the project.
 Author: Josué Soto, Pamela Fernández
 Date: March 2026
-Version: 1.4
+Version: 1.5
 
 =============================================================================================
 
@@ -49,7 +49,7 @@ def write_json_file(data: list[Token], filename:str = "data.json"):
 
 
 
-def write_json(data: list[Token]):
+def write_json(data: list[Token]) -> json:
     """
     - Input: data (list[Token])
     - Output: Data from "data" written to a json object for direct dump with json library
@@ -94,6 +94,29 @@ def read_json_file(filename:str = "data.json") -> list[Token]:
     return tokens
 
 
+
+def read_json(json_file:list) -> list[Token]:
+    """
+    - Input: json_file (dict)
+    - Output: tokens (list[Token])
+    - Description: Reads the data of the social networks' tokens from a unified json file and returns a list of valid Token objects
+
+    < Note > 
+    If an invalid token or value is read it will be ignored  
+    """
+
+    if not isinstance(json_file, list):
+        raise TypeError("Json_file invalid.")
+    
+    tokens = []
+    for token_data in json_file:
+        if isinstance(token_data, dict):
+            tokens.append(Token(**token_data))
+
+    return tokens
+
+
+
 def get_next_post_id() -> int:
     """
     - Output: next_id (int)
@@ -110,6 +133,7 @@ def get_next_post_id() -> int:
     COUNTER_FILE.write_text(str(next_id))
 
     return next_id
+
 
 
 def get_image(image_path: Path) -> str:

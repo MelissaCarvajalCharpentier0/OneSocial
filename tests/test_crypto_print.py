@@ -23,9 +23,9 @@ from pathlib import Path
 PROJECT_ROOT_PATH = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT_PATH) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT_PATH))
-
-from backend.crypto.encrypt import process_file as encrypt_process_file
-from backend.crypto.decrypt import process_file as decrypt_process_file
+    
+from app.crypto.encrypt import process_file as encrypt_process_file
+from app.crypto.decrypt import process_file as decrypt_process_file
 
 COLOR_GREEN = "\033[92m"
 COLOR_RED = "\033[91m"

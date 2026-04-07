@@ -4,22 +4,19 @@
 
 Name: main.py
 Description: Main module for testing the functionalities of the project, including authentication and post creation on social media platforms.
-Author: Josué Soto, Pamela Fernández
+Author: Josué Soto, Pamela Fernández, Melissa Carvajal
 Date: March 2026
-Version: 1.0
+Version: 1.1
 
 =============================================================================================
 
 """
 
-from mastodon import Mastodon
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
 
-from pathlib import Path
-import tkinter as tk
-from tkinter import filedialog
+from mastodon import Mastodon
 
 from models.file_manager import *
 from auth.mastodon_auth import *
@@ -27,6 +24,17 @@ from auth.wordpress_auth import *
 
 from post.functions_post import *
 from post.post_on_socials import *
+
+from crypto.encrypt import process_file as encrypt_process_file
+from crypto.decrypt import process_file as decrypt_process_file
+
+
+
+MASTER_KEY = "ASDFADFASFASDASFADFFASD"
+FILE_DIRECTORY = "data/data.dat"
+
+
+
 
 
 def test_mastodon_auth():
@@ -211,4 +219,92 @@ def test_post_wordpress_text():
         )
 
 
-test_post_wordpress_text()
+def test_post_wordpress_with_featured_image():
+    """
+    - Effects: 
+        - Publishes a post to WordPress with the given title, content, and featured image for 
+        each WordPress account found in "data.json".
+    - Description: 
+        - Reads the post information (title, content, and image) and the account tokens from "data.json". 
+        For each WordPress account, it calls the function to publish a post with the specified title, content, 
+        and featured image. The function ensures that the account has a valid access token before uploading the 
+        media and creating the post. This function specifically tests the ability to set a featured image for the 
+        post on WordPress.         
+    """
+
+    info_post = create_post_title_content_image()
+    tokens = read_json_file("data.json")
+
+    for account in tokens:
+
+        if account.provider != "WordPress":
+            continue
+
+        publish_post_wordpress_with_featured_image(
+            account,
+            title=info_post["title"],
+            content=info_post["content"],
+            image_path=Path(POSTS_FOLDER) / info_post["image"]
+        )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def save(tokens: list[Token]):
+    """
+    Input: tokens: list[Token] - A list of Token objects representing the account tokens to be saved.
+    Output: None
+    Description: Takes a list of Token objects, converts it to JSON format, and then encrypts the JSON data before saving it to a file.
+    """
+
+    json_data = write_json(tokens)
+
+    encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
+
+
+
+def load():
+    """
+    Input: None
+    Output: tokens: list[Token] - A list of Token objects representing the account tokens that were loaded from the file.
+    Description: Reads the encrypted data from the file, decrypts it using the master key, and then converts the decrypted JSON 
+                 data back into a list of Token objects. Finally, it prints the loaded tokens to the console.
+    """
+
+    tokens = []
+    file = Path(FILE_DIRECTORY)
+
+    if file.is_file():
+        token_data = decrypt_process_file(FILE_DIRECTORY, MASTER_KEY)
+        tokens = read_json(token_data)
+
+    return tokens
+
+
+
+
+
+
+
+def load_save_test():
+
+    tokens = read_json_file("data.json")
+
+    save(tokens)
+
+    load()
+
+load_save_test()
