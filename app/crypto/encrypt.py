@@ -81,14 +81,14 @@ def encrypt_json(data, fernet):
     return encrypt_value(data, fernet)
 
 
-def process_file(input_path, output_path, password):
+def process_file(data, output_path, password):
     """
     - Input: input_path (str), output_path (str), password (str)
     - Output: Encrypted JSON file saved to output_path
     - Description: Reads a JSON file, encrypts its contents using the provided password, and
     """
-    with open(input_path, "r") as f:
-        data = json.load(f)
+    #with open(input_path, "r") as f:
+        #data = json.load(f)
     salt = os.urandom(16)
 
     key = derive_key(password.encode('utf-8'), salt)

@@ -81,7 +81,7 @@ def decrypt_json(data, fernet):
     return decrypt_value(data, fernet)
 
 
-def process_file(input_path, output_path, password):
+def process_file(input_path, password):
     """
     - Input: input_path (str), output_path (str), password (str)
     - Output: Decrypted JSON file saved to output_path
@@ -98,9 +98,6 @@ def process_file(input_path, output_path, password):
     fernet = Fernet(key)
 
     try:
-        decrypted_data = decrypt_json(payload['data'], fernet)
+        return decrypt_json(payload['data'], fernet)
     except InvalidToken:
         raise ValueError("Incorrect password or corrupted encrypted data.") 
-
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(decrypted_data, f, indent=4)
