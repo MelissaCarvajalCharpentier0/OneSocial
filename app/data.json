@@ -1,0 +1,38 @@
+[
+  {
+    "provider": "Mastodon",
+    "provider_user_id": null,
+    "username": "@OneSocialProject@mastodon.social",
+    "email": "onesocial59@gmail.com",
+    "password": "0N3Soc14l!R@do.",
+    "account_label": null,
+    "access_token": "u0sLKJ6rc_HuXNJ8EBG_L8Ktf66l7chtCisvCe-_Z14",
+    "refresh_token": null,
+    "token_type": null,
+    "scope": null,
+    "issued_at": null,
+    "access_expires_at": null,
+    "refresh_expires_at": null,
+    "base_url": null,
+    "client_id": null,
+    "client_secret": null
+  },
+  {
+    "provider": "WordPress",
+    "provider_user_id": null,
+    "username": "@onesocial59",
+    "email": "onesocial59@gmail.com",
+    "password": "0N3Soc14l!R@do.",
+    "account_label": null,
+    "access_token": "JVup6nRrY0JoG7SjYUQOS%4YEkuCUC!QTd@Pl9f(xCCNt62A)&DRX2VxC83QPbDu",
+    "refresh_token": null,
+    "token_type": "bearer",
+    "scope": "global",
+    "issued_at": null,
+    "access_expires_at": null,
+    "refresh_expires_at": null,
+    "base_url": "https://onesocialtest.wordpress.com",
+    "client_id": "135551",
+    "client_secret": "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL"
+  }
+]
