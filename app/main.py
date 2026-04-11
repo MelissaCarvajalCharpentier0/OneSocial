@@ -248,7 +248,7 @@ def test_post_wordpress_with_featured_image():
         )
 
 
-
+test_post_wordpress_with_featured_image()
 
 
 
@@ -294,11 +294,6 @@ def load():
     return tokens
 
 
-
-
-
-
-
 def load_save_test():
 
     tokens = read_json_file("data.json")
@@ -307,4 +302,34 @@ def load_save_test():
 
     load()
 
-load_save_test()
+
+
+####################### GENERAL #######################
+
+def general_upload_post(tokens, text, title=None, image_path=None):
+    """
+    - Input: 
+        - account: Account - The account object containing authentication details and provider information.
+        - text: str - The text content of the post to be published.
+        - title: str (optional) - The title of the post, if applicable.
+        - image_path: Path (optional) - The file path to the image to be included in the post, if applicable.
+    - Description:
+        - Determines the social media platform based on the account's provider and calls the appropriate function to upload the post.
+        - If the provider is "Mastodon", it calls the upload_post_mastodon function with the text and image path.
+        - If the provider is "WordPress", it calls the publish_post_wordpress_with_image function with the account, text as title, text as content, and image path.
+        - If the provider is not recognized, it prints a message indicating that the provider is not supported.
+    """
+
+    for account in tokens:
+        if account.provider == "Mastodon":
+            if image_path:
+                upload_post_mastodon(text, image_path, account)
+            else:
+                upload_post_mastodon_text(text, account)
+        elif account.provider == "WordPress":
+            if image_path: 
+                publish_post_wordpress_with_featured_image(account, title, text, image_path)
+            else:
+                publish_post_wordpress(account, title, text)
+    else:
+        print(f"Proveedor {account.provider} no soportado.")    

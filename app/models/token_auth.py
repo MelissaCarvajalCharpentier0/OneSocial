@@ -41,6 +41,7 @@ class Token:
     base_url: Optional[str] = None
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
+    site_id: Optional[str] = None
 
 
 
@@ -75,7 +76,8 @@ class Token:
 
             "base_url": self.base_url,
             "client_id": self.client_id,
-            "client_secret": self.client_secret
+            "client_secret": self.client_secret,
+            "site_id": self.site_id
         }
 
 

@@ -15,14 +15,15 @@
     "refresh_expires_at": null,
     "base_url": null,
     "client_id": null,
-    "client_secret": null
+    "client_secret": null,
+    "site_id": null
   },
   {
     "provider": "WordPress",
     "provider_user_id": null,
     "username": "@onesocial59",
     "email": "onesocial59@gmail.com",
-    "password": "0N3Soc14l!R@do.",
+    "password": null,
     "account_label": null,
     "access_token": "JVup6nRrY0JoG7SjYUQOS%4YEkuCUC!QTd@Pl9f(xCCNt62A)&DRX2VxC83QPbDu",
     "refresh_token": null,
@@ -33,6 +34,7 @@
     "refresh_expires_at": null,
     "base_url": "https://onesocialtest.wordpress.com",
     "client_id": "135551",
-    "client_secret": "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL"
+    "client_secret": "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL",
+    "site_id": 253556022
   }
 ]
