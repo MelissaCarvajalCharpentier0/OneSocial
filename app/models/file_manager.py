@@ -6,7 +6,7 @@ Name: file_manager.py
 Description: Module for managing file operations in the project.
 Author: Josué Soto, Pamela Fernández
 Date: March 2026
-Version: 1.5
+Version: 1.6
 
 =============================================================================================
 
@@ -159,3 +159,58 @@ def get_image(image_path: Path) -> str:
 
     print(f"Imagen guardada como: {new_name}")
     return new_name
+
+
+
+def account_list(raw_tokens: list[Token]) -> list[list[str]]:
+    """
+    - Input: raw_tokens (list[Token])
+    - Output: accounts (list[str, str])
+    - Description: Extracts the social network and username and outputs them in a list with the format ["social", "username"]
+    """
+
+    if not isinstance(raw_tokens, list):
+        raise TypeError("Tokens got are invalid.")
+    for token in raw_tokens:
+        if not isinstance(token, Token):
+            raise TypeError("Invalid token found in tokens.")
+
+    accounts = []
+    for token in raw_tokens:
+        if token.provider != "" and token.username not in (None, ""):
+            accounts.append([token.provider, token.username])
+
+    return accounts
+
+
+
+def filter_tokens_by_account(raw_tokens: list[Token], accounts: list[list[str]]) -> list[Token]:
+    """
+    - Input: raw_tokens (list[Token]), accounts (list[list[str, str]])
+    - Output: filtered_tokens (list[Token])
+    - Description: Extracts the tokens that match the accounts in the list (with format ["social", "username"])
+    """
+
+    if not isinstance(raw_tokens, list):
+        raise TypeError("Tokens got are invalid.")
+    for token in raw_tokens:
+        if not isinstance(token, Token):
+            raise TypeError("Invalid token found in tokens.")
+        
+    if not isinstance(accounts, list):
+        raise TypeError("The accounts should be a list of accounts.")
+    for account in accounts:
+        if not isinstance(account, list) or len(account) != 2:
+            raise TypeError("Invalid account found. Each account must be a list")
+        if not isinstance(account[0], str) or not isinstance(account[1], str):
+            raise TypeError("Invalid account found. Each account must have a social network provider AND a username as strings")
+        
+    filtered_tokens = []
+    for token in raw_tokens:
+        for account in accounts:
+            if token.provider == account[0] and token.username == account[1]:
+                filtered_tokens.append(token)
+                continue
+
+    return filtered_tokens
+

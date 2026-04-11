@@ -294,6 +294,20 @@ def load():
     return tokens
 
 
+def get_accounts() -> list[str, str]:
+    """
+    Input: None
+    Output: tokens: list[Token] - A list of Token objects representing the account tokens that were loaded from the file.
+    Description: Reads the encrypted data from the file, decrypts it using the master key, and then converts the decrypted JSON 
+                 data back into a list of Token objects. Finally, it prints the loaded tokens to the console.
+    """
+
+    tokens = load()
+    return account_list(tokens)
+
+
+
+
 def load_save_test():
 
     tokens = read_json_file("data.json")
