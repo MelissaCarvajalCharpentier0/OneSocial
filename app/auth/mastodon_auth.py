@@ -11,41 +11,22 @@ Version: 1.0
 =============================================================================================
 
 """
-
+import os
 from mastodon import Mastodon
 
 
-def get_mastodon_token(account):
+def ensure_mastodon_app():
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    cred_path = os.path.join(BASE_DIR, "clientcred.secret")
 
-    """
-    - Input: 
-        - account: Token object for the Mastodon account to authenticate
-    - Output: 
-        - access_token: str - The access token obtained after authentication
-    - Description:
-        - Obtain the access token for the given Mastodon account by guiding the 
-        user through the authentication process.
-    """
+    if not os.path.exists(cred_path):
+        print("Creando app de Mastodon...")
 
-    mastodon = Mastodon(
-        client_id='clientcred.secret',
-        api_base_url='https://mastodon.social'
-    )
-
-    url = mastodon.auth_request_url(scopes=['read', 'write'])
-    print(f"Autoriza esta cuenta {account.username}:")
-    print(url)
-
-    code = input("Pega el código: ")
-
-    mastodon.log_in(
-        code=code,
-        scopes=['read', 'write']
-    )
-
-    return mastodon.access_token
-
-
+        Mastodon.create_app(
+            'onesocial',
+            api_base_url='https://mastodon.social',
+            to_file=cred_path
+        )
 
 
 def ensure_mastodon_token(account):
@@ -61,6 +42,33 @@ def ensure_mastodon_token(account):
 
     if account.access_token:
         return account.access_token
-    
-    account.access_token = get_mastodon_token(account)
-    return account.access_token
+    else:
+        return None
+
+
+
+def get_mastodon_auth_url(account):
+    mastodon = Mastodon(
+        client_id='clientcred.secret',
+        api_base_url='https://mastodon.social'
+    )
+
+    url = mastodon.auth_request_url(
+        scopes=['read', 'write'],
+        redirect_uris="http://localhost:8000/callback"
+    )
+
+
+def save_mastodon_token(account, code):
+    mastodon = Mastodon(
+        client_id='clientcred.secret',
+        api_base_url='https://mastodon.social'
+    )
+
+    mastodon.log_in(
+        code=code,
+        scopes=['read', 'write'],
+        redirect_uri="http://localhost:8000/callback"
+    )
+
+    account.access_token = mastodon.access_token

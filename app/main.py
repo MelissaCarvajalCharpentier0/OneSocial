@@ -248,7 +248,7 @@ def test_post_wordpress_with_featured_image():
         )
 
 
-test_post_wordpress_with_featured_image()
+
 
 
 
@@ -347,43 +347,76 @@ def general_upload_post(tokens, text, title=None, image_path=None):
         print(f"Proveedor {account.provider} no soportado.")    
 
 
-def general_auth_accounts():
+def register_and_auth_wordpress(provider, username, client_id, client_secret):
     """
-    - Effects: 
-        - Reads the tokens from "data.json" and iterates through each account.
-         - For each Mastodon account, it ensures that a valid access token is obtained and then verifies the credentials by making an API call to Mastodon.
-         - For each WordPress account, it ensures that a valid access token is obtained and then verifies the access by making an API call to WordPress.
-         - Finally, it saves the updated tokens back to "data.json".
-    - Description: 
-        - This function serves as a general authentication handler for all accounts listed in "data.json". It processes both Mastodon and WordPress accounts by ensuring they have valid access tokens and verifying their credentials or access. After processing all accounts, it updates the "data.json" file with any new tokens obtained during the authentication process.
+    Effects:
+        - Initiates the authentication process for WordPress accounts by ensuring that a valid access token is  
+        obtained for each WordPress account found in "data.json". It also prints the result of the authentication 
+        process for each account.
+    Description:
+        - Reads the tokens from "data.json" and iterates through each account. For each WordPress account, it 
+        calls the function to ensure that a valid access token is obtained. It then verifies the access by making 
+        an API call to WordPress and prints the result of the authentication process for each account. Finally, it 
+        saves the updated tokens back to "data.json".
+    """
+    tokens = load() 
+    funcionMeli(provider, username, client_id, client_secret)
+
+    for account in tokens: 
+        if account.provider != "WordPress":
+            continue
+        
+        if account.username != username:
+            continue
+
+        print(f"\nProcesando cuenta: {account.username}")
+
+        # Ensure token 
+        ensure_wordpress_token(account)
+
+        # Verify that the token works
+        success = verify_wordpress_access(account)
+
+        print(f"Resultado: {'OK' if success else 'FAIL'}")
+
+    # Guardar JSON actualizado con token
+    save(tokens)
+
+
+def setup_mastodon_account(provider, username, password):
+    """
+    Effects:
+        - Initiates the authentication process for Mastodon accounts by ensuring that a valid access token is  
+        obtained for each Mastodon account found in "data.json". It also prints the result of the authentication 
+        process for each account.
+    Description:
+        - Reads the tokens from "data.json" and iterates through each account. For each Mastodon account, it 
+        calls the function to ensure that a valid access token is obtained. It then verifies the credentials by making 
+        an API call to Mastodon and prints the user information if successful. Finally, it saves the updated tokens 
+        back to "data.json".
     """
 
-    # Funcion de añadir cuenta a data.json
-    
-    tokens = read_json_file("data.json")
+    tokens = load()
+    funcionMeli(provider, username, password)
 
-    for account in tokens:
+    for account in tokens: 
+        if account.provider != "Mastodon":
+            continue
+        
+        if account.username != username:
+            continue
 
-        if account.provider == "Mastodon":
-            ensure_mastodon_token(account)
+        # Ensure app
+        ensure_mastodon_app()
 
-            mastodon = Mastodon(
-                access_token=account.access_token,
-                api_base_url='https://mastodon.social'
-            )
+        # Ensure token
+        token = ensure_mastodon_token(account)
 
-            user = mastodon.account_verify_credentials()
-            print(user)
+        if token:
+            return {
+                "status": "connected",
+                "auth_url": None
+            }
 
-        elif account.provider == "WordPress":
-            print(f"\nProcesando cuenta: {account.username}")
-
-            # Asegurar token
-            ensure_wordpress_token(account)
-
-            # Verificar que funcione
-            success = verify_wordpress_access(account)
-
-            print(f"Resultado: {'OK' if success else 'FAIL'}")
-
-    write_json_file(tokens, "data.json")
+        get_mastodon_auth_url(account)
+        return False
