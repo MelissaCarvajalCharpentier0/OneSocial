@@ -24,6 +24,60 @@ REDIRECT_URI = "http://localhost:8000/callback"
 auth_code = None
 server = None
 
+def get_sites(token):
+    """
+    - Input: 
+        - token: str - The access token for authenticating with the WordPress API.
+    - Output: 
+        - site_id: str - The ID of the first site associated with the authenticated account.
+    - Description: 
+        - Makes a GET request to the WordPress API to retrieve the list of sites associated with the authenticated account.
+        - Parses the response to extract and return the ID of the first site found. If no sites are found, it prints a message and returns None.    
+    """
+
+    url = "https://public-api.wordpress.com/rest/v1.1/me/sites"
+    
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(url, headers=headers)
+    data = response.json()
+
+    sites = data.get("sites", [])
+
+    if not sites:
+        print("No se encontraron sitios")
+        return None
+
+    site_id = sites[0]["ID"] 
+    return site_id
+
+
+def get_primary_site(token):
+    url = "https://public-api.wordpress.com/rest/v1.1/me/sites"
+    
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        print("Error obteniendo sitios:", response.text)
+        return None, None
+
+    data = response.json()
+    sites = data.get("sites", [])
+
+    if not sites:
+        print("No se encontraron sitios")
+        return None, None
+
+    site = sites[0]
+
+    return site["ID"], site["URL"]
+
 
 class CallbackHandler(BaseHTTPRequestHandler):
     """
@@ -184,6 +238,9 @@ def ensure_wordpress_token(account):
         return None
 
     account.access_token = token_data.get("access_token")
+    site_id, base_url = get_primary_site(account.access_token)
+    account.site_id = site_id
+    account.base_url = base_url
     account.refresh_token = token_data.get("refresh_token")
     account.token_type = token_data.get("token_type")
     account.scope = token_data.get("scope")

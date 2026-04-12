@@ -65,36 +65,6 @@ def upload_post_mastodon_text(text: str, account):
 
 ####################### WORDPRESS #######################
 
-def get_sites(token):
-    """
-    - Input: 
-        - token: str - The access token for authenticating with the WordPress API.
-    - Output: 
-        - site_id: str - The ID of the first site associated with the authenticated account.
-    - Description: 
-        - Makes a GET request to the WordPress API to retrieve the list of sites associated with the authenticated account.
-        - Parses the response to extract and return the ID of the first site found. If no sites are found, it prints a message and returns None.    
-    """
-
-    url = "https://public-api.wordpress.com/rest/v1.1/me/sites"
-    
-    headers = {
-        "Authorization": f"Bearer {token}"
-    }
-
-    response = requests.get(url, headers=headers)
-    data = response.json()
-
-    sites = data.get("sites", [])
-
-    if not sites:
-        print("No se encontraron sitios")
-        return None
-
-    site_id = sites[0]["ID"] 
-    return site_id
-
-
 def publish_post_wordpress(account, title, content):
     """
     - Input: 
@@ -111,7 +81,7 @@ def publish_post_wordpress(account, title, content):
         response containing details of the created post; otherwise, it prints an error message and returns None.
     """
 
-    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{get_sites(account.access_token)}/posts/new"
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{account.site_id}/posts/new"
 
     headers = {
         "Authorization": f"Bearer {account.access_token}"
@@ -188,7 +158,7 @@ def publish_post_wordpress_with_image(account, title, content, image_path):
         function to create the post with the combined content. If any step fails, it prints an error message and returns None.
     """
 
-    media = upload_image_wp(account.access_token, get_sites(account.access_token), image_path)
+    media = upload_image_wp(account.access_token, account.site_id, image_path)
 
     if not media:
         print("Falló subida de imagen")
@@ -198,7 +168,7 @@ def publish_post_wordpress_with_image(account, title, content, image_path):
 
     content_with_image = f'<img src="{image_url}" /><br>{content}'
 
-    return publish_post_wordpress(account.access_token, get_sites(account.access_token), title, content_with_image)
+    return publish_post_wordpress(account, title, content_with_image)
 
 
 def publish_post_wordpress_with_featured_image(account, title, content, image_path):
@@ -218,15 +188,14 @@ def publish_post_wordpress_with_featured_image(account, title, content, image_pa
         Finally, it sends a POST request to create the post with the specified details.
     """
 
-    site_id = get_sites(account.access_token)
-    media = upload_image_wp(account.access_token, site_id, image_path)
+    media = upload_image_wp(account.access_token, account.site_id, image_path)
 
     if not media:
         print("Falló subida de imagen")
         return None
 
     media_id = media["media"][0]["ID"]
-    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{site_id}/posts/new"
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{account.site_id}/posts/new"
 
     headers = {
         "Authorization": f"Bearer {account.access_token}"

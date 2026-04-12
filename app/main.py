@@ -248,7 +248,7 @@ def test_post_wordpress_with_featured_image():
         )
 
 
-
+test_post_wordpress_with_featured_image()
 
 
 
@@ -316,4 +316,74 @@ def load_save_test():
 
     load()
 
-load_save_test()
+
+
+def general_upload_post(tokens, text, title=None, image_path=None):
+    """
+    - Input: 
+        - account: Account - The account object containing authentication details and provider information.
+        - text: str - The text content of the post to be published.
+        - title: str (optional) - The title of the post, if applicable.
+        - image_path: Path (optional) - The file path to the image to be included in the post, if applicable.
+    - Description:
+        - Determines the social media platform based on the account's provider and calls the appropriate function to upload the post.
+        - If the provider is "Mastodon", it calls the upload_post_mastodon function with the text and image path.
+        - If the provider is "WordPress", it calls the publish_post_wordpress_with_image function with the account, text as title, text as content, and image path.
+        - If the provider is not recognized, it prints a message indicating that the provider is not supported.
+    """
+
+    for account in tokens:
+        if account.provider == "Mastodon":
+            if image_path:
+                upload_post_mastodon(text, image_path, account)
+            else:
+                upload_post_mastodon_text(text, account)
+        elif account.provider == "WordPress":
+            if image_path: 
+                publish_post_wordpress_with_featured_image(account, title, text, image_path)
+            else:
+                publish_post_wordpress(account, title, text)
+    else:
+        print(f"Proveedor {account.provider} no soportado.")    
+
+
+def general_auth_accounts():
+    """
+    - Effects: 
+        - Reads the tokens from "data.json" and iterates through each account.
+         - For each Mastodon account, it ensures that a valid access token is obtained and then verifies the credentials by making an API call to Mastodon.
+         - For each WordPress account, it ensures that a valid access token is obtained and then verifies the access by making an API call to WordPress.
+         - Finally, it saves the updated tokens back to "data.json".
+    - Description: 
+        - This function serves as a general authentication handler for all accounts listed in "data.json". It processes both Mastodon and WordPress accounts by ensuring they have valid access tokens and verifying their credentials or access. After processing all accounts, it updates the "data.json" file with any new tokens obtained during the authentication process.
+    """
+
+    # Funcion de añadir cuenta a data.json
+    
+    tokens = read_json_file("data.json")
+
+    for account in tokens:
+
+        if account.provider == "Mastodon":
+            ensure_mastodon_token(account)
+
+            mastodon = Mastodon(
+                access_token=account.access_token,
+                api_base_url='https://mastodon.social'
+            )
+
+            user = mastodon.account_verify_credentials()
+            print(user)
+
+        elif account.provider == "WordPress":
+            print(f"\nProcesando cuenta: {account.username}")
+
+            # Asegurar token
+            ensure_wordpress_token(account)
+
+            # Verificar que funcione
+            success = verify_wordpress_access(account)
+
+            print(f"Resultado: {'OK' if success else 'FAIL'}")
+
+    write_json_file(tokens, "data.json")
