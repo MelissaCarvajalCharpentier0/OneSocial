@@ -318,8 +318,6 @@ def load_save_test():
 
 
 
-####################### GENERAL #######################
-
 def general_upload_post(tokens, text, title=None, image_path=None):
     """
     - Input: 
@@ -347,3 +345,45 @@ def general_upload_post(tokens, text, title=None, image_path=None):
                 publish_post_wordpress(account, title, text)
     else:
         print(f"Proveedor {account.provider} no soportado.")    
+
+
+def general_auth_accounts():
+    """
+    - Effects: 
+        - Reads the tokens from "data.json" and iterates through each account.
+         - For each Mastodon account, it ensures that a valid access token is obtained and then verifies the credentials by making an API call to Mastodon.
+         - For each WordPress account, it ensures that a valid access token is obtained and then verifies the access by making an API call to WordPress.
+         - Finally, it saves the updated tokens back to "data.json".
+    - Description: 
+        - This function serves as a general authentication handler for all accounts listed in "data.json". It processes both Mastodon and WordPress accounts by ensuring they have valid access tokens and verifying their credentials or access. After processing all accounts, it updates the "data.json" file with any new tokens obtained during the authentication process.
+    """
+
+    # Funcion de añadir cuenta a data.json
+    
+    tokens = read_json_file("data.json")
+
+    for account in tokens:
+
+        if account.provider == "Mastodon":
+            ensure_mastodon_token(account)
+
+            mastodon = Mastodon(
+                access_token=account.access_token,
+                api_base_url='https://mastodon.social'
+            )
+
+            user = mastodon.account_verify_credentials()
+            print(user)
+
+        elif account.provider == "WordPress":
+            print(f"\nProcesando cuenta: {account.username}")
+
+            # Asegurar token
+            ensure_wordpress_token(account)
+
+            # Verificar que funcione
+            success = verify_wordpress_access(account)
+
+            print(f"Resultado: {'OK' if success else 'FAIL'}")
+
+    write_json_file(tokens, "data.json")
