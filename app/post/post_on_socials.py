@@ -81,7 +81,7 @@ def publish_post_wordpress(account, title, content):
         response containing details of the created post; otherwise, it prints an error message and returns None.
     """
 
-    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{account.site_id}/posts/new"
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{int(account.site_id)}/posts/new"
 
     headers = {
         "Authorization": f"Bearer {account.access_token}"
@@ -158,7 +158,7 @@ def publish_post_wordpress_with_image(account, title, content, image_path):
         function to create the post with the combined content. If any step fails, it prints an error message and returns None.
     """
 
-    media = upload_image_wp(account.access_token, account.site_id, image_path)
+    media = upload_image_wp(account.access_token, int(account.site_id), image_path)
 
     if not media:
         print("Falló subida de imagen")
@@ -188,14 +188,14 @@ def publish_post_wordpress_with_featured_image(account, title, content, image_pa
         Finally, it sends a POST request to create the post with the specified details.
     """
 
-    media = upload_image_wp(account.access_token, account.site_id, image_path)
+    media = upload_image_wp(account.access_token, int(account.site_id), image_path)
 
     if not media:
         print("Falló subida de imagen")
         return None
 
     media_id = media["media"][0]["ID"]
-    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{account.site_id}/posts/new"
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{int(account.site_id)}/posts/new"
 
     headers = {
         "Authorization": f"Bearer {account.access_token}"

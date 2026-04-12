@@ -239,7 +239,7 @@ def ensure_wordpress_token(account):
 
     account.access_token = token_data.get("access_token")
     site_id, base_url = get_primary_site(account.access_token)
-    account.site_id = site_id
+    account.site_id = str(site_id)
     account.base_url = base_url
     account.refresh_token = token_data.get("refresh_token")
     account.token_type = token_data.get("token_type")
