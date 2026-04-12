@@ -420,3 +420,24 @@ def setup_mastodon_account(provider, username, password):
 
         get_mastodon_auth_url(account)
         return False
+    write_json_file(tokens, "data.json")
+
+
+def save_new_account(username, client_id, client_secret, provider, tokens):
+    """
+    - Input: Account info, current tokens 
+    - Output:Data.json updated
+    - Description: This function allows for adding a new account to the existing list of accounts stored in "data.json". 
+        It reads the current accounts, appends the new account, and then writes the updated list back to the file, 
+        ensuring that all accounts are preserved.
+    """
+
+    new_account = Token(
+        provider = provider,
+        username = username,
+        client_id = client_id,
+        client_secret = client_secret
+    )
+    if username not in [token.username for token in tokens]:
+        tokens.append(new_account)
+    save(tokens)
