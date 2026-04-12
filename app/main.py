@@ -17,6 +17,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from mastodon import Mastodon
+import webbrowser
 
 from models.file_manager import *
 from auth.mastodon_auth import *
@@ -347,6 +348,26 @@ def general_upload_post(tokens, text, title=None, image_path=None):
         print(f"Proveedor {account.provider} no soportado.")    
 
 
+def save_new_account(username, client_id, client_secret, provider, tokens):
+    """
+    - Input: Account info, current tokens 
+    - Output:Data.json updated
+    - Description: This function allows for adding a new account to the existing list of accounts stored in "data.json". 
+        It reads the current accounts, appends the new account, and then writes the updated list back to the file, 
+        ensuring that all accounts are preserved.
+    """
+
+    new_account = Token(
+        provider = provider,
+        username = username,
+        client_id = client_id,
+        client_secret = client_secret
+    )
+    if username not in [token.username for token in tokens]:
+        tokens.append(new_account)
+    save(tokens)
+
+
 def register_and_auth_wordpress(provider, username, client_id, client_secret):
     """
     Effects:
@@ -359,8 +380,8 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
         an API call to WordPress and prints the result of the authentication process for each account. Finally, it 
         saves the updated tokens back to "data.json".
     """
+    save_new_account(provider, username, client_id, client_secret)
     tokens = load() 
-    funcionMeli(provider, username, client_id, client_secret)
 
     for account in tokens: 
         if account.provider != "WordPress":
@@ -396,8 +417,8 @@ def setup_mastodon_account(provider, username, password):
         back to "data.json".
     """
 
+    save_new_account(provider, username, password)
     tokens = load()
-    funcionMeli(provider, username, password)
 
     for account in tokens: 
         if account.provider != "Mastodon":
@@ -413,31 +434,36 @@ def setup_mastodon_account(provider, username, password):
         token = ensure_mastodon_token(account)
 
         if token:
-            return {
-                "status": "connected",
-                "auth_url": None
-            }
+            save(tokens)
+            return True
 
-        get_mastodon_auth_url(account)
-        return False
-    write_json_file(tokens, "data.json")
+        auth_url = get_mastodon_auth_url(account)
+        webbrowser.open(auth_url)
 
-
-def save_new_account(username, client_id, client_secret, provider, tokens):
-    """
-    - Input: Account info, current tokens 
-    - Output:Data.json updated
-    - Description: This function allows for adding a new account to the existing list of accounts stored in "data.json". 
-        It reads the current accounts, appends the new account, and then writes the updated list back to the file, 
-        ensuring that all accounts are preserved.
-    """
-
-    new_account = Token(
-        provider = provider,
-        username = username,
-        client_id = client_id,
-        client_secret = client_secret
-    )
-    if username not in [token.username for token in tokens]:
-        tokens.append(new_account)
     save(tokens)
+    return False
+
+
+def setup_mastodon_account_auth(code, username):
+    """
+    Effects:
+        - Completes the authentication process for a Mastodon account by saving the obtained access token 
+        after the user has authorized the app.
+    Description:
+        - Reads the tokens from "data.json" and iterates through each account. For each Mastodon account, 
+        it checks if the access token is already present. If not, it calls the function to save the access 
+        token using the provided authorization code. Finally, it saves the updated tokens back to "data.json".
+    """
+
+    tokens = load()
+
+    for account in tokens: 
+        if account.provider != "Mastodon":
+            continue
+
+        if account.username != username:
+            continue
+
+        save_mastodon_token(account, code)
+
+    save(tokens) 

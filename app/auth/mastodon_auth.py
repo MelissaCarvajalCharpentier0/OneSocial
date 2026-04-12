@@ -58,6 +58,8 @@ def get_mastodon_auth_url(account):
         redirect_uris="http://localhost:8000/callback"
     )
 
+    return url
+
 
 def save_mastodon_token(account, code):
     mastodon = Mastodon(
