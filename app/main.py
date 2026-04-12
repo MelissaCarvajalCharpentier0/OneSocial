@@ -17,6 +17,7 @@ import tkinter as tk
 from tkinter import filedialog
 
 from mastodon import Mastodon
+import webbrowser
 
 from models.file_manager import *
 from auth.mastodon_auth import *
@@ -248,7 +249,7 @@ def test_post_wordpress_with_featured_image():
         )
 
 
-test_post_wordpress_with_featured_image()
+
 
 
 
@@ -347,48 +348,6 @@ def general_upload_post(tokens, text, title=None, image_path=None):
         print(f"Proveedor {account.provider} no soportado.")    
 
 
-def general_auth_accounts():
-    """
-    - Effects: 
-        - Reads the tokens from "data.json" and iterates through each account.
-         - For each Mastodon account, it ensures that a valid access token is obtained and then verifies the credentials by making an API call to Mastodon.
-         - For each WordPress account, it ensures that a valid access token is obtained and then verifies the access by making an API call to WordPress.
-         - Finally, it saves the updated tokens back to "data.json".
-    - Description: 
-        - This function serves as a general authentication handler for all accounts listed in "data.json". It processes both Mastodon and WordPress accounts by ensuring they have valid access tokens and verifying their credentials or access. After processing all accounts, it updates the "data.json" file with any new tokens obtained during the authentication process.
-    """
-
-    # Funcion de añadir cuenta a data.json
-    
-    tokens = read_json_file("data.json")
-
-    for account in tokens:
-
-        if account.provider == "Mastodon":
-            ensure_mastodon_token(account)
-
-            mastodon = Mastodon(
-                access_token=account.access_token,
-                api_base_url='https://mastodon.social'
-            )
-
-            user = mastodon.account_verify_credentials()
-            print(user)
-
-        elif account.provider == "WordPress":
-            print(f"\nProcesando cuenta: {account.username}")
-
-            # Asegurar token
-            ensure_wordpress_token(account)
-
-            # Verificar que funcione
-            success = verify_wordpress_access(account)
-
-            print(f"Resultado: {'OK' if success else 'FAIL'}")
-
-    write_json_file(tokens, "data.json")
-
-
 def save_new_account(username, client_id, client_secret, provider, tokens):
     """
     - Input: Account info, current tokens 
@@ -407,3 +366,104 @@ def save_new_account(username, client_id, client_secret, provider, tokens):
     if username not in [token.username for token in tokens]:
         tokens.append(new_account)
     save(tokens)
+
+
+def register_and_auth_wordpress(provider, username, client_id, client_secret):
+    """
+    Effects:
+        - Initiates the authentication process for WordPress accounts by ensuring that a valid access token is  
+        obtained for each WordPress account found in "data.json". It also prints the result of the authentication 
+        process for each account.
+    Description:
+        - Reads the tokens from "data.json" and iterates through each account. For each WordPress account, it 
+        calls the function to ensure that a valid access token is obtained. It then verifies the access by making 
+        an API call to WordPress and prints the result of the authentication process for each account. Finally, it 
+        saves the updated tokens back to "data.json".
+    """
+    save_new_account(provider, username, client_id, client_secret)
+    tokens = load() 
+
+    for account in tokens: 
+        if account.provider != "WordPress":
+            continue
+        
+        if account.username != username:
+            continue
+
+        print(f"\nProcesando cuenta: {account.username}")
+
+        # Ensure token 
+        ensure_wordpress_token(account)
+
+        # Verify that the token works
+        success = verify_wordpress_access(account)
+
+        print(f"Resultado: {'OK' if success else 'FAIL'}")
+
+    # Guardar JSON actualizado con token
+    save(tokens)
+
+
+def setup_mastodon_account(provider, username, password):
+    """
+    Effects:
+        - Initiates the authentication process for Mastodon accounts by ensuring that a valid access token is  
+        obtained for each Mastodon account found in "data.json". It also prints the result of the authentication 
+        process for each account.
+    Description:
+        - Reads the tokens from "data.json" and iterates through each account. For each Mastodon account, it 
+        calls the function to ensure that a valid access token is obtained. It then verifies the credentials by making 
+        an API call to Mastodon and prints the user information if successful. Finally, it saves the updated tokens 
+        back to "data.json".
+    """
+
+    save_new_account(provider, username, password)
+    tokens = load()
+
+    for account in tokens: 
+        if account.provider != "Mastodon":
+            continue
+        
+        if account.username != username:
+            continue
+
+        # Ensure app
+        ensure_mastodon_app()
+
+        # Ensure token
+        token = ensure_mastodon_token(account)
+
+        if token:
+            save(tokens)
+            return True
+
+        auth_url = get_mastodon_auth_url(account)
+        webbrowser.open(auth_url)
+
+    save(tokens)
+    return False
+
+
+def setup_mastodon_account_auth(code, username):
+    """
+    Effects:
+        - Completes the authentication process for a Mastodon account by saving the obtained access token 
+        after the user has authorized the app.
+    Description:
+        - Reads the tokens from "data.json" and iterates through each account. For each Mastodon account, 
+        it checks if the access token is already present. If not, it calls the function to save the access 
+        token using the provided authorization code. Finally, it saves the updated tokens back to "data.json".
+    """
+
+    tokens = load()
+
+    for account in tokens: 
+        if account.provider != "Mastodon":
+            continue
+
+        if account.username != username:
+            continue
+
+        save_mastodon_token(account, code)
+
+    save(tokens) 
