@@ -42,11 +42,13 @@ if not os.path.isdir(web_folder):
 eel.init(web_folder)
 
 @eel.expose
-def create_post(header, body):
+def create_post(header, body, image_data=None, image_name=None):
     """
     input:
         header - String containing the post title (max 100 characters)
         body - String containing the post content (max 500 characters)
+        image_data - Base64 encoded image data (optional)
+        image_name - String containing the image file name (optional)
     output:
         Dictionary with keys:
             success - Boolean indicating if post was created successfully
@@ -62,6 +64,7 @@ def create_post(header, body):
     print(f"Header: {header if header else '(No header)'}")
     print(f"Body: {body if body else '(No body)'}")
     print(f"Characters: {len(header) + len(body)}")
+    print(f"Image: {image_name if image_name else '(No image)'}")
     print(f"{'='*50}\n")
     
     return {

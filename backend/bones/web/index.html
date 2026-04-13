@@ -28,10 +28,18 @@
             </div>
         </div>
 
+        <div class="form-group">
+            <label for="post-image" class="post-button secondary-button">
+                Upload Image
+            </label>
+            <input type="file" id="post-image" accept="image/*" hidden>
+        </div>
+
         <button class="post-button" onclick="createPost()">
             Publish Post
         </button>
 
+        
         <div class="divider"></div>
 
         <div class="preview-section">
@@ -39,6 +47,7 @@
             <div class="preview-card">
                 <div class="preview-header" id="preview-header">Your header appears here</div>
                 <div class="preview-body" id="preview-body">Your post content will show up here...</div>
+                <img id="preview-image" class="preview-image hidden" />
             </div>
         </div>
 
@@ -140,6 +149,22 @@
                 body.trim() || "Your post content will show up here...";
         }
 
+        function updateImagePreview(file) {
+            const previewImage = document.getElementById('preview-image');
+
+            if (!file) {
+                previewImage.classList.add('hidden');
+                return;
+            }
+        
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewImage.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
         /*
             Function: createPost
             input:
@@ -155,29 +180,87 @@
         async function createPost() {
             const header = document.getElementById('post-header').value.trim();
             const body = document.getElementById('post-body').value.trim();
-            
-            if (!header && !body) {
-                showStatus('Please add a header or body to your post', 'error');
+            const imageInput = document.getElementById('post-image');
+            const file = imageInput.files[0];
+
+            // ---- Validation ----
+            if (!header && !body && !file) {
+                showStatus('Please add a header, body, or image', 'error');
                 return;
             }
-            
+        
             if (header.length > 100) {
                 showStatus('Header exceeds 100 characters', 'error');
                 return;
             }
-            
+        
             if (body.length > 500) {
                 showStatus('Body exceeds 500 characters', 'error');
                 return;
             }
+        
+            // Optional: basic image validation
+            if (file) {
+                const maxSizeMB = 5;
+                if (file.size > maxSizeMB * 1024 * 1024) {
+                    showStatus('Image must be smaller than 5MB', 'error');
+                    return;
+                }
             
+                if (!file.type.startsWith('image/')) {
+                    showStatus('Invalid file type (must be an image)', 'error');
+                    return;
+                }
+            }
+        
             showStatus('Creating post...', 'info');
-            const result = await eel.create_post(header, body)();
+        
+            let imageData = null;
+
+            // ---- Convert image to Base64 (async) ----
+            if (file) {
+                try {
+                    imageData = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                    
+                        reader.onload = () => resolve(reader.result);
+                        reader.onerror = () => reject('Error reading file');
+                    
+                        reader.readAsDataURL(file);
+                    });
+                } catch (error) {
+                    showStatus('Failed to process image', 'error');
+                    return;
+                }
+            }
+
+            let imageName = null;
+
+            if (file) {
+                imageName = file.name;  // ← THIS is what you need
+
+                imageData = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = () => reject('Error reading file');
+                    reader.readAsDataURL(file);
+                });
+            }
+        
+            // ---- Send to backend ----
+            try {
+                const result = await eel.create_post(header, body, imageData, imageName)();
             
-            if (result.success) {
-                showStatus(result.message, 'success');
-            } else {
-                showStatus(result.message, 'error');
+                if (result.success) {
+                    showStatus(result.message, 'success');
+                    clearForm(); // optional but recommended UX
+                } else {
+                    showStatus(result.message, 'error');
+                }
+            
+            } catch (error) {
+                showStatus('Backend connection failed', 'error');
+                console.error(error);
             }
         }
 
@@ -202,6 +285,10 @@
             document.getElementById('post-body').addEventListener('input', () => {
                 updateCounters();
                 updatePreview();
+            });
+            document.getElementById('post-image').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                updateImagePreview(file);
             });
         }
         
