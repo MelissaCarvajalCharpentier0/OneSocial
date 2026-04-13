@@ -18,7 +18,6 @@ from mastodon import Mastodon
 from pathlib import Path
 
 import requests
-from auth.mastodon_auth import ensure_mastodon_token
 
 
 
@@ -37,7 +36,7 @@ def upload_post_mastodon(text: str, image_path: Path, account):
     """
 
     mastodon = Mastodon(
-        access_token=ensure_mastodon_token(account),
+        access_token=account.access_token,
         api_base_url='https://mastodon.social'
     )
 
@@ -53,8 +52,11 @@ def upload_post_mastodon_text(text: str, account):
     - Description: 
         - Uploads a text-only post to Mastodon. It ensures that the account has a valid access token and then creates a new status with the provided text.
     """
+    if not account.access_token:
+        print("No hay access_token. Debes autenticar primero.")
+    
     mastodon = Mastodon(
-        access_token=ensure_mastodon_token(account),
+        access_token=account.access_token,
         api_base_url='https://mastodon.social'
     )
 

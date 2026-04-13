@@ -163,10 +163,7 @@ def get_authorization_code(client_id):
         f"&scope=global"
     )
 
-    print("Abriendo navegador para login WordPress...")
     webbrowser.open(auth_url)
-
-    print("Esperando autorización...")
     server.serve_forever()
 
     return auth_code
@@ -224,8 +221,6 @@ def ensure_wordpress_token(account):
         print(f"No hay client_id/client_secret en {account.username}")
         return None
 
-    print(f"Obteniendo token para {account.username}...")
-
     code = get_authorization_code(account.client_id)
 
     if not code:
@@ -275,5 +270,4 @@ def verify_wordpress_access(account):
         return True
     else:
         print("Error de acceso:", response.status_code)
-        print(response.text)
         return False

@@ -28,6 +28,18 @@
             </div>
         </div>
 
+        <div class="form-group">
+            <label>Image</label>
+
+            <input type="file" id="image-input" accept="image/*" hidden>
+
+            <button class="file-button" onclick="document.getElementById('image-input').click()">
+                Select Image
+            </button>
+
+            <span id="file-name">No file selected</span>
+        </div>
+
         <button class="post-button" onclick="createPost()">
             Publish Post
         </button>
@@ -39,6 +51,9 @@
             <div class="preview-card">
                 <div class="preview-header" id="preview-header">Your header appears here</div>
                 <div class="preview-body" id="preview-body">Your post content will show up here...</div>
+                <div class="image-preview">
+                    <img id="preview-image" style="display: none;" />
+                </div>
             </div>
         </div>
 
@@ -46,6 +61,30 @@
     </div>
 
     <script>
+        const fileInput = document.getElementById('image-input');
+        const fileName = document.getElementById('file-name');
+        const preview = document.getElementById('preview-image');
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+
+                // Nombre del archivo
+                fileName.textContent = file.name;
+
+                // Preview
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
+                };
+                reader.readAsDataURL(file);
+
+            } else {
+                fileName.textContent = "No file selected";
+                preview.style.display = "none";
+            }
+        });
         /*
             Name: main.js (embedded in index.html)
             Description: Frontend JavaScript for the OneSocial Post Creator. Handles UI interactions,
@@ -170,15 +209,54 @@
                 showStatus('Body exceeds 500 characters', 'error');
                 return;
             }
+
+            const fileInput = document.getElementById('image-input');
+            let imageData = null;
+            let imageName = null;
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                imageName = file.name;
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                await new Promise((resolve) => {
+                    reader.onload = () => {
+                        imageData = reader.result; // base64
+                        resolve();
+                    };
+                });
+            }
+
             
             showStatus('Creating post...', 'info');
-            const result = await eel.create_post(header, body)();
-            
-            if (result.success) {
-                showStatus(result.message, 'success');
-            } else {
-                showStatus(result.message, 'error');
-            }
+            console.log("Enviando a Python...");
+            const result = await eel.create_post(header, body, imageData, imageName)();
+
+            console.log("RESULTADO:", result);
+        }
+
+        async function authMastodon() {
+            const code = prompt("Pega el código de Mastodon:");
+            console.log("Código de autenticación:", code);
+
+            showStatus('Creating post...', 'info');
+            console.log("Enviando a Python...");
+            const result = await eel.auth_mastodon(code)();
+
+            console.log("RESULTADO:", result);
+        }
+
+        async function setupWordPress() {
+            const username = "@onesocial59";
+            const client_id = "135551";
+            const client_secret = "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL";
+
+            console.log("Enviando a Python...");
+            const result = await eel.setup_wordpress_account(username, client_id, client_secret)();
+
+            console.log("RESULTADO:", result);
         }
 
         /*

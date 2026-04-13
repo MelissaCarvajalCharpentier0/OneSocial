@@ -15,9 +15,9 @@ Version: 1.1
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
-
-from mastodon import Mastodon
 import webbrowser
+import base64
+import shutil
 
 from models.file_manager import *
 from auth.mastodon_auth import *
@@ -78,12 +78,13 @@ def get_accounts() -> list[str, str]:
     return account_list(tokens)
 
 
-def general_upload_post(tokens, text, title=None, image_path=None):
+def general_upload_post(tokens, text, title, image_path=None):
     """
     - Input: 
         - account: Account - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
-        - title: str (optional) - The title of the post, if applicable.
+        - title: str - The title of the post.
+
         - image_path: Path (optional) - The file path to the image to be included in the post, if applicable.
     - Description:
         - Determines the social media platform based on the account's provider and calls the appropriate function to upload the post.
@@ -95,16 +96,16 @@ def general_upload_post(tokens, text, title=None, image_path=None):
     for account in tokens:
         if account.provider == "Mastodon":
             if image_path:
-                upload_post_mastodon(text, image_path, account)
+                upload_post_mastodon(title + "\n" + text, image_path, account)
             else:
-                upload_post_mastodon_text(text, account)
+                upload_post_mastodon_text(title + "\n" + text, account)
         elif account.provider == "WordPress":
             if image_path: 
                 publish_post_wordpress_with_featured_image(account, title, text, image_path)
             else:
                 publish_post_wordpress(account, title, text)
-    else:
-        print(f"Proveedor {account.provider} no soportado.")    
+        else:
+            print(f"Proveedor {account.provider} no soportado.")    
 
 
 def save_new_account(username, client_id, client_secret, provider, tokens):
@@ -139,7 +140,8 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
         an API call to WordPress and prints the result of the authentication process for each account. Finally, it 
         saves the updated tokens back to "data.json".
     """
-    save_new_account(provider, username, client_id, client_secret)
+    tokens = load()
+    save_new_account(username, client_id, client_secret, provider, tokens)
     tokens = load() 
 
     for account in tokens: 
@@ -175,19 +177,23 @@ def setup_mastodon_account(provider, username, password):
         an API call to Mastodon and prints the user information if successful. Finally, it saves the updated tokens 
         back to "data.json".
     """
-
-    save_new_account(provider, username, password)
     tokens = load()
+    if username not in [t.username for t in tokens]:
+        tokens.append(Token(
+            provider=provider,
+            username=username,
+            password=password
+        ))
+        save(tokens)
 
+    ensure_mastodon_app()
+    
     for account in tokens: 
         if account.provider != "Mastodon":
             continue
         
         if account.username != username:
             continue
-
-        # Ensure app
-        ensure_mastodon_app()
 
         # Ensure token
         token = ensure_mastodon_token(account)
@@ -226,3 +232,58 @@ def setup_mastodon_account_auth(code, username):
         save_mastodon_token(account, code)
 
     save(tokens) 
+
+
+def process_image(image_path: Path) -> Path:
+    """
+    - Input: image_path (Path)
+    - Output: full_path (Path)
+    - Description:
+        Calls get_image to store the image and returns the full path
+        where the image was saved.
+    """
+
+    new_name = get_image(image_path)  # "post_1.jpg"
+    full_path = Path(POSTS_FOLDER) / new_name
+
+    print(f"Ruta completa de imagen: {full_path}")
+
+    return full_path
+
+def save_image_from_base64(image_data: str, image_name: str) -> Path:
+    """
+    - Input:
+        - image_data: str - A string containing the base64 encoded image data, typically in the format 
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+        - image_name: str - The original name of the image file, used to determine the file extension.  
+    - Output:
+        - full_path: Path - The file path where the decoded image has been saved locally.
+    - Description:
+        - This function takes a base64 encoded image string and the original image name, decodes the image data, 
+        and saves it to a local file. It first validates the image format based on the file extension, then creates
+        a new file name using a unique post ID. The decoded image data is written to a new file in the designated
+        posts folder, and the full path to the saved image is returned.
+    """
+
+    if not image_data:
+        raise ValueError("No image data provided")
+
+    header, encoded = image_data.split(",", 1)
+    image_bytes = base64.b64decode(encoded)
+
+    suffix = Path(image_name).suffix.lower()
+    if suffix not in IMAGE_FORMATS:
+        raise TypeError(f"Formato inválido: {suffix}")
+
+    destiny = Path(POSTS_FOLDER)
+    destiny.mkdir(parents=True, exist_ok=True)
+
+    post_id = get_next_post_id()
+    new_name = f"post_{post_id}{suffix}"
+
+    full_path = destiny / new_name
+
+    with open(full_path, "wb") as f:
+        f.write(image_bytes)
+
+    return full_path

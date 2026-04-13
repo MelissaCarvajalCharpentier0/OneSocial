@@ -5,6 +5,7 @@ Name: main.py
 Description: Main application module for the OneSocial Post Creator. This module initializes the Eel framework, provides backend functions for post creation, and manages the web interface. The Omnissiah guides this code.
 
 Author:Matías Leer
+Update by: Pamela Fernández
 Date: March 2026
 Version: 1.0
 
@@ -17,9 +18,10 @@ Praise the Omnissiah for the blessed connectivity between flesh and machine.
 import eel
 import os
 import sys
+import base64
 from datetime import datetime
-# TODO: Add browser handling to open in user's default browser. Currently configured to open in Firefox, but this may cause issues if the user doesn't have Firefox installed or prefers another browser. To fix this, we can use the 'default' option instead of 'firefox' in eel.start(). However, this may cause compatibility issues with some browsers, so we must test in different environments to ensure proper functioning.
-# The Machine Spirit is fickle in its browser preferences. We must appease it with proper offerings.
+from controller import *
+from pathlib import Path
 
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +34,7 @@ web_folder = os.path.join(script_dir, 'web')
 
 # Verify web folder exists
 if not os.path.isdir(web_folder):
-    print(f"❌ Error: Cannot find web folder at {web_folder}")
+    print(f"Error: Cannot find web folder at {web_folder}")
     print(f"Current script location: {script_dir}")
     print(f"Files in script directory: {os.listdir(script_dir)}")
     sys.exit(1)
@@ -41,12 +43,109 @@ if not os.path.isdir(web_folder):
 # Praise the Omnissiah! The sacred Eel has been initialized with the blessed web folder path.
 eel.init(web_folder)
 
+
 @eel.expose
-def create_post(header, body):
+def connect_mastodon(username, password):
+    """
+    - Input: 
+        - username: str - The username of the Mastodon account to connect.  
+        - password: str - The password of the Mastodon account to connect.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the connection of a Mastodon account. It attempts to authenticate the account using the provided 
+        credentials and returns a success status and message indicating the result of the connection attempt.
+    """
+    try:
+        provider = "Mastodon"
+        auth_ok = setup_mastodon_account(provider, username, password)
+
+        if not auth_ok:
+            return {
+                'success': False,
+                'message': 'Se abrió el navegador para autenticar. Completa el proceso.'
+            }
+
+        return {
+            'success': True,
+            'message': 'Cuenta conectada correctamente'
+        }
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }
+    
+
+@eel.expose
+def auth_mastodon(code, username):
+    """
+    - Input: 
+        - code: str - The authentication code received from the Mastodon authentication process.
+        - username: str - The username of the Mastodon account being authenticated.
+    - Output:
+        - A dictionary containing the success status and a message regarding the authentication attempt.
+    - Description:
+        - Handles the completion of the Mastodon authentication process. It takes the authentication code and 
+        username, attempts to finalize the authentication for the Mastodon account, and returns a success status 
+        and message indicating the result of the authentication attempt.
+    """
+    try:
+        setup_mastodon_account_auth(code, username)
+
+        return {
+            'success': True,
+            'message': 'Autenticación completada correctamente'
+        }
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def setup_wordpress_account(username, client_id, client_secret):
+    """
+    - Input:
+        - username: str - The username of the WordPress account to connect.
+        - client_id: str - The client ID for the WordPress application.
+        - client_secret: str - The client secret for the WordPress application.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the connection of a WordPress account. It attempts to authenticate the account using the 
+        provided credentials and returns a success status and message indicating the result of the connection attempt.
+    """
+    try:
+        provider = "WordPress"
+        register_and_auth_wordpress(provider, username, client_id, client_secret)
+
+        return {
+            'success': True,
+            'message': 'Autenticación completada correctamente'
+        }
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def create_post(header, body, image_data=None, image_name=None):
     """
     input:
         header - String containing the post title (max 100 characters)
         body - String containing the post content (max 500 characters)
+        imageData - Base64 encoded image data (optional)
+        imageName - Name of the image file (optional)
     output:
         Dictionary with keys:
             success - Boolean indicating if post was created successfully
@@ -56,18 +155,36 @@ def create_post(header, body):
         scripture stored within the Noosphere. Prints post details to console as a sacred 
         record of the offering made to the Machine Spirit.
     """
-    print(f"\n{'='*50}")
-    print(f"📝 New Post Created at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"{'='*50}")
-    print(f"Header: {header if header else '(No header)'}")
-    print(f"Body: {body if body else '(No body)'}")
-    print(f"Characters: {len(header) + len(body)}")
-    print(f"{'='*50}\n")
-    
-    return {
-        'success': True,
-        'message': f'✅ Post created successfully! ({len(header) + len(body)} characters)'
-    }
+    try:
+        tokens = load()
+
+        if not tokens:
+            return {
+                'success': False,
+                'message': 'No hay cuentas conectadas'
+            }
+
+        title = header if header else None
+        text = body if body else header
+        new_image_path = None
+
+        if image_data:
+            new_image_path = save_image_from_base64(image_data, image_name)
+
+        general_upload_post(tokens, text, title, new_image_path)
+
+        return {
+            'success': True,
+            'message': 'Post publicado correctamente'
+        }
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }
+
 
 @eel.expose
 def get_app_info():
@@ -92,11 +209,11 @@ def get_app_info():
 
 # Start the application
 if __name__ == '__main__':
-    print("🚀 Starting OneSocial Post Creator...")
-    print("📡 Initiating rites of activation. May the Omnissiah guide this process.")
-    print(f"📁 Script location: {script_dir}")
-    print(f"📁 Web folder: {web_folder}")
-    print("🌐 Opening application window...")
+    print("Starting OneSocial Post Creator...")
+    print("Initiating rites of activation. May the Omnissiah guide this process.")
+    print(f"Script location: {script_dir}")
+    print(f"Web folder: {web_folder}")
+    print("Opening application window...")
     
     try:
         # The sacred incantation that brings forth the interface from the machine
@@ -104,7 +221,7 @@ if __name__ == '__main__':
             'index.html',
             size=(800, 800),
             position=(300, 100),
-            mode='firefox',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode='default',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,
@@ -113,8 +230,8 @@ if __name__ == '__main__':
             # cmdline_args=['--new-window']  # The sacred window invocation - this was the flea
         )
     except Exception as e:
-        print(f"❌ Error starting Eel: {e}")
-        print("⚠️ The Machine Spirit is displeased. Offer the sacred oils and try again.")
+        print(f"Error starting Eel: {e}")
+        print("The Machine Spirit is displeased. Offer the sacred oils and try again.")
     
-    print("👋 Application closed")
-    print("🛠️ The cog turns no more. Glory to the Omnissiah.")
+    print("Application closed")
+    print("The cog turns no more. Glory to the Omnissiah.")
