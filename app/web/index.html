@@ -44,6 +44,7 @@
             Publish Post
         </button>
 
+        
         <div class="divider"></div>
 
         <div class="preview-section">
@@ -179,6 +180,22 @@
                 body.trim() || "Your post content will show up here...";
         }
 
+        function updateImagePreview(file) {
+            const previewImage = document.getElementById('preview-image');
+
+            if (!file) {
+                previewImage.classList.add('hidden');
+                return;
+            }
+        
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImage.src = e.target.result;
+                previewImage.classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
         /*
             Function: createPost
             input:
@@ -194,17 +211,20 @@
         async function createPost() {
             const header = document.getElementById('post-header').value.trim();
             const body = document.getElementById('post-body').value.trim();
-            
-            if (!header && !body) {
-                showStatus('Please add a header or body to your post', 'error');
+            const imageInput = document.getElementById('post-image');
+            const file = imageInput.files[0];
+
+            // ---- Validation ----
+            if (!header && !body && !file) {
+                showStatus('Please add a header, body, or image', 'error');
                 return;
             }
-            
+        
             if (header.length > 100) {
                 showStatus('Header exceeds 100 characters', 'error');
                 return;
             }
-            
+        
             if (body.length > 500) {
                 showStatus('Body exceeds 500 characters', 'error');
                 return;
@@ -280,6 +300,10 @@
             document.getElementById('post-body').addEventListener('input', () => {
                 updateCounters();
                 updatePreview();
+            });
+            document.getElementById('post-image').addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                updateImagePreview(file);
             });
         }
         

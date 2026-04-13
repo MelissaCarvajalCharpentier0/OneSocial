@@ -184,6 +184,28 @@ textarea {
     white-space: pre-wrap;
 }
 
+.preview-image {
+    width: 100%;
+    margin-top: 12px;
+    border-radius: 8px;
+    object-fit: cover;
+    max-height: 300px;
+}
+
+.secondary-button {
+    background: #4a4a4a;      /* muted color */
+    color: #d0d0d0;
+    font-size: 0.85rem;       /* smaller text */
+    padding: 10px;            /* smaller size */
+    width: auto;              /* don't stretch full width */
+    display: inline-block;
+    margin-top: 8px;
+}
+
+.secondary-button:hover {
+    background: #5a5a5a;
+}
+
 /* Utility Classes */
 .hidden {
     display: none;
