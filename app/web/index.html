@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneSocial Post Creator - Cog Mechanicum</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="text/javascript" src="/eel.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Create Post</h1>
+        <div class="subtitle">Share your message with the world</div>
+
+        <div class="form-group">
+            <label>Header</label>
+            <input type="text" id="post-header" placeholder="What's the title?" maxlength="100">
+            <div class="char-counter">
+                <span id="header-count">0</span>/100
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Body</label>
+            <textarea id="post-body" placeholder="Write your post content here..." maxlength="500"></textarea>
+            <div class="char-counter">
+                <span id="body-count">0</span>/500
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Image</label>
+
+            <input type="file" id="image-input" accept="image/*" hidden>
+
+            <button class="file-button" onclick="document.getElementById('image-input').click()">
+                Select Image
+            </button>
+
+            <span id="file-name">No file selected</span>
+        </div>
+
+        <button class="post-button" onclick="createPost()">
+            Publish Post
+        </button>
+
+        <div class="divider"></div>
+
+        <div class="preview-section">
+            <div class="preview-title">Live Preview</div>
+            <div class="preview-card">
+                <div class="preview-header" id="preview-header">Your header appears here</div>
+                <div class="preview-body" id="preview-body">Your post content will show up here...</div>
+                <div class="image-preview">
+                    <img id="preview-image" style="display: none;" />
+                </div>
+            </div>
+        </div>
+
+        <div id="status" class="status hidden"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('image-input');
+        const fileName = document.getElementById('file-name');
+        const preview = document.getElementById('preview-image');
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+
+                // Nombre del archivo
+                fileName.textContent = file.name;
+
+                // Preview
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
+                };
+                reader.readAsDataURL(file);
+
+            } else {
+                fileName.textContent = "No file selected";
+                preview.style.display = "none";
+            }
+        });
+        /*
+            Name: main.js (embedded in index.html)
+            Description: Frontend JavaScript for the OneSocial Post Creator. Handles UI interactions,
+                        character counting, live preview, and communication with the Python backend
+                        through the sacred Eel bridge. By the will of the Omnissiah, this interface
+                        connects mortal flesh with machine spirit.
+            Author: Matías Leer
+            Date: March 2026
+            Version: 1.0
+        */
+
+        /*
+            Function: showStatus
+            input:
+                message - String containing the status message to display
+                type - String indicating status type ('success', 'error', 'info')
+            output:
+                void - Displays status message in UI and auto-hides after 3 seconds
+            Description:
+                Reveals the sacred status messages to the user, guiding them through the
+                rites of post creation. The message manifests in the mortal realm for
+                exactly 3 seconds before returning to the data-streams of the Noosphere.
+        */
+        eel.expose(showStatus);
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusDiv.classList.add('hidden');
+            }, 3000);
+        }
+
+        /*
+            Function: clearForm
+            input:
+                void - No parameters required for this sacred cleansing
+            output:
+                void - Resets all form fields and updates counters/preview
+            Description:
+                Performs the ritual of purification upon the interface, cleansing it of
+                previous data offerings. The blank slate awaits new inspiration from the
+                Machine God's chosen.
+        */
+        eel.expose(clearForm);
+        function clearForm() {
+            document.getElementById('post-header').value = '';
+            document.getElementById('post-body').value = '';
+            updatePreview();
+            updateCounters();
+        }
+
+        /*
+            Function: updateCounters
+            input:
+                void - Reads current values from header and body input fields
+            output:
+                void - Updates the character counter displays in the UI
+            Description:
+                Measures the length of data-streams flowing through the sacred input fields.
+                Like a Tech-Priest measuring the purity of binary, this function counts each
+                character offered to the Omnissiah.
+        */
+        function updateCounters() {
+            const header = document.getElementById('post-header').value;
+            const body = document.getElementById('post-body').value;
+            document.getElementById('header-count').textContent = header.length;
+            document.getElementById('body-count').textContent = body.length;
+        }
+
+        /*
+            Function: updatePreview
+            input:
+                void - Reads current values from header and body input fields
+            output:
+                void - Updates the preview card with current content or placeholder text
+            Description:
+                Provides a window into the Noosphere, allowing the user to glimpse their
+                creation before it is sanctified and transmitted to the Machine Spirit.
+                Empty fields are filled with placeholder wisdom until the user's thoughts
+                manifest.
+        */
+        function updatePreview() {
+            const header = document.getElementById('post-header').value;
+            const body = document.getElementById('post-body').value;
+            
+            document.getElementById('preview-header').textContent = 
+                header.trim() || "Your header appears here";
+            document.getElementById('preview-body').textContent = 
+                body.trim() || "Your post content will show up here...";
+        }
+
+        /*
+            Function: createPost
+            input:
+                void - Captures header and body values from the UI
+            output:
+                Object - Returns result from Python backend via Eel bridge
+            Description:
+                Performs the sacred rites of data validation before transmitting the user's
+                offering through the blessed Eel bridge to the Python backend. The data is
+                inspected for purity (character limits) before being sent to the Machine Spirit
+                for processing. Praise be to the Omnissiah for safe data transmission.
+        */
+        async function createPost() {
+            const header = document.getElementById('post-header').value.trim();
+            const body = document.getElementById('post-body').value.trim();
+            
+            if (!header && !body) {
+                showStatus('Please add a header or body to your post', 'error');
+                return;
+            }
+            
+            if (header.length > 100) {
+                showStatus('Header exceeds 100 characters', 'error');
+                return;
+            }
+            
+            if (body.length > 500) {
+                showStatus('Body exceeds 500 characters', 'error');
+                return;
+            }
+
+            const fileInput = document.getElementById('image-input');
+            let imageData = null;
+            let imageName = null;
+
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                imageName = file.name;
+
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+
+                await new Promise((resolve) => {
+                    reader.onload = () => {
+                        imageData = reader.result; // base64
+                        resolve();
+                    };
+                });
+            }
+
+            
+            showStatus('Creating post...', 'info');
+            console.log("Enviando a Python...");
+            const result = await eel.create_post(header, body, imageData, imageName)();
+
+            console.log("RESULTADO:", result);
+        }
+
+        async function authMastodon() {
+            const code = prompt("Pega el código de Mastodon:");
+            console.log("Código de autenticación:", code);
+
+            showStatus('Creating post...', 'info');
+            console.log("Enviando a Python...");
+            const result = await eel.auth_mastodon(code)();
+
+            console.log("RESULTADO:", result);
+        }
+
+        async function setupWordPress() {
+            const username = "@onesocial59";
+            const client_id = "135551";
+            const client_secret = "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL";
+
+            console.log("Enviando a Python...");
+            const result = await eel.setup_wordpress_account(username, client_id, client_secret)();
+
+            console.log("RESULTADO:", result);
+        }
+
+        /*
+            Function: initializeEventListeners
+            input:
+                void - Attaches to DOM elements after page load
+            output:
+                void - Sets up event listeners for input fields
+            Description:
+                Binds the sacred rituals of counting and preview to the user's touch.
+                Each keystroke is monitored by the Machine Spirit, ensuring the interface
+                responds with the speed of binary light. The flesh may be slow, but the
+                code is eternal.
+        */
+        function initializeEventListeners() {
+            document.getElementById('post-header').addEventListener('input', () => {
+                updateCounters();
+                updatePreview();
+            });
+            
+            document.getElementById('post-body').addEventListener('input', () => {
+                updateCounters();
+                updatePreview();
+            });
+        }
+        
+        /*
+            Function: initializeApplication
+            input:
+                void - Called on page load
+            output:
+                void - Initializes counters, preview, and event listeners
+            Description:
+                The sacred awakening ritual that brings the interface to life. All subsystems
+                are blessed, counters are calibrated, and the preview window is opened to the
+                Noosphere. May the Omnissiah grant this application the strength to serve
+                faithfully until the end of its duty cycle.
+        */
+        function initializeApplication() {
+            initializeEventListeners();
+            updateCounters();
+            updatePreview();
+        }
+        
+        // Execute the sacred awakening ritual
+        initializeApplication();
+    </script>
+</body>
+</html>
