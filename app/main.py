@@ -139,7 +139,36 @@ def setup_wordpress_account(username, client_id, client_secret):
 
 
 @eel.expose
-def create_post(header, body, image_data=None, image_name=None):
+def get_available_accounts():
+    """
+    input:
+        void - No parameters required
+    output:
+        Dictionary with keys:
+            success - Boolean indicating if accounts were loaded
+            accounts - List with format [[provider, username], ...]
+            message - Optional error message
+    Description:
+        Returns linked accounts from the token store so the frontend can
+        render social tabs and account selectors.
+    """
+    try:
+        accounts = get_accounts()
+        return {
+            'success': True,
+            'accounts': accounts
+        }
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'accounts': [],
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def create_post(header, body, image_data=None, image_name=None, selected_accounts=None):
     """
     input:
         header - String containing the post title (max 100 characters)
@@ -163,6 +192,15 @@ def create_post(header, body, image_data=None, image_name=None):
                 'success': False,
                 'message': 'No hay cuentas conectadas'
             }
+
+        if selected_accounts is not None:
+            tokens = filter_tokens_by_account(tokens, selected_accounts)
+
+            if not tokens:
+                return {
+                    'success': False,
+                    'message': 'No hay cuentas seleccionadas para publicar'
+                }
 
         title = header if header else None
         text = body if body else header

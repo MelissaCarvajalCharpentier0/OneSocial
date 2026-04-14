@@ -8,6 +8,19 @@
     <script type="text/javascript" src="/eel.js"></script>
 </head>
 <body>
+    <aside class="account-sidebar">
+        <div class="sidebar-title">Accounts</div>
+        <div class="sidebar-subtitle">Select where to publish</div>
+
+        <div id="account-tabs" class="account-tabs"></div>
+
+        <div id="account-list-wrap" class="account-list-wrap">
+            <div id="account-list" class="account-list"></div>
+        </div>
+
+        <div id="account-summary" class="account-summary">Loading accounts...</div>
+    </aside>
+
     <div class="container">
         <h1>Create Post</h1>
         <div class="subtitle">Share your message with the world</div>
@@ -65,6 +78,13 @@
         const fileName = document.getElementById('file-name');
         const preview = document.getElementById('preview-image');
 
+        const accountState = {
+            accountsByProvider: {},
+            selected: new Set(),
+            activeTab: 'Todas',
+            hasLoaded: false
+        };
+
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
@@ -77,12 +97,14 @@
                 reader.onload = function (e) {
                     preview.src = e.target.result;
                     preview.style.display = "block";
+                    syncSidebarHeight();
                 };
                 reader.readAsDataURL(file);
 
             } else {
                 fileName.textContent = "No file selected";
                 preview.style.display = "none";
+                syncSidebarHeight();
             }
         });
         /*
@@ -120,6 +142,169 @@
             }, 3000);
         }
 
+        function accountKey(provider, username) {
+            return `${provider}::${username}`;
+        }
+
+        function accountFromKey(key) {
+            const splitIndex = key.indexOf('::');
+            return [key.slice(0, splitIndex), key.slice(splitIndex + 2)];
+        }
+
+        function getAllAccountObjects() {
+            const all = [];
+            Object.keys(accountState.accountsByProvider).forEach((provider) => {
+                accountState.accountsByProvider[provider].forEach((username) => {
+                    all.push({ provider, username });
+                });
+            });
+            return all;
+        }
+
+        function getAccountsForActiveTab() {
+            if (accountState.activeTab === 'Todas') {
+                return getAllAccountObjects();
+            }
+
+            const usernames = accountState.accountsByProvider[accountState.activeTab] || [];
+            return usernames.map((username) => ({
+                provider: accountState.activeTab,
+                username
+            }));
+        }
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('account-tabs');
+            const providers = Object.keys(accountState.accountsByProvider).sort((a, b) => a.localeCompare(b));
+            const tabs = ['Todas', ...providers];
+
+            if (!tabs.includes(accountState.activeTab)) {
+                accountState.activeTab = 'Todas';
+            }
+
+            tabsContainer.innerHTML = tabs.map((tab) => {
+                const activeClass = tab === accountState.activeTab ? ' active' : '';
+                return `<button class="account-tab${activeClass}" data-tab="${tab}">${tab}</button>`;
+            }).join('');
+        }
+
+        function renderAccountList() {
+            const listContainer = document.getElementById('account-list');
+            const accounts = getAccountsForActiveTab();
+
+            if (accounts.length === 0) {
+                listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
+                renderSummary();
+                return;
+            }
+
+            const allChecked = accounts.every(({ provider, username }) =>
+                accountState.selected.has(accountKey(provider, username))
+            );
+
+            const items = accounts.map(({ provider, username }) => {
+                const key = accountKey(provider, username);
+                const checked = accountState.selected.has(key) ? 'checked' : '';
+                return `
+                    <label class="account-item">
+                        <input type="checkbox" data-provider="${provider}" data-username="${username}" ${checked}>
+                        <span class="account-name">${username}</span>
+                        <span class="account-provider">${provider}</span>
+                    </label>
+                `;
+            }).join('');
+
+            listContainer.innerHTML = `
+                <label class="account-item select-all-item">
+                    <input type="checkbox" id="toggle-visible-accounts" ${allChecked ? 'checked' : ''}>
+                    <span class="account-name">Seleccionar visibles</span>
+                </label>
+                ${items}
+            `;
+
+            renderSummary();
+        }
+
+        function renderSummary() {
+            const summary = document.getElementById('account-summary');
+            const total = getAllAccountObjects().length;
+            const selectedCount = accountState.selected.size;
+            summary.textContent = `${selectedCount} of ${total} account(s) selected`;
+        }
+
+        function renderAccounts() {
+            renderTabs();
+            renderAccountList();
+            syncSidebarHeight();
+        }
+
+        function syncSidebarHeight() {
+            const sidebar = document.querySelector('.account-sidebar');
+            const mainContainer = document.querySelector('.container');
+
+            if (!sidebar || !mainContainer) {
+                return;
+            }
+
+            if (window.innerWidth <= 1180) {
+                sidebar.style.height = '';
+                return;
+            }
+
+            sidebar.style.height = `${mainContainer.offsetHeight}px`;
+        }
+
+        async function loadAccounts() {
+            try {
+                const response = await eel.get_available_accounts()();
+
+                if (!response || !response.success) {
+                    showStatus('Could not load linked accounts', 'error');
+                    document.getElementById('account-list').innerHTML = '<div class="empty-accounts">Could not load accounts.</div>';
+                    document.getElementById('account-summary').textContent = '0 of 0 account(s) selected';
+                    return;
+                }
+
+                const grouped = {};
+                (response.accounts || []).forEach((account) => {
+                    const provider = account[0];
+                    const username = account[1];
+
+                    if (!provider || !username) {
+                        return;
+                    }
+
+                    if (!grouped[provider]) {
+                        grouped[provider] = [];
+                    }
+
+                    grouped[provider].push(username);
+                });
+
+                Object.keys(grouped).forEach((provider) => {
+                    grouped[provider] = [...new Set(grouped[provider])].sort((a, b) => a.localeCompare(b));
+                });
+
+                accountState.accountsByProvider = grouped;
+
+                if (!accountState.hasLoaded) {
+                    getAllAccountObjects().forEach(({ provider, username }) => {
+                        accountState.selected.add(accountKey(provider, username));
+                    });
+                    accountState.hasLoaded = true;
+                }
+
+                renderAccounts();
+            } catch (error) {
+                console.error(error);
+                showStatus('Error loading linked accounts', 'error');
+            }
+        }
+
+        function getSelectedAccountsPayload() {
+            return [...accountState.selected].map((key) => accountFromKey(key));
+        }
+
         /*
             Function: clearForm
             input:
@@ -137,6 +322,7 @@
             document.getElementById('post-body').value = '';
             updatePreview();
             updateCounters();
+            syncSidebarHeight();
         }
 
         /*
@@ -194,9 +380,15 @@
         async function createPost() {
             const header = document.getElementById('post-header').value.trim();
             const body = document.getElementById('post-body').value.trim();
+            const selectedAccounts = getSelectedAccountsPayload();
             
             if (!header && !body) {
                 showStatus('Please add a header or body to your post', 'error');
+                return;
+            }
+
+            if (selectedAccounts.length === 0) {
+                showStatus('Select at least one account before publishing', 'error');
                 return;
             }
             
@@ -232,9 +424,17 @@
             
             showStatus('Creating post...', 'info');
             console.log("Enviando a Python...");
-            const result = await eel.create_post(header, body, imageData, imageName)();
+            const result = await eel.create_post(header, body, imageData, imageName, selectedAccounts)();
 
             console.log("RESULTADO:", result);
+
+            if (result && result.success) {
+                showStatus(result.message || 'Post published successfully', 'success');
+                clearForm();
+                return;
+            }
+
+            showStatus((result && result.message) || 'Error publishing post', 'error');
         }
 
         async function authMastodon() {
@@ -281,6 +481,50 @@
                 updateCounters();
                 updatePreview();
             });
+
+            document.getElementById('account-tabs').addEventListener('click', (event) => {
+                const tabButton = event.target.closest('button[data-tab]');
+                if (!tabButton) {
+                    return;
+                }
+
+                accountState.activeTab = tabButton.getAttribute('data-tab');
+                renderAccounts();
+            });
+
+            document.getElementById('account-list').addEventListener('change', (event) => {
+                const target = event.target;
+
+                if (target.id === 'toggle-visible-accounts') {
+                    const accounts = getAccountsForActiveTab();
+                    accounts.forEach(({ provider, username }) => {
+                        const key = accountKey(provider, username);
+                        if (target.checked) {
+                            accountState.selected.add(key);
+                        } else {
+                            accountState.selected.delete(key);
+                        }
+                    });
+                    renderAccountList();
+                    return;
+                }
+
+                if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
+                    const provider = target.getAttribute('data-provider');
+                    const username = target.getAttribute('data-username');
+                    const key = accountKey(provider, username);
+
+                    if (target.checked) {
+                        accountState.selected.add(key);
+                    } else {
+                        accountState.selected.delete(key);
+                    }
+
+                    renderAccountList();
+                }
+            });
+
+            window.addEventListener('resize', syncSidebarHeight);
         }
         
         /*
@@ -299,6 +543,8 @@
             initializeEventListeners();
             updateCounters();
             updatePreview();
+            loadAccounts();
+            syncSidebarHeight();
         }
         
         // Execute the sacred awakening ritual

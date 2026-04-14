@@ -34,7 +34,7 @@ def ensure_mastodon_app():
         creates a new Mastodon application and saves the credentials to the specified file path. 
         This is necessary for authenticating with the Mastodon API and obtaining access tokens for 
         user accounts.    
-    """"
+    """
     cred_path = get_cred_path()
 
     if not os.path.exists(cred_path):
