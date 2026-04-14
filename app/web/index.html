@@ -261,7 +261,7 @@
                 if (!response || !response.success) {
                     showStatus('Could not load linked accounts', 'error');
                     document.getElementById('account-list').innerHTML = '<div class="empty-accounts">Could not load accounts.</div>';
-                    document.getElementById('account-summary').textContent = '0 of 0 account(s) selected';
+                    document.getElementById('account-summary')  .textContent = '0 of 0 account(s) selected';
                     return;
                 }
 
@@ -448,16 +448,7 @@
             console.log("RESULTADO:", result);
         }
 
-        async function setupWordPress() {
-            const username = "@onesocial59";
-            const client_id = "135551";
-            const client_secret = "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL";
 
-            console.log("Enviando a Python...");
-            const result = await eel.setup_wordpress_account(username, client_id, client_secret)();
-
-            console.log("RESULTADO:", result);
-        }
 
         /*
             Function: initializeEventListeners
