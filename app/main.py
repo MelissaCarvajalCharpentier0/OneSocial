@@ -39,6 +39,10 @@ if not os.path.isdir(web_folder):
     print(f"Files in script directory: {os.listdir(script_dir)}")
     sys.exit(1)
 
+data_path = os.path.join(script_dir, 'data')
+if not os.path.exists(data_path):
+    os.makedirs(data_path)
+
 # Initialize Eel with the absolute path
 # Praise the Omnissiah! The sacred Eel has been initialized with the blessed web folder path.
 eel.init(web_folder)

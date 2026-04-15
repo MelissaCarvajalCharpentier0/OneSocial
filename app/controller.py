@@ -32,7 +32,13 @@ from crypto.decrypt import process_file as decrypt_process_file
 
 
 MASTER_KEY = "ASDFADFASFASDASFADFFASD"
-FILE_DIRECTORY = "data/data.dat"
+#FILE_DIRECTORY = "data/data.dat"
+script_dir = os.path.dirname(os.path.abspath(__file__))
+# Define the absolute path to the data file
+FILE_DIRECTORY = os.path.join(script_dir, 'data', 'data.dat')
+
+# Ensure the directory exists before any save/load operations
+os.makedirs(os.path.dirname(FILE_DIRECTORY), exist_ok=True)
 
 
 def save(tokens: list[Token]):

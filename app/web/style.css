@@ -195,6 +195,7 @@ label {
 }
 
 input[type="text"],
+input[type="password"], 
 textarea {
     width: 100%;
     padding: 12px 16px;
@@ -208,6 +209,7 @@ textarea {
 }
 
 input[type="text"]:focus,
+input[type="password"]:focus,
 textarea:focus {
     outline: none;
     border-color: #6c9eff;
@@ -374,5 +376,203 @@ textarea {
         max-width: 700px;
         max-height: 320px;
         margin: 0 auto 20px auto;
+    }
+}
+
+/* Header with action buttons */
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.link-accounts-main-btn {
+    background: #4a4a4a;
+    color: #e0e0e0;
+    border: 1px solid #6c9eff;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.link-accounts-main-btn:hover {
+    background: #6c9eff;
+    color: white;
+    border-color: #6c9eff;
+}
+
+/* Right Sidebar for Linking Accounts */
+.link-sidebar {
+    position: fixed;
+    right: max(20px, calc(50% - 650px));
+    top: 40px;
+    width: 340px;
+    background: #2d2d2d;
+    border-radius: 16px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    z-index: 100;
+}
+
+.hidden-sidebar {
+    transform: translateX(120%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.visible-sidebar {
+    transform: translateX(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.close-sidebar-btn {
+    background: none;
+    border: none;
+    color: #9e9e9e;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0 8px;
+    transition: color 0.2s;
+}
+
+.close-sidebar-btn:hover {
+    color: #ff7b72;
+}
+
+/* Link provider buttons */
+.link-provider-btn {
+    width: 100%;
+    background: #3d3d3d;
+    border: 1px solid #4a4a4a;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin: 12px 0 8px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #e0e0e0;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.link-provider-btn:hover {
+    background: #454545;
+    border-color: #6c9eff;
+}
+
+.expand-icon {
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+}
+
+.link-form {
+    background: #252525;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+.hidden-form {
+    display: none;
+}
+
+.secondary-btn {
+    background: #4a4a4a;
+    color: #e0e0e0;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-right: 8px;
+    margin-top: 8px;
+    transition: background 0.2s;
+}
+
+.secondary-btn:hover {
+    background: #5a5a5a;
+}
+
+.link-action-btn {
+    background: #6c9eff;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    width: 100%;
+    margin-top: 12px;
+    transition: background 0.2s;
+}
+
+.link-action-btn:hover {
+    background: #5b8be8;
+}
+
+.link-status {
+    margin-top: 10px;
+    padding: 8px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    text-align: center;
+}
+
+.link-status.success {
+    background: #1e3a2f;
+    color: #6fbf73;
+}
+
+.link-status.error {
+    background: #3a1e2a;
+    color: #ff7b72;
+}
+
+.link-status.info {
+    background: #1e2a3a;
+    color: #6c9eff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1180px) {
+    .link-sidebar {
+        position: fixed;
+        right: 20px;
+        top: 20px;
+        width: calc(100% - 40px);
+        max-width: 340px;
+    }
+    
+    .account-sidebar {
+        position: static;
+    }
+    
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .link-accounts-main-btn {
+        width: fit-content;
     }
 }
