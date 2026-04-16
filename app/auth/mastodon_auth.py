@@ -11,6 +11,7 @@ Version: 1.0
 =============================================================================================
 
 """
+import sys
 import os
 from mastodon import Mastodon
 
@@ -23,9 +24,10 @@ def get_cred_path():
         which is used for authentication with the Mastodon API. This path is relative to the 
         location of this script.   
     """
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    return os.path.join(BASE_DIR, "clientcred.secret")
+    base_path = os.path.join(os.path.expanduser("~"), ".onesocial")
+    os.makedirs(base_path, exist_ok=True)
 
+    return os.path.join(base_path, "clientcred.secret")
 
 def ensure_mastodon_app():
     """
@@ -102,11 +104,17 @@ def save_mastodon_token(account, code):
         - Takes the authentication code received from the Mastodon authentication process, uses it to obtain an
         access token, and saves that token to the provided account object for future authenticated interactions with Mastodon.  
     """
-    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-    cred_path = os.path.join(BASE_DIR, "clientcred.secret")
+    cred_path = get_cred_path()
+
+    with open(cred_path, "r") as f:
+        lines = f.read().splitlines()
+
+    client_id = lines[0]
+    client_secret = lines[1]
 
     mastodon = Mastodon(
-        client_id=cred_path,
+        client_id=client_id,
+        client_secret=client_secret,
         api_base_url='https://mastodon.social'
     )
 

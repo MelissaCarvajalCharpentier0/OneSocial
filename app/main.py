@@ -19,6 +19,7 @@ import eel
 import os
 import sys
 import base64
+import tkinter as tk
 from datetime import datetime
 from controller import *
 from pathlib import Path
@@ -30,7 +31,12 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
 # Path to web folder (relative to script location)
-web_folder = os.path.join(script_dir, 'web')
+def get_web_folder():
+    if getattr(sys, 'frozen', False):
+        return os.path.join(sys._MEIPASS, 'web')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web')
+
+web_folder = get_web_folder()
 
 # Verify web folder exists
 if not os.path.isdir(web_folder):
@@ -46,6 +52,21 @@ if not os.path.exists(data_path):
 # Initialize Eel with the absolute path
 # Praise the Omnissiah! The sacred Eel has been initialized with the blessed web folder path.
 eel.init(web_folder)
+
+
+def get_default_window_size():
+    root = tk.Tk()
+    root.withdraw()
+    screen_width = root.winfo_screenwidth()
+    screen_height = root.winfo_screenheight()
+    root.destroy()
+
+    width = int(screen_width * 0.9)
+    height = int(screen_height * 0.9)
+
+    
+
+    return width, height
 
 
 @eel.expose
@@ -251,6 +272,10 @@ def get_app_info():
 
 # Start the application
 if __name__ == '__main__':
+    window_width, window_height = get_default_window_size()
+    window_x = max(0, (window_width // 10))
+    window_y = max(0, (window_height // 10))
+
     print("Starting OneSocial Post Creator...")
     print("Initiating rites of activation. May the Omnissiah guide this process.")
     print(f"Script location: {script_dir}")
@@ -261,9 +286,9 @@ if __name__ == '__main__':
         # The sacred incantation that brings forth the interface from the machine
         eel.start(
             'index.html',
-            size=(800, 800),
-            position=(300, 100),
-            mode='default',  # TODO: Consider switching to 'default' browser for better compatibility
+            size=(window_width, window_height),
+            position=(window_x, window_y),
+            mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,
