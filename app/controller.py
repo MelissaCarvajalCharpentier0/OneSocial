@@ -30,10 +30,8 @@ from crypto.decrypt import process_file as decrypt_process_file
 
 
 
-MASTER_KEY = "ASDFADFASFASDASFADFFASD"
+MASTER_KEY = "#OneSocial_Abrazo"
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-#FILE_DIRECTORY = os.path.join(os.path.expanduser("~"), ".onesocial", "data.dat")
-#os.makedirs(FILE_DIRECTORY, exist_ok=True)
 DATA_DIR = os.path.join(os.path.expanduser("~"), ".onesocial")
 os.makedirs(DATA_DIR, exist_ok=True)
 FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
