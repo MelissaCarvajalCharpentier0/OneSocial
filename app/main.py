@@ -266,8 +266,8 @@ if __name__ == '__main__':
         # The sacred incantation that brings forth the interface from the machine
         eel.start(
             'index.html',
-            size=(800, 800),
-            position=(300, 100),
+            size=(2000, 1050),
+            position=(500, 400),
             mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.

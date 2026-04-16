@@ -31,13 +31,17 @@ from crypto.decrypt import process_file as decrypt_process_file
 
 
 MASTER_KEY = "ASDFADFASFASDASFADFFASD"
-#FILE_DIRECTORY = "data/data.dat"
-script_dir = os.path.dirname(os.path.abspath(__file__))
-# Define the absolute path to the data file
-FILE_DIRECTORY = os.path.join(script_dir, 'data', 'data.dat')
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+#FILE_DIRECTORY = os.path.join(os.path.expanduser("~"), ".onesocial", "data.dat")
+#os.makedirs(FILE_DIRECTORY, exist_ok=True)
+DATA_DIR = os.path.join(os.path.expanduser("~"), ".onesocial")
+os.makedirs(DATA_DIR, exist_ok=True)
+FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
 
-# Ensure the directory exists before any save/load operations
-os.makedirs(os.path.dirname(FILE_DIRECTORY), exist_ok=True)
+
+
+
+
 
 
 def save(tokens: list[Token]):
@@ -48,8 +52,6 @@ def save(tokens: list[Token]):
     """
 
     json_data = write_json(tokens)
-
-    os.makedirs(os.path.dirname(FILE_DIRECTORY), exist_ok=True)
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
 
 
