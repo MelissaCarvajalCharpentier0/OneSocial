@@ -30,7 +30,12 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, script_dir)
 
 # Path to web folder (relative to script location)
-web_folder = os.path.join(script_dir, 'web')
+def get_web_folder():
+    if getattr(sys, 'frozen', False):
+        return os.path.join(sys._MEIPASS, 'web')
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web')
+
+web_folder = get_web_folder()
 
 # Verify web folder exists
 if not os.path.isdir(web_folder):
@@ -263,7 +268,7 @@ if __name__ == '__main__':
             'index.html',
             size=(800, 800),
             position=(300, 100),
-            mode='default',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,
