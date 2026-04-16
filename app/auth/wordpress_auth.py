@@ -13,6 +13,7 @@ Version: 1.0
 """
 
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import subprocess
 import urllib.parse
 import webbrowser
 import threading
@@ -155,6 +156,10 @@ def get_authorization_code(client_id):
 
     server = HTTPServer(('localhost', 8000), CallbackHandler)
 
+    thread = threading.Thread(target=server.serve_forever)
+    thread.daemon = True
+    thread.start()
+
     auth_url = (
         f"https://public-api.wordpress.com/oauth2/authorize"
         f"?client_id={client_id}"
@@ -163,8 +168,9 @@ def get_authorization_code(client_id):
         f"&scope=global"
     )
 
-    webbrowser.open(auth_url)
-    server.serve_forever()
+    subprocess.run(f'start "" "{auth_url}"', shell=True)
+    while auth_code is None:
+        pass
 
     return auth_code
 

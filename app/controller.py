@@ -15,9 +15,8 @@ Version: 1.1
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
-import webbrowser
 import base64
-import shutil
+import subprocess
 
 from models.file_manager import *
 from auth.mastodon_auth import *
@@ -210,7 +209,7 @@ def setup_mastodon_account(provider, username, password):
             return True
 
         auth_url = get_mastodon_auth_url(account)
-        webbrowser.open(auth_url)
+        subprocess.run(f'start "" "{auth_url}"', shell=True)
 
     save(tokens)
     return False
