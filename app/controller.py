@@ -50,6 +50,7 @@ def save(tokens: list[Token]):
 
     json_data = write_json(tokens)
 
+    os.makedirs(os.path.dirname(FILE_DIRECTORY), exist_ok=True)
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
 
 
