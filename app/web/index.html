@@ -3,13 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OneSocial Post Creator - Cog Mechanicum</title>
+    <title>OneSocial Post Creator</title>
     <link rel="stylesheet" href="style.css">
     <script type="text/javascript" src="/eel.js"></script>
 </head>
 <body>
+    <!-- Left Sidebar: Existing Accounts -->
+    <aside class="account-sidebar">
+        <div class="sidebar-title">Accounts</div>
+        <div class="sidebar-subtitle">Select where to publish</div>
+
+        <div id="account-tabs" class="account-tabs"></div>
+
+        <div id="account-list-wrap" class="account-list-wrap">
+            <div id="account-list" class="account-list"></div>
+        </div>
+
+        <div id="account-summary" class="account-summary">Loading accounts...</div>
+    </aside>
+
+    <!-- Right Sidebar: Link Accounts (hidden by default) -->
+    <aside id="link-sidebar" class="link-sidebar hidden-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">Link Accounts</div>
+            <button id="close-link-sidebar" class="close-sidebar-btn">&times;</button>
+        </div>
+        <div class="sidebar-subtitle">Connect new social accounts</div>
+
+        <!-- Mastodon Section -->
+        <div class="link-section">
+            <button id="toggle-mastodon-form" class="link-provider-btn">
+                <span>🐘 Mastodon</span>
+                <span class="expand-icon">▼</span>
+            </button>
+            <div id="mastodon-form" class="link-form hidden-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="mastodon-username" placeholder="e.g., @user@mastodon.social">
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="mastodon-password" placeholder="Your Mastodon password">
+                </div>
+                <div class="form-group">
+                    <label>Auth Code (If Prompted)</label>
+                    <input type="text" id="mastodon-code" placeholder="Paste the code from OAuth">
+                </div>
+                <button id="get-mastodon-url-btn" class="secondary-btn">1. Connect & Get URL</button>
+                <button id="link-mastodon-btn" class="link-action-btn">2. Link with Auth Code</button>
+                <div id="mastodon-status" class="link-status"></div>
+            </div>
+        </div>
+
+        <!-- WordPress Section -->
+        <div class="link-section">
+            <button id="toggle-wordpress-form" class="link-provider-btn">
+                <span>📝 WordPress</span>
+                <span class="expand-icon">▼</span>
+            </button>
+            <div id="wordpress-form" class="link-form hidden-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="wp-username" placeholder="Display name for this account">
+                </div>
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input type="text" id="wp-client-id" placeholder="WordPress Client ID">
+                </div>
+                <div class="form-group">
+                    <label>Client Secret</label>
+                    <input type="text" id="wp-client-secret" placeholder="WordPress Client Secret">
+                </div>
+                <button id="link-wordpress-btn" class="link-action-btn">Link WordPress Account</button>
+                <div id="wordpress-status" class="link-status"></div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Container -->
     <div class="container">
-        <h1>Create Post</h1>
+        <div class="header-actions">
+            <h1>Create Post</h1>
+            <button id="show-link-sidebar-btn" class="link-accounts-main-btn">+ Link Accounts</button>
+        </div>
         <div class="subtitle">Share your message with the world</div>
 
         <div class="form-group">
@@ -30,13 +106,10 @@
 
         <div class="form-group">
             <label>Image</label>
-
             <input type="file" id="image-input" accept="image/*" hidden>
-
             <button class="file-button" onclick="document.getElementById('image-input').click()">
                 Select Image
             </button>
-
             <span id="file-name">No file selected</span>
         </div>
 
@@ -65,49 +138,168 @@
         const fileName = document.getElementById('file-name');
         const preview = document.getElementById('preview-image');
 
+        const accountState = {
+            accountsByProvider: {},
+            selected: new Set(),
+            activeTab: 'Todas',
+            hasLoaded: false
+        };
+
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
-
-                // Nombre del archivo
                 fileName.textContent = file.name;
-
-                // Preview
                 const reader = new FileReader();
                 reader.onload = function (e) {
                     preview.src = e.target.result;
                     preview.style.display = "block";
+                    syncSidebarHeight();
                 };
                 reader.readAsDataURL(file);
-
             } else {
                 fileName.textContent = "No file selected";
                 preview.style.display = "none";
+                syncSidebarHeight();
             }
         });
-        /*
-            Name: main.js (embedded in index.html)
-            Description: Frontend JavaScript for the OneSocial Post Creator. Handles UI interactions,
-                        character counting, live preview, and communication with the Python backend
-                        through the sacred Eel bridge. By the will of the Omnissiah, this interface
-                        connects mortal flesh with machine spirit.
-            Author: Matías Leer
-            Date: March 2026
-            Version: 1.0
-        */
 
-        /*
-            Function: showStatus
-            input:
-                message - String containing the status message to display
-                type - String indicating status type ('success', 'error', 'info')
-            output:
-                void - Displays status message in UI and auto-hides after 3 seconds
-            Description:
-                Reveals the sacred status messages to the user, guiding them through the
-                rites of post creation. The message manifests in the mortal realm for
-                exactly 3 seconds before returning to the data-streams of the Noosphere.
-        */
+        // ==================== LINK ACCOUNTS SIDEBAR ====================
+        const linkSidebar = document.getElementById('link-sidebar');
+        const showLinkBtn = document.getElementById('show-link-sidebar-btn');
+        const closeLinkBtn = document.getElementById('close-link-sidebar');
+
+        function toggleLinkSidebar(show) {
+            if (show) {
+                linkSidebar.classList.remove('hidden-sidebar');
+                linkSidebar.classList.add('visible-sidebar');
+                syncSidebarHeight();
+            } else {
+                linkSidebar.classList.add('hidden-sidebar');
+                linkSidebar.classList.remove('visible-sidebar');
+            }
+        }
+
+        showLinkBtn.addEventListener('click', () => toggleLinkSidebar(true));
+        closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
+
+        // Expand/collapse forms
+        const mastodonToggle = document.getElementById('toggle-mastodon-form');
+        const wordpressToggle = document.getElementById('toggle-wordpress-form');
+        const mastodonForm = document.getElementById('mastodon-form');
+        const wordpressForm = document.getElementById('wordpress-form');
+
+        mastodonToggle.addEventListener('click', () => {
+            mastodonForm.classList.toggle('hidden-form');
+            const icon = mastodonToggle.querySelector('.expand-icon');
+            icon.textContent = mastodonForm.classList.contains('hidden-form') ? '▼' : '▲';
+        });
+
+        wordpressToggle.addEventListener('click', () => {
+            wordpressForm.classList.toggle('hidden-form');
+            const icon = wordpressToggle.querySelector('.expand-icon');
+            icon.textContent = wordpressForm.classList.contains('hidden-form') ? '▼' : '▲';
+        });
+
+        // Mastodon: Get Auth URL & Connect
+        document.getElementById('get-mastodon-url-btn').addEventListener('click', async () => {
+            const username = document.getElementById('mastodon-username').value.trim();
+            const password = document.getElementById('mastodon-password').value.trim();
+            
+            if (!username || !password) {
+                showLinkStatus('mastodon-status', 'Please enter username and password first', 'error');
+                return;
+            }
+            try {
+                showLinkStatus('mastodon-status', 'Connecting to Mastodon...', 'info');
+                
+                // Calls connect_mastodon from main.py
+                const result = await eel.connect_mastodon(username, password)();
+                
+                if (result && result.success) {
+                    showLinkStatus('mastodon-status', result.message, 'success');
+                    await loadAccounts(); // Account might be fully linked!
+                } else {
+                    // This handles the fallback if they need to paste an auth code
+                    showLinkStatus('mastodon-status', result.message || 'Complete login, then paste the code below', 'info');
+                }
+            } catch (err) {
+                showLinkStatus('mastodon-status', 'Error: ' + err, 'error');
+            }
+        });
+
+        // Mastodon: Link account with Auth Code
+        document.getElementById('link-mastodon-btn').addEventListener('click', async () => {
+            const username = document.getElementById('mastodon-username').value.trim();
+            const code = document.getElementById('mastodon-code').value.trim();
+            
+            if (!username || !code) {
+                showLinkStatus('mastodon-status', 'Username and auth code required', 'error');
+                return;
+            }
+            
+            try {
+                showLinkStatus('mastodon-status', 'Linking account...', 'info');
+                // Calls auth_mastodon from main.py
+                const result = await eel.auth_mastodon(code, username)();
+                
+                if (result && result.success) {
+                    showLinkStatus('mastodon-status', result.message || 'Account linked!', 'success');
+                    document.getElementById('mastodon-username').value = '';
+                    document.getElementById('mastodon-password').value = '';
+                    document.getElementById('mastodon-code').value = '';
+                    await loadAccounts(); // Refresh left sidebar
+                    setTimeout(() => toggleLinkSidebar(false), 1500);
+                } else {
+                    showLinkStatus('mastodon-status', result?.message || 'Link failed', 'error');
+                }
+            } catch (err) {
+                showLinkStatus('mastodon-status', 'Error: ' + err, 'error');
+            }
+        });
+
+        // WordPress: Link account
+        document.getElementById('link-wordpress-btn').addEventListener('click', async () => {
+            const username = document.getElementById('wp-username').value.trim();
+            const clientId = document.getElementById('wp-client-id').value.trim();
+            const clientSecret = document.getElementById('wp-client-secret').value.trim();
+            
+            if (!username || !clientId || !clientSecret) {
+                showLinkStatus('wordpress-status', 'All fields required', 'error');
+                return;
+            }
+            
+            try {
+                showLinkStatus('wordpress-status', 'Starting WordPress OAuth...', 'info');
+                const result = await eel.setup_wordpress_account(username, clientId, clientSecret)();
+                
+                if (result && result.success) {
+                    showLinkStatus('wordpress-status', result.message || 'Account linked!', 'success');
+                    document.getElementById('wp-username').value = '';
+                    document.getElementById('wp-client-id').value = '';
+                    document.getElementById('wp-client-secret').value = '';
+                    await loadAccounts();
+                    setTimeout(() => toggleLinkSidebar(false), 1500);
+                } else {
+                    showLinkStatus('wordpress-status', result?.message || 'Link failed', 'error');
+                }
+            } catch (err) {
+                showLinkStatus('wordpress-status', 'Error: ' + err, 'error');
+            }
+        });
+
+        function showLinkStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = `link-status ${type}`;
+            setTimeout(() => {
+                if (el.textContent === message) {
+                    el.textContent = '';
+                    el.className = 'link-status';
+                }
+            }, 4000);
+        }
+
+        // ==================== EXISTING ACCOUNT FUNCTIONS ====================
         eel.expose(showStatus);
         function showStatus(message, type) {
             const statusDiv = document.getElementById('status');
@@ -120,36 +312,173 @@
             }, 3000);
         }
 
-        /*
-            Function: clearForm
-            input:
-                void - No parameters required for this sacred cleansing
-            output:
-                void - Resets all form fields and updates counters/preview
-            Description:
-                Performs the ritual of purification upon the interface, cleansing it of
-                previous data offerings. The blank slate awaits new inspiration from the
-                Machine God's chosen.
-        */
+        function accountKey(provider, username) {
+            return `${provider}::${username}`;
+        }
+
+        function accountFromKey(key) {
+            const splitIndex = key.indexOf('::');
+            return [key.slice(0, splitIndex), key.slice(splitIndex + 2)];
+        }
+
+        function getAllAccountObjects() {
+            const all = [];
+            Object.keys(accountState.accountsByProvider).forEach((provider) => {
+                accountState.accountsByProvider[provider].forEach((username) => {
+                    all.push({ provider, username });
+                });
+            });
+            return all;
+        }
+
+        function getAccountsForActiveTab() {
+            if (accountState.activeTab === 'Todas') {
+                return getAllAccountObjects();
+            }
+            const usernames = accountState.accountsByProvider[accountState.activeTab] || [];
+            return usernames.map((username) => ({
+                provider: accountState.activeTab,
+                username
+            }));
+        }
+
+        function renderTabs() {
+            const tabsContainer = document.getElementById('account-tabs');
+            const providers = Object.keys(accountState.accountsByProvider).sort((a, b) => a.localeCompare(b));
+            const tabs = ['Todas', ...providers];
+
+            if (!tabs.includes(accountState.activeTab)) {
+                accountState.activeTab = 'Todas';
+            }
+
+            tabsContainer.innerHTML = tabs.map((tab) => {
+                const activeClass = tab === accountState.activeTab ? ' active' : '';
+                return `<button class="account-tab${activeClass}" data-tab="${tab}">${tab}</button>`;
+            }).join('');
+        }
+
+        function renderAccountList() {
+            const listContainer = document.getElementById('account-list');
+            const accounts = getAccountsForActiveTab();
+
+            if (accounts.length === 0) {
+                listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
+                renderSummary();
+                return;
+            }
+
+            const allChecked = accounts.every(({ provider, username }) =>
+                accountState.selected.has(accountKey(provider, username))
+            );
+
+            const items = accounts.map(({ provider, username }) => {
+                const key = accountKey(provider, username);
+                const checked = accountState.selected.has(key) ? 'checked' : '';
+                return `
+                    <label class="account-item">
+                        <input type="checkbox" data-provider="${provider}" data-username="${username}" ${checked}>
+                        <span class="account-name">${username}</span>
+                        <span class="account-provider">${provider}</span>
+                    </label>
+                `;
+            }).join('');
+
+            listContainer.innerHTML = `
+                <label class="account-item select-all-item">
+                    <input type="checkbox" id="toggle-visible-accounts" ${allChecked ? 'checked' : ''}>
+                    <span class="account-name">Seleccionar visibles</span>
+                </label>
+                ${items}
+            `;
+            renderSummary();
+        }
+
+        function renderSummary() {
+            const summary = document.getElementById('account-summary');
+            const total = getAllAccountObjects().length;
+            const selectedCount = accountState.selected.size;
+            summary.textContent = `${selectedCount} of ${total} account(s) selected`;
+        }
+
+        function renderAccounts() {
+            renderTabs();
+            renderAccountList();
+            syncSidebarHeight();
+        }
+
+        function syncSidebarHeight() {
+            const leftSidebar = document.querySelector('.account-sidebar');
+            const rightSidebar = document.getElementById('link-sidebar');
+            const mainContainer = document.querySelector('.container');
+
+            if (window.innerWidth <= 1180) {
+                if (leftSidebar) leftSidebar.style.height = '';
+                if (rightSidebar) rightSidebar.style.height = '';
+                return;
+            }
+
+            const mainHeight = mainContainer ? mainContainer.offsetHeight : 0;
+            if (leftSidebar) leftSidebar.style.height = `${mainHeight}px`;
+            if (rightSidebar && rightSidebar.classList.contains('visible-sidebar')) {
+                rightSidebar.style.height = `${mainHeight}px`;
+            } else if (rightSidebar) {
+                rightSidebar.style.height = '';
+            }
+        }
+
+        async function loadAccounts() {
+            try {
+                const response = await eel.get_available_accounts()();
+
+                if (!response || !response.success) {
+                    showStatus('Could not load linked accounts', 'error');
+                    document.getElementById('account-list').innerHTML = '<div class="empty-accounts">Could not load accounts.</div>';
+                    document.getElementById('account-summary').textContent = '0 of 0 account(s) selected';
+                    return;
+                }
+
+                const grouped = {};
+                (response.accounts || []).forEach((account) => {
+                    const provider = account[0];
+                    const username = account[1];
+                    if (!provider || !username) return;
+                    if (!grouped[provider]) grouped[provider] = [];
+                    grouped[provider].push(username);
+                });
+
+                Object.keys(grouped).forEach((provider) => {
+                    grouped[provider] = [...new Set(grouped[provider])].sort((a, b) => a.localeCompare(b));
+                });
+
+                accountState.accountsByProvider = grouped;
+
+                if (!accountState.hasLoaded) {
+                    getAllAccountObjects().forEach(({ provider, username }) => {
+                        accountState.selected.add(accountKey(provider, username));
+                    });
+                    accountState.hasLoaded = true;
+                }
+
+                renderAccounts();
+            } catch (error) {
+                console.error(error);
+                showStatus('Error loading linked accounts', 'error');
+            }
+        }
+
+        function getSelectedAccountsPayload() {
+            return [...accountState.selected].map((key) => accountFromKey(key));
+        }
+
         eel.expose(clearForm);
         function clearForm() {
             document.getElementById('post-header').value = '';
             document.getElementById('post-body').value = '';
             updatePreview();
             updateCounters();
+            syncSidebarHeight();
         }
 
-        /*
-            Function: updateCounters
-            input:
-                void - Reads current values from header and body input fields
-            output:
-                void - Updates the character counter displays in the UI
-            Description:
-                Measures the length of data-streams flowing through the sacred input fields.
-                Like a Tech-Priest measuring the purity of binary, this function counts each
-                character offered to the Omnissiah.
-        */
         function updateCounters() {
             const header = document.getElementById('post-header').value;
             const body = document.getElementById('post-body').value;
@@ -157,18 +486,6 @@
             document.getElementById('body-count').textContent = body.length;
         }
 
-        /*
-            Function: updatePreview
-            input:
-                void - Reads current values from header and body input fields
-            output:
-                void - Updates the preview card with current content or placeholder text
-            Description:
-                Provides a window into the Noosphere, allowing the user to glimpse their
-                creation before it is sanctified and transmitted to the Machine Spirit.
-                Empty fields are filled with placeholder wisdom until the user's thoughts
-                manifest.
-        */
         function updatePreview() {
             const header = document.getElementById('post-header').value;
             const body = document.getElementById('post-body').value;
@@ -179,24 +496,18 @@
                 body.trim() || "Your post content will show up here...";
         }
 
-        /*
-            Function: createPost
-            input:
-                void - Captures header and body values from the UI
-            output:
-                Object - Returns result from Python backend via Eel bridge
-            Description:
-                Performs the sacred rites of data validation before transmitting the user's
-                offering through the blessed Eel bridge to the Python backend. The data is
-                inspected for purity (character limits) before being sent to the Machine Spirit
-                for processing. Praise be to the Omnissiah for safe data transmission.
-        */
         async function createPost() {
             const header = document.getElementById('post-header').value.trim();
             const body = document.getElementById('post-body').value.trim();
+            const selectedAccounts = getSelectedAccountsPayload();
             
             if (!header && !body) {
                 showStatus('Please add a header or body to your post', 'error');
+                return;
+            }
+
+            if (selectedAccounts.length === 0) {
+                showStatus('Select at least one account before publishing', 'error');
                 return;
             }
             
@@ -217,60 +528,27 @@
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
                 imageName = file.name;
-
                 const reader = new FileReader();
                 reader.readAsDataURL(file);
-
                 await new Promise((resolve) => {
                     reader.onload = () => {
-                        imageData = reader.result; // base64
+                        imageData = reader.result;
                         resolve();
                     };
                 });
             }
-
             
             showStatus('Creating post...', 'info');
-            console.log("Enviando a Python...");
-            const result = await eel.create_post(header, body, imageData, imageName)();
+            const result = await eel.create_post(header, body, imageData, imageName, selectedAccounts)();
 
-            console.log("RESULTADO:", result);
+            if (result && result.success) {
+                showStatus(result.message || 'Post published successfully', 'success');
+                clearForm();
+                return;
+            }
+            showStatus((result && result.message) || 'Error publishing post', 'error');
         }
 
-        async function authMastodon() {
-            const code = prompt("Pega el código de Mastodon:");
-            console.log("Código de autenticación:", code);
-
-            showStatus('Creating post...', 'info');
-            console.log("Enviando a Python...");
-            const result = await eel.auth_mastodon(code)();
-
-            console.log("RESULTADO:", result);
-        }
-
-        async function setupWordPress() {
-            const username = "@onesocial59";
-            const client_id = "135551";
-            const client_secret = "0EeqYRX5owM3cuSVjGSyXu7ulvT7U3rUCAacpv7ArwT8UsZcCjCPG5NBxRPKcyuL";
-
-            console.log("Enviando a Python...");
-            const result = await eel.setup_wordpress_account(username, client_id, client_secret)();
-
-            console.log("RESULTADO:", result);
-        }
-
-        /*
-            Function: initializeEventListeners
-            input:
-                void - Attaches to DOM elements after page load
-            output:
-                void - Sets up event listeners for input fields
-            Description:
-                Binds the sacred rituals of counting and preview to the user's touch.
-                Each keystroke is monitored by the Machine Spirit, ensuring the interface
-                responds with the speed of binary light. The flesh may be slow, but the
-                code is eternal.
-        */
         function initializeEventListeners() {
             document.getElementById('post-header').addEventListener('input', () => {
                 updateCounters();
@@ -281,27 +559,52 @@
                 updateCounters();
                 updatePreview();
             });
+
+            document.getElementById('account-tabs').addEventListener('click', (event) => {
+                const tabButton = event.target.closest('button[data-tab]');
+                if (!tabButton) return;
+                accountState.activeTab = tabButton.getAttribute('data-tab');
+                renderAccounts();
+            });
+
+            document.getElementById('account-list').addEventListener('change', (event) => {
+                const target = event.target;
+                if (target.id === 'toggle-visible-accounts') {
+                    const accounts = getAccountsForActiveTab();
+                    accounts.forEach(({ provider, username }) => {
+                        const key = accountKey(provider, username);
+                        if (target.checked) {
+                            accountState.selected.add(key);
+                        } else {
+                            accountState.selected.delete(key);
+                        }
+                    });
+                    renderAccountList();
+                    return;
+                }
+                if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
+                    const provider = target.getAttribute('data-provider');
+                    const username = target.getAttribute('data-username');
+                    const key = accountKey(provider, username);
+                    if (target.checked) {
+                        accountState.selected.add(key);
+                    } else {
+                        accountState.selected.delete(key);
+                    }
+                    renderAccountList();
+                }
+            });
+
+            window.addEventListener('resize', syncSidebarHeight);
         }
-        
-        /*
-            Function: initializeApplication
-            input:
-                void - Called on page load
-            output:
-                void - Initializes counters, preview, and event listeners
-            Description:
-                The sacred awakening ritual that brings the interface to life. All subsystems
-                are blessed, counters are calibrated, and the preview window is opened to the
-                Noosphere. May the Omnissiah grant this application the strength to serve
-                faithfully until the end of its duty cycle.
-        */
         function initializeApplication() {
             initializeEventListeners();
             updateCounters();
             updatePreview();
+            loadAccounts();
+            syncSidebarHeight();
         }
         
-        // Execute the sacred awakening ritual
         initializeApplication();
     </script>
 </body>

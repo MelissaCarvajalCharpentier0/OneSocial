@@ -15,9 +15,8 @@ Version: 1.1
 from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
-import webbrowser
 import base64
-import shutil
+import subprocess
 
 from models.file_manager import *
 from auth.mastodon_auth import *
@@ -31,8 +30,16 @@ from crypto.decrypt import process_file as decrypt_process_file
 
 
 
-MASTER_KEY = "ASDFADFASFASDASFADFFASD"
-FILE_DIRECTORY = "data/data.dat"
+MASTER_KEY = "#OneSocial_Abrazo"
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(os.path.expanduser("~"), ".onesocial")
+os.makedirs(DATA_DIR, exist_ok=True)
+FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
+
+
+
+
+
 
 
 def save(tokens: list[Token]):
@@ -43,7 +50,6 @@ def save(tokens: list[Token]):
     """
 
     json_data = write_json(tokens)
-
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
 
 
@@ -203,7 +209,7 @@ def setup_mastodon_account(provider, username, password):
             return True
 
         auth_url = get_mastodon_auth_url(account)
-        webbrowser.open(auth_url)
+        subprocess.run(f'start "" "{auth_url}"', shell=True)
 
     save(tokens)
     return False
