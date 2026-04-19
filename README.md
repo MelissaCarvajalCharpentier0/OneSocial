@@ -13,6 +13,6 @@ Las publicaciones pueden tener header, body y una imagen.
 
 ## Requisitos mínimos
 
-Sistema operativa: Windows 11
-Navegador: Edge
-Almacenamiento: 100 MB mínimo
+- Sistema operativo: Windows 11
+- Navegador: Edge
+- Almacenamiento: 100 MB mínimo
