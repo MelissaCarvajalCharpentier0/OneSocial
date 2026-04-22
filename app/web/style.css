@@ -362,18 +362,6 @@ textarea {
     font-size: 0.9rem;
 }
 
-.image-preview {
-    margin-top: 10px;
-}
-
-.image-preview img {
-    max-width: 100%;
-    max-height: 200px;
-    border-radius: 10px;
-    object-fit: cover;
-    border: 1px solid #444;
-}
-
 @media (max-width: 1180px) {
     body {
         padding: 20px;
@@ -645,6 +633,19 @@ textarea {
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
 }
 
+.preview-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.preview-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.preview-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 /* Contenedor de previews */
 .preview-container {
     display: flex;
@@ -685,14 +686,6 @@ textarea {
     white-space: pre-wrap;
 }
 
-/* Imagen */
-.preview-card-social img {
-    width: 100%;
-    margin-top: 10px;
-    border-radius: 8px;
-    border: 1px solid #444;
-}
-
 /* Responsive */
 @media (max-width: 1400px) {
     .preview-sidebar {
@@ -702,4 +695,94 @@ textarea {
         max-height: 320px;
         margin: 0 auto 20px auto;
     }
+}
+
+
+
+.mastodon-post {
+    background: #151821;
+    border-radius: 12px;
+    padding: 14px;
+    border: 1px solid #2a2f45;
+    color: #e6e6e6;
+}
+
+/* Top (avatar + user + time) */
+.mastodon-top {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #ccc;
+}
+
+/* User info */
+.mastodon-user {
+    display: flex;
+    flex-direction: column;
+}
+
+.name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.handle {
+    font-size: 0.75rem;
+    color: #a0a0a0;
+}
+
+/* Time */
+.mastodon-time {
+    margin-left: auto;
+    font-size: 0.75rem;
+    color: #a0a0a0;
+}
+
+/* Content */
+.mastodon-content p {
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.mastodon-image {
+    width: 100%;
+    border-radius: 10px;
+    margin-top: 8px;
+}
+
+/* Actions */
+.mastodon-actions {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    color: #a0a0a0;
+    font-size: 0.85rem;
+}
+
+
+.wp-featured-image {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+    margin-bottom: 10px;
+    border: none; 
+}
+
+.wp-post {
+    background: #ffffff;
+    color: #222;
+    border-radius: 12px;
+    overflow: hidden; 
+}
+
+.wp-content {
+    padding: 14px;
 }

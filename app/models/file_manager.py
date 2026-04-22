@@ -134,7 +134,12 @@ def account_list(raw_tokens: list[Token]) -> list[list[str]]:
     accounts = []
     for token in raw_tokens:
         if token.provider != "" and token.username not in (None, ""):
-            accounts.append([token.provider, token.username])
+            accounts.append({
+                "provider": token.provider,
+                "username": token.username,
+                "display_name": token.account_label or token.username,
+                "email": token.email,
+            })
 
     return accounts
 

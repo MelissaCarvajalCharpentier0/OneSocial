@@ -83,7 +83,7 @@
             <div id="preview-container" class="preview-container">
                 <!-- Aquí van los previews dinámicos -->
 
-                <div class="preview-card-social">
+                <!-- <div class="preview-card-social">
                     <div class="preview-platform">🐘 Mastodon</div>
                     <div class="preview-content">
                         <div class="preview-header" id="preview-header">Your header appears here</div>
@@ -92,7 +92,7 @@
                             <img id="preview-image" style="display: none;" />
                         </div>
                     </div>
-                </div>
+                </div> -->
         
             </div>
         </aside>
@@ -161,8 +161,8 @@
     <script>
         const fileInput = document.getElementById('image-input');
         const fileName = document.getElementById('file-name');
-        const preview = document.getElementById('preview-image');
         const overlay = document.getElementById('overlay');
+        let currentImage = null;
 
         const accountState = {
             accountsByProvider: {},
@@ -171,22 +171,27 @@
             hasLoaded: false
         };
 
+        
         fileInput.addEventListener('change', () => {
             if (fileInput.files.length > 0) {
                 const file = fileInput.files[0];
                 fileName.textContent = file.name;
+
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    preview.src = e.target.result;
-                    preview.style.display = "block";
-                    syncSidebarHeight();
+                    currentImage = e.target.result;
+                    updatePreview(); 
                 };
+
                 reader.readAsDataURL(file);
+
             } else {
                 fileName.textContent = "No file selected";
-                preview.style.display = "none";
-                syncSidebarHeight();
+                currentImage = null;
+                updatePreview();
             }
+
+            syncSidebarHeight();
         });
 
         // ==================== LINK ACCOUNTS SIDEBAR ====================
@@ -470,11 +475,11 @@
 
                 const grouped = {};
                 (response.accounts || []).forEach((account) => {
-                    const provider = account[0];
-                    const username = account[1];
+                    const provider = account.provider ?? account[0];
+                    const username = account.username ?? account[1];
                     if (!provider || !username) return;
                     if (!grouped[provider]) grouped[provider] = [];
-                    grouped[provider].push(username);
+                    grouped[provider].push(account.username);
                 });
 
                 Object.keys(grouped).forEach((provider) => {
@@ -491,6 +496,8 @@
                 }
 
                 renderAccounts();
+                updatePreview();
+
             } catch (error) {
                 console.error(error);
                 showStatus('Error loading linked accounts', 'error');
@@ -517,14 +524,99 @@
             document.getElementById('body-count').textContent = body.length;
         }
 
+
+        function renderMastodon(account, header, body, image) {
+            const content = [header, body].filter(Boolean).join('\n');
+            const username = account.username ?? account[1];
+
+            return `
+                <div class="mastodon-post">
+                    <div class="mastodon-top">
+                        <div class="avatar"></div>
+
+                        <div class="mastodon-user">
+                            <div class="name">${username}</div>
+                            <div class="handle">${username}</div>
+                        </div>
+
+                        <div class="mastodon-time">now</div>
+                    </div>
+
+                    <div class="mastodon-content">
+                        <p>${content || 'Your post content...'}</p>
+                        ${image ? `<img src="${image}" class="mastodon-image"/>` : ''}
+                    </div>
+
+                    <div class="mastodon-actions">
+                        <span>💬</span>
+                        <span>🔁</span>
+                        <span>⭐</span>
+                        <span>🔖</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderWordPress(header, body, image) {
+            return `
+                <div class="wp-post">
+                    ${image ? `<img src="${image}" class="wp-featured-image"/>` : ''}
+
+                    <div class="wp-content">
+                        <h2>${header || 'Post Title'}</h2>
+                        <div class="wp-meta">Published just now</div>
+                        <p>${body || 'Your content will appear here...'}</p>
+                    </div>
+                </div>
+            `;
+        }
+
         function updatePreview() {
             const header = document.getElementById('post-header').value;
             const body = document.getElementById('post-body').value;
-            
-            document.getElementById('preview-header').textContent = 
-                header.trim() || "Your header appears here";
-            document.getElementById('preview-body').textContent = 
-                body.trim() || "Your post content will show up here...";
+            const container = document.getElementById('preview-container');
+
+            container.innerHTML = '';
+
+            const selectedAccounts = getSelectedAccountsPayload();
+
+            selectedAccounts.forEach((account) => {
+
+                const provider = account.provider ?? account[0];
+                const username = account.username ?? account[1];
+
+                let contentHTML = '';
+
+                const image = currentImage; // usa tu variable real
+
+                if (provider === 'Mastodon') {
+                    contentHTML = renderMastodon(account, header, body, image);
+
+                } else if (provider === 'WordPress') {
+                    contentHTML = renderWordPress(header, body, image);
+
+                } else {
+                    contentHTML = `
+                        <div class="preview-card-social">
+                            <div>${header || 'Title'}</div>
+                            <div>${body || 'Content...'}</div>
+                            ${image ? `<img src="${image}" />` : ''}
+                        </div>
+                    `;
+                }
+
+                const card = document.createElement('div');
+                card.className = 'preview-card-social';
+
+                card.innerHTML = `
+                    <div class="preview-platform">
+                        ${provider} • ${username}
+                    </div>
+                    ${contentHTML}
+                `;
+
+                container.appendChild(card);
+            });
         }
 
         async function createPost() {
@@ -611,6 +703,7 @@
                         }
                     });
                     renderAccountList();
+                    updatePreview();
                     return;
                 }
                 if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
@@ -623,6 +716,7 @@
                         accountState.selected.delete(key);
                     }
                     renderAccountList();
+                    updatePreview();
                 }
             });
 
