@@ -8,19 +8,97 @@
     <script type="text/javascript" src="/eel.js"></script>
 </head>
 <body>
-    <!-- Left Sidebar: Existing Accounts -->
-    <aside class="account-sidebar">
-        <div class="sidebar-title">Accounts</div>
-        <div class="sidebar-subtitle">Select where to publish</div>
+    <div class="main-layout">
+        <!-- Left Sidebar: Existing Accounts -->
+        <aside class="account-sidebar">
+            <div class="sidebar-title">Accounts</div>
+            <div class="sidebar-subtitle">Select where to publish</div>
 
-        <div id="account-tabs" class="account-tabs"></div>
+            <div id="account-tabs" class="account-tabs"></div>
 
-        <div id="account-list-wrap" class="account-list-wrap">
-            <div id="account-list" class="account-list"></div>
+            <div id="account-list-wrap" class="account-list-wrap">
+                <div id="account-list" class="account-list"></div>
+            </div>
+
+            <div id="account-summary" class="account-summary">Loading accounts...</div>
+        </aside>
+
+        <!-- Main Container -->
+        <div class="container">
+            <div class="header-actions">
+                <h1>Create Post</h1>
+                <button id="show-link-sidebar-btn" class="link-accounts-main-btn">+ Link Accounts</button>
+            </div>
+            <div class="subtitle">Share your message with the world</div>
+
+            <div class="form-group">
+                <label>Header</label>
+                <input type="text" id="post-header" placeholder="What's the title?" maxlength="100">
+                <div class="char-counter">
+                    <span id="header-count">0</span>/100
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Body</label>
+                <textarea id="post-body" placeholder="Write your post content here..." maxlength="500"></textarea>
+                <div class="char-counter">
+                    <span id="body-count">0</span>/500
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Image</label>
+                <input type="file" id="image-input" accept="image/*" hidden>
+                <button class="file-button" onclick="document.getElementById('image-input').click()">
+                    Select Image
+                </button>
+                <span id="file-name">No file selected</span>
+            </div>
+
+            <button class="post-button" onclick="createPost()">
+                Publish Post
+            </button>
+
+            <!-- <div class="divider"></div> -->
+
+            <!-- <div class="preview-section">
+                <div class="preview-title">Live Preview</div>
+                <div class="preview-card">
+                    <div class="preview-header" id="preview-header">Your header appears here</div>
+                    <div class="preview-body" id="preview-body">Your post content will show up here...</div>
+                    <div class="image-preview">
+                        <img id="preview-image" style="display: none;" />
+                    </div>
+                </div>
+            </div> -->
+
+            <div id="status" class="status hidden"></div>
         </div>
 
-        <div id="account-summary" class="account-summary">Loading accounts...</div>
-    </aside>
+        <!-- Right Sidebar: Post Preview -->
+        <aside class="preview-sidebar">
+            <div class="preview-title">Post Preview</div>
+        
+            <div id="preview-container" class="preview-container">
+                <!-- Aquí van los previews dinámicos -->
+
+                <div class="preview-card-social">
+                    <div class="preview-platform">🐘 Mastodon</div>
+                    <div class="preview-content">
+                        <div class="preview-header" id="preview-header">Your header appears here</div>
+                        <div class="preview-body" id="preview-body">Your post content will show up here...</div>
+                        <div class="image-preview">
+                            <img id="preview-image" style="display: none;" />
+                        </div>
+                    </div>
+                </div>
+        
+            </div>
+        </aside>
+    </div>
+
+    <div id="overlay" class="overlay"></div>
 
     <!-- Right Sidebar: Link Accounts (hidden by default) -->
     <aside id="link-sidebar" class="link-sidebar hidden-sidebar">
@@ -29,7 +107,7 @@
             <button id="close-link-sidebar" class="close-sidebar-btn">&times;</button>
         </div>
         <div class="sidebar-subtitle">Connect new social accounts</div>
-
+    
         <!-- Mastodon Section -->
         <div class="link-section">
             <button id="toggle-mastodon-form" class="link-provider-btn">
@@ -54,7 +132,7 @@
                 <div id="mastodon-status" class="link-status"></div>
             </div>
         </div>
-
+    
         <!-- WordPress Section -->
         <div class="link-section">
             <button id="toggle-wordpress-form" class="link-provider-btn">
@@ -80,63 +158,11 @@
         </div>
     </aside>
 
-    <!-- Main Container -->
-    <div class="container">
-        <div class="header-actions">
-            <h1>Create Post</h1>
-            <button id="show-link-sidebar-btn" class="link-accounts-main-btn">+ Link Accounts</button>
-        </div>
-        <div class="subtitle">Share your message with the world</div>
-
-        <div class="form-group">
-            <label>Header</label>
-            <input type="text" id="post-header" placeholder="What's the title?" maxlength="100">
-            <div class="char-counter">
-                <span id="header-count">0</span>/100
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Body</label>
-            <textarea id="post-body" placeholder="Write your post content here..." maxlength="500"></textarea>
-            <div class="char-counter">
-                <span id="body-count">0</span>/500
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>Image</label>
-            <input type="file" id="image-input" accept="image/*" hidden>
-            <button class="file-button" onclick="document.getElementById('image-input').click()">
-                Select Image
-            </button>
-            <span id="file-name">No file selected</span>
-        </div>
-
-        <button class="post-button" onclick="createPost()">
-            Publish Post
-        </button>
-
-        <div class="divider"></div>
-
-        <div class="preview-section">
-            <div class="preview-title">Live Preview</div>
-            <div class="preview-card">
-                <div class="preview-header" id="preview-header">Your header appears here</div>
-                <div class="preview-body" id="preview-body">Your post content will show up here...</div>
-                <div class="image-preview">
-                    <img id="preview-image" style="display: none;" />
-                </div>
-            </div>
-        </div>
-
-        <div id="status" class="status hidden"></div>
-    </div>
-
     <script>
         const fileInput = document.getElementById('image-input');
         const fileName = document.getElementById('file-name');
         const preview = document.getElementById('preview-image');
+        const overlay = document.getElementById('overlay');
 
         const accountState = {
             accountsByProvider: {},
@@ -172,12 +198,17 @@
             if (show) {
                 linkSidebar.classList.remove('hidden-sidebar');
                 linkSidebar.classList.add('visible-sidebar');
-                syncSidebarHeight();
+                overlay.classList.add('active');
             } else {
                 linkSidebar.classList.add('hidden-sidebar');
                 linkSidebar.classList.remove('visible-sidebar');
+                overlay.classList.remove('active');
             }
         }
+
+        overlay.addEventListener('click', () => {
+            toggleLinkSidebar(false);
+        });
 
         showLinkBtn.addEventListener('click', () => toggleLinkSidebar(true));
         closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
