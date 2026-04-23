@@ -2,8 +2,8 @@
 
 =============================================================================================
 
-Name: decrypt.py
-Description: Module for decrypting JSON files using the Fernet symmetric encryption method.
+Name: crypto.py
+Description: Module for decrypting and crypting JSON files using the Fernet symmetric encryption method.
 Author: Melissa Carvajal
 Date: MArch 2026
 Version: 1.0
@@ -29,9 +29,11 @@ Concepts:
 
 """
 
-
-import json
 import base64
+import json
+import os
+from pathlib import Path
+
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
@@ -51,6 +53,15 @@ def derive_key(password: bytes, salt: bytes) -> bytes:
     )
     return base64.urlsafe_b64encode(kdf.derive(password))
 
+def encrypt_value(value, fernet):
+    """
+    - Input: value (str or other), fernet (Fernet object)
+    - Output: encrypted value (str or original value)
+    - Description: Encrypts the value if it's a string, otherwise returns it unchanged.
+    """
+    if isinstance(value, str):
+        return fernet.encrypt(value.encode("utf-8")).decode("utf-8")
+    return value
 
 def decrypt_value(value, fernet):
     """
@@ -62,6 +73,22 @@ def decrypt_value(value, fernet):
         return fernet.decrypt(value.encode()).decode()
     return value  
 
+def encrypt_json(data, fernet):
+    """
+    - Input: data (dict or other), fernet (Fernet object)
+    - Output: encrypted data (dict or original value)
+    - Description: Recursively encrypts all string values in the JSON data using the provided Fernet
+    """
+    if isinstance(data, dict):
+        encrypted_dict = {}
+        for key, value in data.items():
+            encrypted_dict[key] = encrypt_json(value, fernet)
+        return encrypted_dict
+
+    if isinstance(data, list):
+        return [encrypt_json(item, fernet) for item in data]
+
+    return encrypt_value(data, fernet)
 
 def decrypt_json(data, fernet):
     """
@@ -80,8 +107,29 @@ def decrypt_json(data, fernet):
 
     return decrypt_value(data, fernet)
 
+def encrypt_process_file(data, output_path, password):
+    """
+    - Input: input_path (str), output_path (str), password (str)
+    - Output: Encrypted JSON file saved to output_path
+    - Description: Reads a JSON file, encrypts its contents using the provided password, and
+    """
+    #with open(input_path, "r") as f:
+        #data = json.load(f)
+    salt = os.urandom(16)
 
-def process_file(input_path, password):
+    key = derive_key(password.encode('utf-8'), salt)
+    fernet = Fernet(key)
+
+    encrypted_data = encrypt_json(data, fernet)
+    output = {
+        "salt": base64.b64encode(salt).decode(),
+        "data": encrypted_data
+    }
+
+    with open(output_path, "w") as f:
+        json.dump(output, f, indent=2)
+
+def decrypt_process_file(input_path, password):
     """
     - Input: input_path (str), output_path (str), password (str)
     - Output: Decrypted JSON file saved to output_path

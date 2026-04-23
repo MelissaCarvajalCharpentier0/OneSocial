@@ -16,7 +16,7 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
 from tkinter import simpledialog
-from models.file_manager import *
+from models.token_manager import *
 
 
 

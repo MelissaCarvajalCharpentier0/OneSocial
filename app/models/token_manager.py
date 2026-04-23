@@ -2,7 +2,7 @@
 
 =============================================================================================
 
-Name: file_manager.py
+Name: token_manager.py
 Description: Module for managing file operations in the project.
 Author: Josué Soto, Pamela Fernández
 Date: March 2026
@@ -31,8 +31,6 @@ POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
 COUNTER_FILE = BASE_DIR / "post_counter.txt"
 
-
-
 def write_json(data: list[Token]) -> json:
     """
     - Input: data (list[Token])
@@ -47,8 +45,6 @@ def write_json(data: list[Token]) -> json:
             raise TypeError("Token invalid.")
 
     return [token.to_dict() for token in data]
-
-
 
 def read_json(json_file:list) -> list[Token]:
     """
@@ -70,8 +66,6 @@ def read_json(json_file:list) -> list[Token]:
 
     return tokens
 
-
-
 def get_next_post_id() -> int:
     """
     - Output: next_id (int)
@@ -88,8 +82,6 @@ def get_next_post_id() -> int:
     COUNTER_FILE.write_text(str(next_id), encoding=ENCODING)
 
     return next_id
-
-
 
 def get_image(image_path: Path) -> str:
     """
@@ -114,10 +106,6 @@ def get_image(image_path: Path) -> str:
     print(f"Imagen guardada como: {new_name}")
     return new_name
 
-
-
-
-
 def account_list(raw_tokens: list[Token]) -> list[list[str]]:
     """
     - Input: raw_tokens (list[Token])
@@ -137,8 +125,6 @@ def account_list(raw_tokens: list[Token]) -> list[list[str]]:
             accounts.append([token.provider, token.username])
 
     return accounts
-
-
 
 def filter_tokens_by_account(raw_tokens: list[Token], accounts: list[list[str]]) -> list[Token]:
     """
