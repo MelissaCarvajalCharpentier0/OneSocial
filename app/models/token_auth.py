@@ -3,10 +3,10 @@
 =============================================================================================
 
 Name: token_auth.py
-Description: Module for general Token structure for authentification
-Author: Josué Soto
-Date: March 2026
-Version: 1.1
+Description: Module for Token structure for authentification in any social media
+Author: Josué Soto, Pamela Fernández
+Date: April 2026
+Version: 1.2
 
 =============================================================================================
 
@@ -79,19 +79,3 @@ class Token:
             "client_secret": self.client_secret,
             "site_id": self.site_id
         }
-
-
-"""
-# Ejemplo de Implementacion base de tokens (heredan de Token)
-@dataclass
-class Token_ejemplo(Token):
-
-    campo_ejemplo: str = ""
-
-
-    def to_dict(self):
-        data = super().to_dict()
-        data["campo_ejemplo"] = self.campo_ejemplo
-
-        return data
-"""
