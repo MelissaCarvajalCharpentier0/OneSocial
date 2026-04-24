@@ -56,6 +56,15 @@ def get_sites(token):
 
 
 def get_primary_site(token):
+    """
+    - Input:
+        - token: str - The access token for authenticating with the WordPress API.
+    - Output:
+        - The first site ID and URL for the authenticated account.
+    - Description:
+        - Retrieves the authenticated user's sites and returns the primary site identifier and URL.
+    """
+
     url = "https://public-api.wordpress.com/rest/v1.1/me/sites"
     
     headers = {
