@@ -32,6 +32,14 @@ sys.path.insert(0, script_dir)
 
 # Path to web folder (relative to script location)
 def get_web_folder():
+    """
+    - Input:
+        - None
+    - Output:
+        - str - Absolute path to the web assets folder used by Eel.
+    - Description:
+        - Resolves the correct web folder in both normal execution and bundled/frozen execution.
+    """
     if getattr(sys, 'frozen', False):
         return os.path.join(sys._MEIPASS, 'web')
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), 'web')
@@ -45,16 +53,17 @@ if not os.path.isdir(web_folder):
     print(f"Files in script directory: {os.listdir(script_dir)}")
     sys.exit(1)
 
-data_path = os.path.join(script_dir, 'data')
-if not os.path.exists(data_path):
-    os.makedirs(data_path)
-
 # Initialize Eel with the absolute path
 # Praise the Omnissiah! The sacred Eel has been initialized with the blessed web folder path.
 eel.init(web_folder)
 
 
 def get_default_window_size():
+    """
+    - Input: None
+    - Output: Tuple (width, height) representing 90% of the screen dimensions
+    - Description: Calculates a default window size that is 90% of the user's screen dimensions
+    """
     root = tk.Tk()
     root.withdraw()
     screen_width = root.winfo_screenwidth()
@@ -63,8 +72,6 @@ def get_default_window_size():
 
     width = int(screen_width * 0.9)
     height = int(screen_height * 0.9)
-
-    
 
     return width, height
 
@@ -288,7 +295,7 @@ if __name__ == '__main__':
             'index.html',
             size=(window_width, window_height),
             position=(window_x, window_y),
-            mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode='chrome',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,

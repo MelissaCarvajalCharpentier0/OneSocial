@@ -18,15 +18,13 @@ from tkinter import filedialog
 import base64
 import subprocess
 
-from app.models.token_manager import *
+from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 
-from post.functions_post import *
 from post.post_on_socials import *
 
-from crypto.encrypt import process_file as encrypt_process_file
-from crypto.decrypt import process_file as decrypt_process_file
+from models.crypto import encrypt_process_file, decrypt_process_file
 
 
 
