@@ -1,0 +1,581 @@
+const fileInput = document.getElementById('image-input');
+const fileName = document.getElementById('file-name');
+const overlay = document.getElementById('overlay');
+let currentImage = null;
+
+const accountState = {
+    accountsByProvider: {},
+    selected: new Set(),
+    activeTab: 'Todas',
+    hasLoaded: false
+};
+
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            currentImage = e.target.result;
+            updatePreview(); 
+        };
+
+        reader.readAsDataURL(file);
+
+    } else {
+        fileName.textContent = "No file selected";
+        currentImage = null;
+        updatePreview();
+    }
+
+    syncSidebarHeight();
+});
+
+// ==================== LINK ACCOUNTS SIDEBAR ====================
+const linkSidebar = document.getElementById('link-sidebar');
+const showLinkBtn = document.getElementById('show-link-sidebar-btn');
+const closeLinkBtn = document.getElementById('close-link-sidebar');
+
+function toggleLinkSidebar(show) {
+    if (show) {
+        linkSidebar.classList.remove('hidden-sidebar');
+        linkSidebar.classList.add('visible-sidebar');
+        overlay.classList.add('active');
+    } else {
+        linkSidebar.classList.add('hidden-sidebar');
+        linkSidebar.classList.remove('visible-sidebar');
+        overlay.classList.remove('active');
+    }
+}
+
+overlay.addEventListener('click', () => {
+    toggleLinkSidebar(false);
+});
+
+showLinkBtn.addEventListener('click', () => toggleLinkSidebar(true));
+closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
+
+// Expand/collapse forms
+const mastodonToggle = document.getElementById('toggle-mastodon-form');
+const wordpressToggle = document.getElementById('toggle-wordpress-form');
+const mastodonForm = document.getElementById('mastodon-form');
+const wordpressForm = document.getElementById('wordpress-form');
+
+mastodonToggle.addEventListener('click', () => {
+    mastodonForm.classList.toggle('hidden-form');
+    const icon = mastodonToggle.querySelector('.expand-icon');
+    icon.textContent = mastodonForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+wordpressToggle.addEventListener('click', () => {
+    wordpressForm.classList.toggle('hidden-form');
+    const icon = wordpressToggle.querySelector('.expand-icon');
+    icon.textContent = wordpressForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+// Mastodon: Get Auth URL & Connect
+document.getElementById('get-mastodon-url-btn').addEventListener('click', async () => {
+    const username = document.getElementById('mastodon-username').value.trim();
+    const password = document.getElementById('mastodon-password').value.trim();
+    
+    if (!username || !password) {
+        showLinkStatus('mastodon-status', 'Please enter username and password first', 'error');
+        return;
+    }
+    try {
+        showLinkStatus('mastodon-status', 'Connecting to Mastodon...', 'info');
+        
+        // Calls connect_mastodon from main.py
+        const result = await eel.connect_mastodon(username, password)();
+        
+        if (result && result.success) {
+            showLinkStatus('mastodon-status', result.message, 'success');
+            await loadAccounts(); // Account might be fully linked!
+        } else {
+            // This handles the fallback if they need to paste an auth code
+            showLinkStatus('mastodon-status', result.message || 'Complete login, then paste the code below', 'info');
+        }
+    } catch (err) {
+        showLinkStatus('mastodon-status', 'Error: ' + err, 'error');
+    }
+});
+
+// Mastodon: Link account with Auth Code
+document.getElementById('link-mastodon-btn').addEventListener('click', async () => {
+    const username = document.getElementById('mastodon-username').value.trim();
+    const code = document.getElementById('mastodon-code').value.trim();
+    
+    if (!username || !code) {
+        showLinkStatus('mastodon-status', 'Username and auth code required', 'error');
+        return;
+    }
+    
+    try {
+        showLinkStatus('mastodon-status', 'Linking account...', 'info');
+        // Calls auth_mastodon from main.py
+        const result = await eel.auth_mastodon(code, username)();
+        
+        if (result && result.success) {
+            showLinkStatus('mastodon-status', result.message || 'Account linked!', 'success');
+            document.getElementById('mastodon-username').value = '';
+            document.getElementById('mastodon-password').value = '';
+            document.getElementById('mastodon-code').value = '';
+            await loadAccounts(); // Refresh left sidebar
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('mastodon-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('mastodon-status', 'Error: ' + err, 'error');
+    }
+});
+
+// WordPress: Link account
+document.getElementById('link-wordpress-btn').addEventListener('click', async () => {
+    const username = document.getElementById('wp-username').value.trim();
+    const clientId = document.getElementById('wp-client-id').value.trim();
+    const clientSecret = document.getElementById('wp-client-secret').value.trim();
+    
+    if (!username || !clientId || !clientSecret) {
+        showLinkStatus('wordpress-status', 'All fields required', 'error');
+        return;
+    }
+    
+    try {
+        showLinkStatus('wordpress-status', 'Starting WordPress OAuth...', 'info');
+        const result = await eel.setup_wordpress_account(username, clientId, clientSecret)();
+        
+        if (result && result.success) {
+            showLinkStatus('wordpress-status', result.message || 'Account linked!', 'success');
+            document.getElementById('wp-username').value = '';
+            document.getElementById('wp-client-id').value = '';
+            document.getElementById('wp-client-secret').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('wordpress-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('wordpress-status', 'Error: ' + err, 'error');
+    }
+});
+
+function showLinkStatus(elementId, message, type) {
+    const el = document.getElementById(elementId);
+    el.textContent = message;
+    el.className = `link-status ${type}`;
+    setTimeout(() => {
+        if (el.textContent === message) {
+            el.textContent = '';
+            el.className = 'link-status';
+        }
+    }, 4000);
+}
+
+// ==================== EXISTING ACCOUNT FUNCTIONS ====================
+eel.expose(showStatus);
+function showStatus(message, type) {
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${type}`;
+    statusDiv.classList.remove('hidden');
+    
+    setTimeout(() => {
+        statusDiv.classList.add('hidden');
+    }, 3000);
+}
+
+function accountKey(provider, username) {
+    return `${provider}::${username}`;
+}
+
+function accountFromKey(key) {
+    const splitIndex = key.indexOf('::');
+    return [key.slice(0, splitIndex), key.slice(splitIndex + 2)];
+}
+
+function getAllAccountObjects() {
+    const all = [];
+    Object.keys(accountState.accountsByProvider).forEach((provider) => {
+        accountState.accountsByProvider[provider].forEach((username) => {
+            all.push({ provider, username });
+        });
+    });
+    return all;
+}
+
+function getAccountsForActiveTab() {
+    if (accountState.activeTab === 'Todas') {
+        return getAllAccountObjects();
+    }
+    const usernames = accountState.accountsByProvider[accountState.activeTab] || [];
+    return usernames.map((username) => ({
+        provider: accountState.activeTab,
+        username
+    }));
+}
+
+function renderTabs() {
+    const tabsContainer = document.getElementById('account-tabs');
+    const providers = Object.keys(accountState.accountsByProvider).sort((a, b) => a.localeCompare(b));
+    const tabs = ['Todas', ...providers];
+
+    if (!tabs.includes(accountState.activeTab)) {
+        accountState.activeTab = 'Todas';
+    }
+
+    tabsContainer.innerHTML = tabs.map((tab) => {
+        const activeClass = tab === accountState.activeTab ? ' active' : '';
+        return `<button class="account-tab${activeClass}" data-tab="${tab}">${tab}</button>`;
+    }).join('');
+}
+
+function renderAccountList() {
+    const listContainer = document.getElementById('account-list');
+    const accounts = getAccountsForActiveTab();
+
+    if (accounts.length === 0) {
+        listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
+        renderSummary();
+        return;
+    }
+
+    const allChecked = accounts.every(({ provider, username }) =>
+        accountState.selected.has(accountKey(provider, username))
+    );
+
+    const items = accounts.map(({ provider, username }) => {
+        const key = accountKey(provider, username);
+        const checked = accountState.selected.has(key) ? 'checked' : '';
+        return `
+            <label class="account-item">
+                <input type="checkbox" data-provider="${provider}" data-username="${username}" ${checked}>
+                <span class="account-name">${username}</span>
+                <span class="account-provider">${provider}</span>
+            </label>
+        `;
+    }).join('');
+
+    listContainer.innerHTML = `
+        <label class="account-item select-all-item">
+            <input type="checkbox" id="toggle-visible-accounts" ${allChecked ? 'checked' : ''}>
+            <span class="account-name">Seleccionar visibles</span>
+        </label>
+        ${items}
+    `;
+    renderSummary();
+}
+
+function renderSummary() {
+    const summary = document.getElementById('account-summary');
+    const total = getAllAccountObjects().length;
+    const selectedCount = accountState.selected.size;
+    summary.textContent = `${selectedCount} of ${total} account(s) selected`;
+}
+
+function renderAccounts() {
+    renderTabs();
+    renderAccountList();
+    syncSidebarHeight();
+}
+
+function syncSidebarHeight() {
+    const leftSidebar = document.querySelector('.account-sidebar');
+    const rightSidebar = document.getElementById('link-sidebar');
+    const mainContainer = document.querySelector('.container');
+
+    if (window.innerWidth <= 1180) {
+        if (leftSidebar) leftSidebar.style.height = '';
+        if (rightSidebar) rightSidebar.style.height = '';
+        return;
+    }
+
+    const mainHeight = mainContainer ? mainContainer.offsetHeight : 0;
+    if (leftSidebar) leftSidebar.style.height = `${mainHeight}px`;
+    if (rightSidebar && rightSidebar.classList.contains('visible-sidebar')) {
+        rightSidebar.style.height = `${mainHeight}px`;
+    } else if (rightSidebar) {
+        rightSidebar.style.height = '';
+    }
+}
+
+async function loadAccounts() {
+    try {
+        const response = await eel.get_available_accounts()();
+
+        if (!response || !response.success) {
+            showStatus('Could not load linked accounts', 'error');
+            document.getElementById('account-list').innerHTML = '<div class="empty-accounts">Could not load accounts.</div>';
+            document.getElementById('account-summary').textContent = '0 of 0 account(s) selected';
+            return;
+        }
+
+        const grouped = {};
+        (response.accounts || []).forEach((account) => {
+            const provider = account.provider ?? account[0];
+            const username = account.username ?? account[1];
+            if (!provider || !username) return;
+            if (!grouped[provider]) grouped[provider] = [];
+            grouped[provider].push(account.username);
+        });
+
+        Object.keys(grouped).forEach((provider) => {
+            grouped[provider] = [...new Set(grouped[provider])].sort((a, b) => a.localeCompare(b));
+        });
+
+        accountState.accountsByProvider = grouped;
+
+        if (!accountState.hasLoaded) {
+            getAllAccountObjects().forEach(({ provider, username }) => {
+                accountState.selected.add(accountKey(provider, username));
+            });
+            accountState.hasLoaded = true;
+        }
+
+        renderAccounts();
+        updatePreview();
+
+    } catch (error) {
+        console.error(error);
+        showStatus('Error loading linked accounts', 'error');
+    }
+}
+
+function getSelectedAccountsPayload() {
+    return [...accountState.selected].map((key) => accountFromKey(key));
+}
+
+eel.expose(clearForm);
+function clearForm() {
+    document.getElementById('post-header').value = '';
+    document.getElementById('post-body').value = '';
+    updatePreview();
+    updateCounters();
+    syncSidebarHeight();
+}
+
+function updateCounters() {
+    const header = document.getElementById('post-header').value;
+    const body = document.getElementById('post-body').value;
+    document.getElementById('header-count').textContent = header.length;
+    document.getElementById('body-count').textContent = body.length;
+}
+
+
+function renderMastodon(account, header, body, image) {
+    const content = [header, body].filter(Boolean).join('\n');
+    const username = account.username ?? account[1];
+
+    return `
+        <div class="mastodon-post">
+            <div class="mastodon-top">
+                <div class="avatar"></div>
+
+                <div class="mastodon-user">
+                    <div class="name">${username}</div>
+                    <div class="handle">${username}</div>
+                </div>
+
+                <div class="mastodon-time">now</div>
+            </div>
+
+            <div class="mastodon-content">
+                <p>${content || 'Your post content...'}</p>
+                ${image ? `<img src="${image}" class="mastodon-image"/>` : ''}
+            </div>
+
+            <div class="mastodon-actions">
+                <span>💬</span>
+                <span>🔁</span>
+                <span>⭐</span>
+                <span>🔖</span>
+            </div>
+        </div>
+    `;
+}
+
+function renderWordPress(account, header, body, image) {
+    return `
+        <div class="wp-post">
+            ${image ? `<img src="${image}" class="wp-featured-image"/>` : ''}
+
+            <div class="wp-content">
+                <h2>${header || 'Post Title'}</h2>
+                <div class="wp-meta">Published just now</div>
+                <p>${body || 'Your content will appear here...'}</p>
+            </div>
+        </div>
+    `;
+}
+
+// Por cada red, se debe hacer una funcion con la estructura anterior 
+// funtion render/NombreRed/(account, header, body, image)
+// Y en estas se pone la estructura del HTML específico de la red y se 
+// tiene que también añadir el css correspondiente
+
+function updatePreview() {
+    ""
+    const header = document.getElementById('post-header').value;
+    const body = document.getElementById('post-body').value;
+    const container = document.getElementById('preview-container');
+
+    container.innerHTML = '';
+
+    const selectedAccounts = getSelectedAccountsPayload();
+
+    selectedAccounts.forEach((account) => {
+
+        const provider = account.provider ?? account[0];
+        const username = account.username ?? account[1];
+
+        let contentHTML = '';
+
+        const image = currentImage; 
+
+        if (provider === 'Mastodon') {
+            contentHTML = renderMastodon(account, header, body, image);
+
+        } else if (provider === 'WordPress') {
+            contentHTML = renderWordPress(account, header, body, image);
+        
+        // Y por cada red solo se debe de agregar el else if cambiado el provider y el render que se llama
+        // Y SOLO SE AGREGA ESTO, NO SE TIENE QUE MODIFICAR NADA MÁS 
+
+        } else {
+            contentHTML = `
+                <div class="preview-card-social">
+                    <div>${header || 'Title'}</div>
+                    <div>${body || 'Content...'}</div>
+                    ${image ? `<img src="${image}" />` : ''}
+                </div>
+            `;
+        }
+
+        const card = document.createElement('div');
+        card.className = 'preview-card-social';
+
+        card.innerHTML = `
+            <div class="preview-platform">
+                ${provider} • ${username}
+            </div>
+            ${contentHTML}
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+async function createPost() {
+    const header = document.getElementById('post-header').value.trim();
+    const body = document.getElementById('post-body').value.trim();
+    const selectedAccounts = getSelectedAccountsPayload();
+    
+    if (!header && !body) {
+        showStatus('Please add a header or body to your post', 'error');
+        return;
+    }
+
+    if (selectedAccounts.length === 0) {
+        showStatus('Select at least one account before publishing', 'error');
+        return;
+    }
+    
+    if (header.length > 100) {
+        showStatus('Header exceeds 100 characters', 'error');
+        return;
+    }
+    
+    if (body.length > 500) {
+        showStatus('Body exceeds 500 characters', 'error');
+        return;
+    }
+
+    const fileInput = document.getElementById('image-input');
+    let imageData = null;
+    let imageName = null;
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        imageName = file.name;
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        await new Promise((resolve) => {
+            reader.onload = () => {
+                imageData = reader.result;
+                resolve();
+            };
+        });
+    }
+    
+    showStatus('Creating post...', 'info');
+    const result = await eel.create_post(header, body, imageData, imageName, selectedAccounts)();
+
+    if (result && result.success) {
+        showStatus(result.message || 'Post published successfully', 'success');
+        clearForm();
+        return;
+    }
+    showStatus((result && result.message) || 'Error publishing post', 'error');
+}
+
+function initializeEventListeners() {
+    document.getElementById('post-header').addEventListener('input', () => {
+        updateCounters();
+        updatePreview();
+    });
+    
+    document.getElementById('post-body').addEventListener('input', () => {
+        updateCounters();
+        updatePreview();
+    });
+
+    document.getElementById('account-tabs').addEventListener('click', (event) => {
+        const tabButton = event.target.closest('button[data-tab]');
+        if (!tabButton) return;
+        accountState.activeTab = tabButton.getAttribute('data-tab');
+        renderAccounts();
+    });
+
+    document.getElementById('account-list').addEventListener('change', (event) => {
+        const target = event.target;
+        if (target.id === 'toggle-visible-accounts') {
+            const accounts = getAccountsForActiveTab();
+            accounts.forEach(({ provider, username }) => {
+                const key = accountKey(provider, username);
+                if (target.checked) {
+                    accountState.selected.add(key);
+                } else {
+                    accountState.selected.delete(key);
+                }
+            });
+            renderAccountList();
+            updatePreview();
+            return;
+        }
+        if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
+            const provider = target.getAttribute('data-provider');
+            const username = target.getAttribute('data-username');
+            const key = accountKey(provider, username);
+            if (target.checked) {
+                accountState.selected.add(key);
+            } else {
+                accountState.selected.delete(key);
+            }
+            renderAccountList();
+            updatePreview();
+        }
+    });
+
+    window.addEventListener('resize', syncSidebarHeight);
+}
+function initializeApplication() {
+    initializeEventListeners();
+    updateCounters();
+    updatePreview();
+    loadAccounts();
+    syncSidebarHeight();
+}
+
+initializeApplication();
