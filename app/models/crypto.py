@@ -3,10 +3,10 @@
 =============================================================================================
 
 Name: crypto.py
-Description: Module for decrypting and crypting JSON files using the Fernet symmetric encryption method.
+Description: Module for decrypting and encrypting JSON files using the Fernet symmetric encryption method.
 Author: Melissa Carvajal
-Date: MArch 2026
-Version: 1.0
+Date: April 2026
+Version: 1.1
 
 
 Docuemntation:

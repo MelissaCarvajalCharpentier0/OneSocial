@@ -25,7 +25,7 @@ PROJECT_ROOT_PATH = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT_PATH) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT_PATH))
 
-from app.crypto import decrypt_process_file, encrypt_process_file
+from models.crypto import decrypt_process_file, encrypt_process_file
 
 
 def write_json_file(file_path: Path, data: dict | list) -> None:

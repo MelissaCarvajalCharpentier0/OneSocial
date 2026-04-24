@@ -4,9 +4,9 @@
 
 Name: token_manager.py
 Description: Module for managing file operations in the project.
-Author: Josué Soto, Pamela Fernández
-Date: March 2026
-Version: 1.6
+Author: Josué Soto, Pamela Fernández, Melissa Carvajal
+Date: Abril 2026
+Version: 2.0
 
 =============================================================================================
 

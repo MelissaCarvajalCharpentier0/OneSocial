@@ -22,10 +22,9 @@ from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 
-from post.functions_post import *
 from post.post_on_socials import *
 
-from crypto import encrypt_process_file, decrypt_process_file
+from models.crypto import encrypt_process_file, decrypt_process_file
 
 
 
