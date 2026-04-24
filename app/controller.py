@@ -18,7 +18,7 @@ from tkinter import filedialog
 import base64
 import subprocess
 
-from models.file_manager import *
+from app.models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 
