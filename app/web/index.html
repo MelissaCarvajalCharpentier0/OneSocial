@@ -557,7 +557,7 @@
             `;
         }
 
-        function renderWordPress(header, body, image) {
+        function renderWordPress(account, header, body, image) {
             return `
                 <div class="wp-post">
                     ${image ? `<img src="${image}" class="wp-featured-image"/>` : ''}
@@ -571,7 +571,13 @@
             `;
         }
 
+        // Por cada red, se debe hacer una funcion con la estructura anterior 
+        // funtion render/NombreRed/(account, header, body, image)
+        // Y en estas se pone la estructura del HTML específico de la red y se 
+        // tiene que también añadir el css correspondiente
+
         function updatePreview() {
+            ""
             const header = document.getElementById('post-header').value;
             const body = document.getElementById('post-body').value;
             const container = document.getElementById('preview-container');
@@ -587,13 +593,16 @@
 
                 let contentHTML = '';
 
-                const image = currentImage; // usa tu variable real
+                const image = currentImage; 
 
                 if (provider === 'Mastodon') {
                     contentHTML = renderMastodon(account, header, body, image);
 
                 } else if (provider === 'WordPress') {
-                    contentHTML = renderWordPress(header, body, image);
+                    contentHTML = renderWordPress(account, header, body, image);
+                
+                // Y por cada red solo se debe de agregar el else if cambiado el provider y el render que se llama
+                // Y SOLO SE AGREGA ESTO, NO SE TIENE QUE MODIFICAR NADA MÁS 
 
                 } else {
                     contentHTML = `
