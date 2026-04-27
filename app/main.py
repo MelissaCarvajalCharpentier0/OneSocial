@@ -277,6 +277,48 @@ def get_app_info():
         'dark_mode': True  # Even the Machine Spirit prefers the darkness between stars
     }
 
+@eel.expose
+def delete_account(provider, username):
+    """
+    - Input: provider (str), username (str)
+    - Output: dict with success and message
+    - Description: Deletes the account matching provider and username from the stored tokens.
+    """
+    try:
+        tokens = load()
+        original_len = len(tokens)
+        tokens = [t for t in tokens if not (t.provider == provider and t.username == username)]
+        if len(tokens) == original_len:
+            return {'success': False, 'message': 'Account not found'}
+        save(tokens)
+        return {'success': True, 'message': f'Account {username} ({provider}) removed'}
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {'success': False, 'message': str(e)}
+    
+@eel.expose
+def update_account_label(provider, username, new_label):
+    """
+    - Input: provider (str), username (str), new_label (str)
+    - Output: dict with success and message
+    - Description: Sets the account_label for the matching account.
+    """
+    try:
+        tokens = load()
+        found = False
+        for token in tokens:
+            if token.provider == provider and token.username == username:
+                token.account_label = new_label.strip() if new_label.strip() else None
+                found = True
+                break
+        if not found:
+            return {'success': False, 'message': 'Account not found'}
+        save(tokens)
+        return {'success': True, 'message': 'Label updated'}
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {'success': False, 'message': str(e)}
+
 # Start the application
 if __name__ == '__main__':
     window_width, window_height = get_default_window_size()
