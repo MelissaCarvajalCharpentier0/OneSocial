@@ -6,7 +6,7 @@ Name: token_auth.py
 Description: Module for Token structure for authentification in any social media
 Author: Josué Soto, Pamela Fernández
 Date: April 2026
-Version: 1.2
+Version: 1.3
 
 =============================================================================================
 
@@ -42,6 +42,7 @@ class Token:
     client_id: Optional[str] = None
     client_secret: Optional[str] = None
     site_id: Optional[str] = None
+    server: Optional[str] = None
 
 
 
@@ -77,5 +78,6 @@ class Token:
             "base_url": self.base_url,
             "client_id": self.client_id,
             "client_secret": self.client_secret,
-            "site_id": self.site_id
+            "site_id": self.site_id,
+            "server": self.server
         }

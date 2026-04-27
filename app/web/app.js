@@ -78,17 +78,16 @@ wordpressToggle.addEventListener('click', () => {
 // Mastodon: Get Auth URL & Connect
 document.getElementById('get-mastodon-url-btn').addEventListener('click', async () => {
     const username = document.getElementById('mastodon-username').value.trim();
-    const password = document.getElementById('mastodon-password').value.trim();
     
-    if (!username || !password) {
-        showLinkStatus('mastodon-status', 'Please enter username and password first', 'error');
+    if (!username) {
+        showLinkStatus('mastodon-status', 'Please enter username first', 'error');
         return;
     }
     try {
         showLinkStatus('mastodon-status', 'Connecting to Mastodon...', 'info');
         
         // Calls connect_mastodon from main.py
-        const result = await eel.connect_mastodon(username, password)();
+        const result = await eel.connect_mastodon(username)();
         
         if (result && result.success) {
             showLinkStatus('mastodon-status', result.message, 'success');
@@ -120,7 +119,6 @@ document.getElementById('link-mastodon-btn').addEventListener('click', async () 
         if (result && result.success) {
             showLinkStatus('mastodon-status', result.message || 'Account linked!', 'success');
             document.getElementById('mastodon-username').value = '';
-            document.getElementById('mastodon-password').value = '';
             document.getElementById('mastodon-code').value = '';
             await loadAccounts(); // Refresh left sidebar
             setTimeout(() => toggleLinkSidebar(false), 1500);

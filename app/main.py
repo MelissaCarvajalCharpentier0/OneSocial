@@ -77,7 +77,7 @@ def get_default_window_size():
 
 
 @eel.expose
-def connect_mastodon(username, password):
+def connect_mastodon(username):
     """
     - Input: 
         - username: str - The username of the Mastodon account to connect.  
@@ -90,12 +90,17 @@ def connect_mastodon(username, password):
     """
     try:
         provider = "Mastodon"
-        auth_ok = setup_mastodon_account(provider, username, password)
+        auth_ok = setup_mastodon_account(provider, username)
 
-        if not auth_ok:
+        if auth_ok == 1:
             return {
                 'success': False,
                 'message': 'Se abrió el navegador para autenticar. Completa el proceso.'
+            }
+        elif auth_ok == 2:
+            return {
+                'success': False,
+                'message': 'Ocurrió un error al parsear el token. Token no guardado'
             }
 
         return {

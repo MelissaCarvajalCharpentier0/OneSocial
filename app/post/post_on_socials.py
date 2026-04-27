@@ -4,9 +4,9 @@
 
 Name: post_on_socials.py
 Description: Module for handling the creation of posts and their publication on social media platforms.
-Author: Pamela Fernández
+Author: Pamela Fernández, Josue Soto
 Date: March 2026
-Version: 1.0
+Version: 1.1
 
 =============================================================================================
 
@@ -37,7 +37,7 @@ def upload_post_mastodon(text: str, image_path: Path, account):
 
     mastodon = Mastodon(
         access_token=account.access_token,
-        api_base_url='https://mastodon.social'
+        api_base_url=f"https://{account.server}"
     )
 
     media = mastodon.media_post(image_path)
@@ -57,7 +57,7 @@ def upload_post_mastodon_text(text: str, account):
     
     mastodon = Mastodon(
         access_token=account.access_token,
-        api_base_url='https://mastodon.social'
+        api_base_url=f"https://{account.server}"
     )
 
     mastodon.status_post(text)
