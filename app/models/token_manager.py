@@ -125,7 +125,7 @@ def account_list(raw_tokens: list[Token]) -> list[list[str]]:
             accounts.append({
                 "provider": token.provider,
                 "username": token.username,
-                "display_name": token.account_label or token.username,
+                "display_name": token.account_label,
                 "email": token.email,
             })
 

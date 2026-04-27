@@ -262,6 +262,37 @@ textarea {
 .post-button:active {
     transform: translateY(0);
 }
+ /*extra button for delete account*/
+.delete-account-btn {
+    background: none;
+    border: none;
+    color: #ff7b72;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-left: 8px;
+    padding: 0 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.delete-account-btn:hover {
+    opacity: 1;
+}
+.edit-label-btn {
+    background: none;
+    border: none;
+    color: #f0c040;
+    font-size: 1rem;
+    cursor: pointer;
+    margin-left: auto;
+    padding: 0 4px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+}
+
+.edit-label-btn:hover {
+    opacity: 1;
+}
 
 /* Status Messages */
 .status {

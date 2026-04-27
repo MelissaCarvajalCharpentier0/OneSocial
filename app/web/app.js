@@ -199,8 +199,8 @@ function accountFromKey(key) {
 function getAllAccountObjects() {
     const all = [];
     Object.keys(accountState.accountsByProvider).forEach((provider) => {
-        accountState.accountsByProvider[provider].forEach((username) => {
-            all.push({ provider, username });
+        accountState.accountsByProvider[provider].forEach((acc) => {
+            all.push({ provider, username: acc.username, accountLabel: acc.accountLabel });
         });
     });
     return all;
@@ -210,11 +210,29 @@ function getAccountsForActiveTab() {
     if (accountState.activeTab === 'Todas') {
         return getAllAccountObjects();
     }
-    const usernames = accountState.accountsByProvider[accountState.activeTab] || [];
-    return usernames.map((username) => ({
+    const accounts = accountState.accountsByProvider[accountState.activeTab] || [];
+    return accounts.map(a => ({
         provider: accountState.activeTab,
-        username
+        username: a.username,
+        accountLabel: a.accountLabel
     }));
+}
+// --- NEW: Nickname/label helpers ---
+function getAccountLabel(provider, username) {
+    const accounts = accountState.accountsByProvider[provider];
+    if (accounts) {
+        const acc = accounts.find(a => a.username === username);
+        return acc ? acc.accountLabel : null;
+    }
+    return null;
+}
+
+function updateAccountLabel(provider, username, newLabel) {
+    const accounts = accountState.accountsByProvider[provider];
+    if (accounts) {
+        const acc = accounts.find(a => a.username === username);
+        if (acc) acc.accountLabel = newLabel || null;
+    }
 }
 
 function renderTabs() {
@@ -246,17 +264,20 @@ function renderAccountList() {
         accountState.selected.has(accountKey(provider, username))
     );
 
-    const items = accounts.map(({ provider, username }) => {
-        const key = accountKey(provider, username);
-        const checked = accountState.selected.has(key) ? 'checked' : '';
-        return `
-            <label class="account-item">
-                <input type="checkbox" data-provider="${provider}" data-username="${username}" ${checked}>
-                <span class="account-name">${username}</span>
-                <span class="account-provider">${provider}</span>
-            </label>
-        `;
-    }).join('');
+    const items = accounts.map(({ provider, username, accountLabel }) => {
+    const display = accountLabel || username;
+    const key = accountKey(provider, username);
+    const checked = accountState.selected.has(key) ? 'checked' : '';
+    return `
+        <label class="account-item">
+            <input type="checkbox" data-provider="${provider}" data-username="${username}" ${checked}>
+            <span class="account-name">${display}</span>
+            <span class="account-provider">${provider}</span>
+            <button class="edit-label-btn" data-provider="${provider}" data-username="${username}" title="Edit label">✎</button>
+            <button class="delete-account-btn" data-provider="${provider}" data-username="${username}" title="Delete account">×</button>
+        </label>
+    `;
+}).join('');
 
     listContainer.innerHTML = `
         <label class="account-item select-all-item">
@@ -316,13 +337,18 @@ async function loadAccounts() {
         (response.accounts || []).forEach((account) => {
             const provider = account.provider ?? account[0];
             const username = account.username ?? account[1];
+            const accountLabel = account.account_label ?? account[2] ?? null; // null if not set
             if (!provider || !username) return;
             if (!grouped[provider]) grouped[provider] = [];
-            grouped[provider].push(account.username);
+            // Push a single object, not two values
+            grouped[provider].push({ username, accountLabel });
         });
 
+        // Sort by username or label
         Object.keys(grouped).forEach((provider) => {
-            grouped[provider] = [...new Set(grouped[provider])].sort((a, b) => a.localeCompare(b));
+            grouped[provider].sort((a, b) => a.username.localeCompare(b.username));
+            // If you want to sort by label when available:
+            // grouped[provider].sort((a, b) => (a.accountLabel || a.username).localeCompare(b.accountLabel || b.username));
         });
 
         accountState.accountsByProvider = grouped;
@@ -364,46 +390,36 @@ function updateCounters() {
 }
 
 
-function renderMastodon(account, header, body, image) {
+function renderMastodon(label, username, header, body, image) {
     const content = [header, body].filter(Boolean).join('\n');
-    const username = account.username ?? account[1];
-
     return `
         <div class="mastodon-post">
             <div class="mastodon-top">
                 <div class="avatar"></div>
-
                 <div class="mastodon-user">
-                    <div class="name">${username}</div>
+                    <div class="name">${label}</div>
                     <div class="handle">${username}</div>
                 </div>
-
                 <div class="mastodon-time">now</div>
             </div>
-
             <div class="mastodon-content">
                 <p>${content || 'Your post content...'}</p>
                 ${image ? `<img src="${image}" class="mastodon-image"/>` : ''}
             </div>
-
             <div class="mastodon-actions">
-                <span>💬</span>
-                <span>🔁</span>
-                <span>⭐</span>
-                <span>🔖</span>
+                <span>💬</span><span>🔁</span><span>⭐</span><span>🔖</span>
             </div>
         </div>
     `;
 }
 
-function renderWordPress(account, header, body, image) {
+function renderWordPress(label, username, header, body, image) {
     return `
         <div class="wp-post">
             ${image ? `<img src="${image}" class="wp-featured-image"/>` : ''}
-
             <div class="wp-content">
                 <h2>${header || 'Post Title'}</h2>
-                <div class="wp-meta">Published just now</div>
+                <div class="wp-meta">Published just now by ${label}</div>
                 <p>${body || 'Your content will appear here...'}</p>
             </div>
         </div>
@@ -416,33 +432,25 @@ function renderWordPress(account, header, body, image) {
 // tiene que también añadir el css correspondiente
 
 function updatePreview() {
-    ""
     const header = document.getElementById('post-header').value;
     const body = document.getElementById('post-body').value;
     const container = document.getElementById('preview-container');
-
     container.innerHTML = '';
 
     const selectedAccounts = getSelectedAccountsPayload();
 
     selectedAccounts.forEach((account) => {
-
         const provider = account.provider ?? account[0];
         const username = account.username ?? account[1];
+        const label = getAccountLabel(provider, username) || username;  // <-- use label
 
         let contentHTML = '';
-
-        const image = currentImage; 
+        const image = currentImage;
 
         if (provider === 'Mastodon') {
-            contentHTML = renderMastodon(account, header, body, image);
-
+            contentHTML = renderMastodon(label, username, header, body, image);
         } else if (provider === 'WordPress') {
-            contentHTML = renderWordPress(account, header, body, image);
-        
-        // Y por cada red solo se debe de agregar el else if cambiado el provider y el render que se llama
-        // Y SOLO SE AGREGA ESTO, NO SE TIENE QUE MODIFICAR NADA MÁS 
-
+            contentHTML = renderWordPress(label, username, header, body, image);
         } else {
             contentHTML = `
                 <div class="preview-card-social">
@@ -455,14 +463,10 @@ function updatePreview() {
 
         const card = document.createElement('div');
         card.className = 'preview-card-social';
-
         card.innerHTML = `
-            <div class="preview-platform">
-                ${provider} • ${username}
-            </div>
+            <div class="preview-platform">${provider} • ${label}</div>
             ${contentHTML}
         `;
-
         container.appendChild(card);
     });
 }
@@ -567,6 +571,60 @@ function initializeEventListeners() {
             updatePreview();
         }
     });
+        document.getElementById('account-list').addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('.delete-account-btn');
+            if (!deleteBtn) return;
+
+            e.stopPropagation();
+            e.preventDefault();
+
+            const provider = deleteBtn.getAttribute('data-provider');
+            const username = deleteBtn.getAttribute('data-username');
+
+            if (!confirm(`Delete account "${username}" (${provider})?`)) return;
+
+                try {
+                    const result = await eel.delete_account(provider, username)();
+                    if (result && result.success) {
+                        // Remove from selected set
+                        const key = accountKey(provider, username);
+                        accountState.selected.delete(key);
+                        // Refresh list
+                        await loadAccounts();
+                        showStatus('Account deleted successfully', 'success');
+                    } else {
+                        showStatus(result?.message || 'Error deleting account', 'error');
+                    }
+                    } catch (err) {
+                        showStatus('Error: ' + err, 'error');
+                }
+        });
+        document.getElementById('account-list').addEventListener('click', async (e) => {
+            const labelBtn = e.target.closest('.edit-label-btn');
+            if (labelBtn) {
+            e.stopPropagation();
+            const provider = labelBtn.getAttribute('data-provider');
+            const username = labelBtn.getAttribute('data-username');
+            const currentLabel = getAccountLabel(provider, username);
+            const newLabel = prompt('Edit account label:', currentLabel || username);
+            if (newLabel === null) return; // cancelled
+        
+        try {
+            const result = await eel.update_account_label(provider, username, newLabel)();
+            if (result && result.success) {
+                updateAccountLabel(provider, username, newLabel.trim() || null);
+                renderAccountList();
+                updatePreview();
+                showStatus('Label updated', 'success');
+                    } else {
+                        showStatus(result?.message || 'Failed to update label', 'error');
+                    }
+                } catch (err) {
+                    showStatus('Error: ' + err, 'error');
+                }
+                return;
+                }
+        });
 
     window.addEventListener('resize', syncSidebarHeight);
 }
