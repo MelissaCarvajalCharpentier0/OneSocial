@@ -24,6 +24,8 @@ from datetime import datetime
 from controller import *
 from pathlib import Path
 
+from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
+
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -76,6 +78,21 @@ def get_default_window_size():
     return width, height
 
 
+def serialize_error(error):
+    """
+    - Input: error (Exception) - The exception to serialize
+    - Output: dict - A dictionary containing the success status, error type, and message
+    - Description: Converts an exception into a structured dictionary format for frontend consumption.
+    """
+    error_category = getattr(error.__class__, "category", ErrorCategory.UNKNOWN)
+    payload = {
+        'success': False,
+        'error_type': error_category.value,
+        'message': str(error),
+    }
+    return payload
+
+
 @eel.expose
 def connect_mastodon(username):
     """
@@ -108,10 +125,14 @@ def connect_mastodon(username):
             'message': 'Cuenta conectada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
     
@@ -137,10 +158,14 @@ def auth_mastodon(code, username):
             'message': 'Autenticación completada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -167,10 +192,14 @@ def setup_wordpress_account(username, client_id, client_secret):
             'message': 'Autenticación completada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -195,11 +224,17 @@ def get_available_accounts():
             'success': True,
             'accounts': accounts
         }
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        payload = serialize_error(e)
+        payload['accounts'] = []
+        return payload
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
             'accounts': [],
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -253,10 +288,14 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
             'message': 'Post publicado correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -297,9 +336,12 @@ def delete_account(provider, username):
             return {'success': False, 'message': 'Account not found'}
         save(tokens)
         return {'success': True, 'message': f'Account {username} ({provider}) removed'}
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
-        return {'success': False, 'message': str(e)}
+        return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
     
 @eel.expose
 def update_account_label(provider, username, new_label):
@@ -320,9 +362,12 @@ def update_account_label(provider, username, new_label):
             return {'success': False, 'message': 'Account not found'}
         save(tokens)
         return {'success': True, 'message': 'Label updated'}
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
-        return {'success': False, 'message': str(e)}
+        return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
 
 # Start the application
 if __name__ == '__main__':

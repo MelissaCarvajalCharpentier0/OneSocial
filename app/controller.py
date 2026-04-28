@@ -16,11 +16,13 @@ from pathlib import Path
 import tkinter as tk
 from tkinter import filedialog
 import base64
+import binascii
 import subprocess
 
 from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
+from models.app_errors import InputValueError
 
 from post.post_on_socials import *
 
@@ -109,7 +111,7 @@ def general_upload_post(tokens, text, title, image_path=None):
             else:
                 publish_post_wordpress(account, title, text)
         else:
-            print(f"Proveedor {account.provider} no soportado.")    
+            raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
 
 def save_new_account(username, client_id, client_secret, provider, tokens):
@@ -272,14 +274,17 @@ def save_image_from_base64(image_data: str, image_name: str) -> Path:
     """
 
     if not image_data:
-        raise ValueError("No image data provided")
+        raise InputValueError("No image data provided")
 
-    header, encoded = image_data.split(",", 1)
-    image_bytes = base64.b64decode(encoded)
+    try:
+        header, encoded = image_data.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+    except (ValueError, binascii.Error) as error:
+        raise InputValueError("Invalid base64 image payload") from error
 
     suffix = Path(image_name).suffix.lower()
     if suffix not in IMAGE_FORMATS:
-        raise TypeError(f"Formato inválido: {suffix}")
+        raise InputValueError(f"Formato inválido: {suffix}")
 
     destiny = Path(POSTS_FOLDER)
     destiny.mkdir(parents=True, exist_ok=True)

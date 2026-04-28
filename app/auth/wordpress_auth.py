@@ -19,6 +19,8 @@ import webbrowser
 import threading
 import requests
 
+from models.app_errors import ApiError, InputValueError
+
 REDIRECT_URI = "http://localhost:8000/callback"
 
 # Variables globales para capturar el code OAuth
@@ -42,14 +44,20 @@ def get_sites(token):
         "Authorization": f"Bearer {token}"
     }
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
+    except requests.RequestException as error:
+        raise ApiError("No se pudo conectar con WordPress para obtener sitios.") from error
+
+    if response.status_code != 200:
+        raise ApiError(f"Error obteniendo sitios: {response.text}")
+
     data = response.json()
 
     sites = data.get("sites", [])
 
     if not sites:
-        print("No se encontraron sitios")
-        return None
+        raise ApiError("No se encontraron sitios")
 
     site_id = sites[0]["ID"] 
     return site_id
@@ -71,18 +79,19 @@ def get_primary_site(token):
         "Authorization": f"Bearer {token}"
     }
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
+    except requests.RequestException as error:
+        raise ApiError("No se pudo conectar con WordPress para obtener el sitio primario.") from error
 
     if response.status_code != 200:
-        print("Error obteniendo sitios:", response.text)
-        return None, None
+        raise ApiError(f"Error obteniendo sitios: {response.text}")
 
     data = response.json()
     sites = data.get("sites", [])
 
     if not sites:
-        print("No se encontraron sitios")
-        return None, None
+        raise ApiError("No se encontraron sitios")
 
     site = sites[0]
 
@@ -197,20 +206,22 @@ def exchange_code_for_token(client_id, client_secret, code):
         - Sends the client ID, client secret, authorization code, grant type, and redirect URI as form data in the request.
         - If the request is successful, returns the JSON response containing the access token; otherwise, prints an error message and returns None.
     """
-    response = requests.post(
-        "https://public-api.wordpress.com/oauth2/token",
-        data={
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "code": code,
-            "grant_type": "authorization_code",
-            "redirect_uri": REDIRECT_URI
-        }
-    )
+    try:
+        response = requests.post(
+            "https://public-api.wordpress.com/oauth2/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code,
+                "grant_type": "authorization_code",
+                "redirect_uri": REDIRECT_URI
+            }
+        )
+    except requests.RequestException as error:
+        raise ApiError("No se pudo intercambiar el code por un token de WordPress.") from error
 
     if response.status_code != 200:
-        print("Error obteniendo token:", response.text)
-        return None
+        raise ApiError(f"Error obteniendo token: {response.text}")
 
     return response.json()
 
@@ -233,19 +244,17 @@ def ensure_wordpress_token(account):
         return account.access_token
 
     if not account.client_id or not account.client_secret:
-        print(f"No hay client_id/client_secret en {account.username}")
-        return None
+        raise InputValueError(f"No hay client_id/client_secret en {account.username}")
 
     code = get_authorization_code(account.client_id)
 
     if not code:
-        print("No se obtuvo code")
-        return None
+        raise ApiError("No se obtuvo code")
 
     token_data = exchange_code_for_token(account.client_id, account.client_secret, code)
 
     if not token_data:
-        return None
+        raise ApiError("No se pudo obtener token de WordPress")
 
     account.access_token = token_data.get("access_token")
     site_id, base_url = get_primary_site(account.access_token)
@@ -270,19 +279,20 @@ def verify_wordpress_access(account):
     """
 
     if not account.access_token:
-        print("No hay token")
-        return False
+        raise InputValueError("No hay token")
 
     url = "https://public-api.wordpress.com/rest/v1.1/me"
     headers = {
         "Authorization": f"Bearer {account.access_token}"
     }
 
-    response = requests.get(url, headers=headers)
+    try:
+        response = requests.get(url, headers=headers)
+    except requests.RequestException as error:
+        raise ApiError("No se pudo verificar el acceso a WordPress.") from error
 
     if response.status_code == 200:
         print("Acceso válido")
         return True
     else:
-        print("Error de acceso:", response.status_code)
-        return False
+        raise ApiError(f"Error de acceso: {response.status_code}")
