@@ -3,10 +3,10 @@
 =============================================================================================
 
 Name: token_manager.py
-Description: Module for managing file operations in the project.
+Description: Module for managing token and file operations in the project.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
 Date: Abril 2026
-Version: 2.0
+Version: 2.1
 
 =============================================================================================
 
@@ -105,6 +105,58 @@ def get_image(image_path: Path) -> str:
 
     print(f"Imagen guardada como: {new_name}")
     return new_name
+
+def delete_image(image_name: str):
+    """
+    - Input: image_name (str)
+    - Description: The image specified will be deleted from local app storage (in the folder specified by POSTS_FOLDER)
+    """
+    
+    if not isinstance(image_name, str):
+        raise TypeError("Image name invalid.")
+    
+    image_path = POSTS_FOLDER / image_name
+
+    if not image_path.exists():
+        print(f"Image: {image_name} not found. Nothing was eliminated")
+        return
+
+    if not image_path.is_file():
+        raise TypeError(f"Not a file: {image_name}")
+
+    try:
+        image_path.unlink()
+    except Exception as e:
+        raise Exception(f"No se pudo eliminar el archivo porque está en uso o no hay permisos: {image_name}") from e
+
+    print(f"Imagen eliminada: {image_name}")
+
+def delete_all_images():
+    """
+    - Description: Deletes all images from local app storage (in the folder specified by POSTS_FOLDER) and
+    resets post counter only if all images were deleted successfully.
+    """
+
+    POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
+    errors = []
+
+    for image_path in POSTS_FOLDER.iterdir():
+        if image_path.is_file() and image_path.suffix.lower() in IMAGE_FORMATS:
+            try:
+                image_path.unlink()
+            except Exception as error:
+                errors.append((image_path.name, error))
+
+    if errors:
+        error_messages = "Errors found:\n".join(f"- {name}: {error}" for name, error in errors)
+        raise OSError(
+            "Could not erase all images"
+            "CounterID was NOT reset.\n"
+            f"{error_messages}"
+        )
+
+    COUNTER_FILE.write_text("0")
+    print("All images erased and CounterID was reset.")
 
 def account_list(raw_tokens: list[Token]) -> list[list[str]]:
     """
