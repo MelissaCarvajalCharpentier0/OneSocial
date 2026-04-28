@@ -14,6 +14,8 @@ Version: 2.0
 import os
 from mastodon import Mastodon
 
+from models.app_errors import InputValueError, TokenStorageError
+
 def get_cred_path(account):
     """
     - Output:
@@ -48,7 +50,7 @@ def ensure_server(account):
     if len(username_parts) == 2:
         account.server = username_parts[-1]
     else:
-        raise ValueError("Invalid username. No server found")
+        raise InputValueError("Invalid username. No server found")
 
 
 def ensure_mastodon_app(account):
@@ -132,8 +134,12 @@ def save_mastodon_token(account, code):
     """
     cred_path = get_cred_path(account)
 
-    with open(cred_path, "r") as f:
-        lines = f.read().splitlines()
+    try:
+        with open(cred_path, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+    except OSError as error:
+        raise TokenStorageError(f"No se pudo leer las credenciales de Mastodon: {cred_path}") from error
+
 
     client_id = lines[0]
     client_secret = lines[1]
