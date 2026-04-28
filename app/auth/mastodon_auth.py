@@ -4,18 +4,17 @@
 
 Name: mastodon_auth.py
 Description: Module for handling Mastodon authentication and token management.  
-Author: Pamela Fernández
-Date: March 2026 
-Version: 1.0
+Author: Pamela Fernández, Josué Soto
+Date: April 2026 
+Version: 2.0
 
 =============================================================================================
 
 """
-import sys
 import os
 from mastodon import Mastodon
 
-def get_cred_path():
+def get_cred_path(account):
     """
     - Output:
         - cred_path: str - The file path to the Mastodon client credentials file.
@@ -27,24 +26,50 @@ def get_cred_path():
     base_path = os.path.join(os.path.expanduser("~"), ".onesocial")
     os.makedirs(base_path, exist_ok=True)
 
-    return os.path.join(base_path, "clientcred.secret")
+    usershort = account.username.replace("/", "_").replace("@", "_")
+    return os.path.join(base_path, f"clientcred.{usershort}.secret")
 
-def ensure_mastodon_app():
+
+def ensure_server(account):
     """
+    - Input: 
+        - account: Token object for the Mastodon account to ensure authentication
+    - Description: 
+        - Assigns server to account token if null (None)    
+    """
+
+    if (account.server != None):
+        return
+
+    username_parts = (account.username).split("@")
+    if username_parts[0] == '':
+        username_parts = username_parts[1:]
+
+    if len(username_parts) == 2:
+        account.server = username_parts[-1]
+    else:
+        raise ValueError("Invalid username. No server found")
+
+
+def ensure_mastodon_app(account):
+    """
+    - Input: 
+        - account: Token object for the Mastodon account to ensure authentication
     - Description: 
         - Ensures that the Mastodon application credentials file exists. If it does not exist, it 
         creates a new Mastodon application and saves the credentials to the specified file path. 
         This is necessary for authenticating with the Mastodon API and obtaining access tokens for 
         user accounts.    
     """
-    cred_path = get_cred_path()
+    cred_path = get_cred_path(account)
+    ensure_server(account)
 
     if not os.path.exists(cred_path):
         print("Creando app de Mastodon...")
 
         Mastodon.create_app(
             'onesocial',
-            api_base_url='https://mastodon.social',
+            api_base_url=f"https://{account.server}",
             to_file=cred_path
         )
 
@@ -77,11 +102,12 @@ def get_mastodon_auth_url(account):
         - Generates the authentication URL for the Mastodon account, which can be used to initiate the 
         authentication process.
     """
-    cred_path = get_cred_path()
+    cred_path = get_cred_path(account)
+    ensure_server(account)
 
     mastodon = Mastodon(
         client_id=cred_path,
-        api_base_url='https://mastodon.social'
+        api_base_url=f"https://{account.server}"
     )
 
     url = mastodon.auth_request_url(
@@ -104,18 +130,19 @@ def save_mastodon_token(account, code):
         - Takes the authentication code received from the Mastodon authentication process, uses it to obtain an
         access token, and saves that token to the provided account object for future authenticated interactions with Mastodon.  
     """
-    cred_path = get_cred_path()
+    cred_path = get_cred_path(account)
 
     with open(cred_path, "r") as f:
         lines = f.read().splitlines()
 
     client_id = lines[0]
     client_secret = lines[1]
+    ensure_server(account)
 
     mastodon = Mastodon(
         client_id=client_id,
         client_secret=client_secret,
-        api_base_url='https://mastodon.social'
+        api_base_url=f"https://{account.server}"
     )
 
     mastodon.log_in(

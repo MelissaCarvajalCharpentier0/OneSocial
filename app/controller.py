@@ -169,7 +169,7 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
     save(tokens)
 
 
-def setup_mastodon_account(provider, username, password):
+def setup_mastodon_account(provider, username):
     """
     Effects:
         - Initiates the authentication process for Mastodon accounts by ensuring that a valid access token is  
@@ -180,17 +180,18 @@ def setup_mastodon_account(provider, username, password):
         calls the function to ensure that a valid access token is obtained. It then verifies the credentials by making 
         an API call to Mastodon and prints the user information if successful. Finally, it saves the updated tokens 
         back to "data.json".
+    Return codes:
+        0: Success
+        1: Get code navigator opened
+        2: Not found
     """
     tokens = load()
-    if username not in [t.username for t in tokens]:
-        tokens.append(Token(
+    new_token = Token(
             provider=provider,
-            username=username,
-            password=password
-        ))
-        save(tokens)
-
-    ensure_mastodon_app()
+            username=username
+        )
+    
+    tokens.append(new_token)
     
     for account in tokens: 
         if account.provider != "Mastodon":
@@ -203,14 +204,15 @@ def setup_mastodon_account(provider, username, password):
         token = ensure_mastodon_token(account)
 
         if token:
-            save(tokens)
-            return True
-
+            return 0
+        
+        save(tokens)
+        ensure_mastodon_app(account)
         auth_url = get_mastodon_auth_url(account)
         subprocess.run(f'start "" "{auth_url}"', shell=True)
+        return 1
 
-    save(tokens)
-    return False
+    return 2
 
 
 def setup_mastodon_account_auth(code, username):
