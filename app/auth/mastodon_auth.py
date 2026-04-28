@@ -11,7 +11,6 @@ Version: 2.0
 =============================================================================================
 
 """
-import sys
 import os
 from mastodon import Mastodon
 
@@ -54,6 +53,8 @@ def ensure_server(account):
 
 def ensure_mastodon_app(account):
     """
+    - Input: 
+        - account: Token object for the Mastodon account to ensure authentication
     - Description: 
         - Ensures that the Mastodon application credentials file exists. If it does not exist, it 
         creates a new Mastodon application and saves the credentials to the specified file path. 
