@@ -728,7 +728,7 @@ function initializeEventListeners() {
             if (!newLabel) return;
 
             try {
-                const result = await eel.update_account_label(provider, username, newLabel)();
+                const result = await eel.update_display_name(provider, username, newLabel)();
 
                 if (result && result.success) {
                     updateAccountLabel(provider, username, newLabel || null);

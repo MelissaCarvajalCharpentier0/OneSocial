@@ -302,7 +302,7 @@ def delete_account(provider, username):
         return {'success': False, 'message': str(e)}
     
 @eel.expose
-def update_account_label(provider, username, new_label):
+def update_display_name(provider, username, new_label):
     """
     - Input: provider (str), username (str), new_label (str)
     - Output: dict with success and message
