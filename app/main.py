@@ -290,12 +290,9 @@ def delete_account(provider, username):
     - Description: Deletes the account matching provider and username from the stored tokens.
     """
     try:
-        tokens = load()
-        original_len = len(tokens)
-        tokens = [t for t in tokens if not (t.provider == provider and t.username == username)]
-        if len(tokens) == original_len:
+        status = delete_token(provider, username)
+        if not status:
             return {'success': False, 'message': 'Account not found'}
-        save(tokens)
         return {'success': True, 'message': f'Account {username} ({provider}) removed'}
     except Exception as e:
         print("ERROR:", str(e))
@@ -309,17 +306,13 @@ def update_display_name(provider, username, new_label):
     - Description: Sets the account_label for the matching account.
     """
     try:
-        tokens = load()
-        found = False
-        for token in tokens:
-            if token.provider == provider and token.username == username:
-                token.account_label = new_label.strip() if new_label.strip() else None
-                found = True
-                break
-        if not found:
+        status = update_account_label(provider, username, new_label)
+
+        if not status:
             return {'success': False, 'message': 'Account not found'}
-        save(tokens)
+            
         return {'success': True, 'message': 'Label updated'}
+        
     except Exception as e:
         print("ERROR:", str(e))
         return {'success': False, 'message': str(e)}
