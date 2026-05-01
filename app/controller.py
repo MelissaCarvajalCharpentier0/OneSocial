@@ -83,6 +83,58 @@ def get_accounts() -> list[str, str]:
     tokens = load()
     return account_list(tokens)
 
+def delete_token(provider, username):
+    """
+    - Input: provider (str), username (str)
+    - Output: dict with success and message
+    - Description: Deletes the account matching provider and username from the stored tokens.
+    """
+    tokens = load()
+    original_len = len(tokens)
+    tokens = [t for t in tokens if not (t.provider == provider and t.username == username)]
+    if len(tokens) == original_len:
+        return False
+    save(tokens)
+    return True
+
+def update_account_label(provider, username, new_label):
+    """
+    - Input: provider (str), username (str), new_label (str)
+    - Output: True for success and False for failure
+    - Description: Sets the account_label for the matching account.
+    """
+    tokens = load()
+    found = False
+    for token in tokens:
+        if token.provider == provider and token.username == username:
+            token.account_label = new_label.strip() if new_label.strip() else None
+            found = True
+            break
+    if not found:
+        return False
+    save(tokens)
+    return True
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 def general_upload_post(tokens, text, title, image_path=None):
     """
