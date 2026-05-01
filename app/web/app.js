@@ -209,13 +209,8 @@ function getAccountsForActiveTab() {
     if (accountState.activeTab === 'Todas') {
         return getAllAccountObjects();
     }
-    const accounts = accountState.accountsByProvider[accountState.activeTab] || [];
-    return accounts.map(a => ({
-        provider: accountState.activeTab,
-        username: a.username,
-        accountLabel: a.accountLabel
-    }));
 }
+
 // --- NEW: Nickname/label helpers ---
 function getAccountLabel(provider, username) {
     const accounts = accountState.accountsByProvider[provider];
@@ -246,6 +241,7 @@ function renderTabs() {
 function renderAccountList() {
     const listContainer = document.getElementById('account-list');
     const accounts = getAccountsForActiveTab();
+    console.log(accounts);
 
     if (accounts.length === 0) {
         listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
@@ -443,12 +439,12 @@ async function loadAccounts() {
         (response.accounts || []).forEach((account) => {
             const provider = account.provider ?? account[0];
             const username = account.username ?? account[1];
-            const accountLabel = account.account_label ?? account[2] ?? null; 
+            const accountLabel = account.display_name ?? account[2] ?? null; 
             if (!provider || !username) return;
             if (!grouped[provider]) grouped[provider] = [];
             grouped[provider].push({ username, accountLabel });
         });
-
+        console.log(grouped);
         // Sort by username or label
         Object.keys(grouped).forEach((provider) => {
             grouped[provider].sort((a, b) => a.username.localeCompare(b.username));
