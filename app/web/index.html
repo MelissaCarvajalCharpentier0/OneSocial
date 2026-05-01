@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OneSocial Post Creator</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="icons/default.ico">
     <script type="text/javascript" src="/eel.js"></script>
 </head>
 <body>
@@ -13,8 +14,6 @@
         <aside class="account-sidebar">
             <div class="sidebar-title">Accounts</div>
             <div class="sidebar-subtitle">Select where to publish</div>
-
-            <div id="account-tabs" class="account-tabs"></div>
 
             <div id="account-list-wrap" class="account-list-wrap">
                 <div id="account-list" class="account-list"></div>
@@ -90,12 +89,15 @@
                     <label>Username</label>
                     <input type="text" id="mastodon-username" placeholder="e.g., @user@mastodon.social">
                 </div>
+
+                <button id="get-mastodon-url-btn" class="secondary-btn">Connect & Get URL</button>
+
                 <div class="form-group">
                     <label>Auth Code (If Prompted)</label>
                     <input type="text" id="mastodon-code" placeholder="Paste the code from OAuth">
                 </div>
-                <button id="get-mastodon-url-btn" class="secondary-btn">1. Connect & Get URL</button>
-                <button id="link-mastodon-btn" class="link-action-btn">2. Link with Auth Code</button>
+                
+                <button id="link-mastodon-btn" class="link-action-btn">Link with Auth Code</button>
                 <div id="mastodon-status" class="link-status"></div>
             </div>
         </div>
@@ -124,6 +126,17 @@
             </div>
         </div>
     </aside>
+
+    <div id="modal" class="modal">
+        <div class="modal-title" id="modal-title"></div>
+        <div class="modal-body" id="modal-body"></div>
+        <div class="modal-actions">
+            <button id="modal-cancel" class="modal-btn cancel">Cancel</button>
+            <button id="modal-confirm" class="modal-btn confirm">OK</button>
+        </div>
+    </div>
+
+    <div id="modal-overlay" class="overlay hidden"></div>
 
     <script src="app.js"></script>
 </body>

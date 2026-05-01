@@ -7,7 +7,8 @@ const accountState = {
     accountsByProvider: {},
     selected: new Set(),
     activeTab: 'Todas',
-    hasLoaded: false
+    hasLoaded: false,
+    collapsedProviders: new Set()
 };
 
 
@@ -234,18 +235,12 @@ function updateAccountLabel(provider, username, newLabel) {
 }
 
 function renderTabs() {
-    const tabsContainer = document.getElementById('account-tabs');
     const providers = Object.keys(accountState.accountsByProvider).sort((a, b) => a.localeCompare(b));
     const tabs = ['Todas', ...providers];
 
     if (!tabs.includes(accountState.activeTab)) {
         accountState.activeTab = 'Todas';
     }
-
-    tabsContainer.innerHTML = tabs.map((tab) => {
-        const activeClass = tab === accountState.activeTab ? ' active' : '';
-        return `<button class="account-tab${activeClass}" data-tab="${tab}">${tab}</button>`;
-    }).join('');
 }
 
 function renderAccountList() {
@@ -257,34 +252,147 @@ function renderAccountList() {
         renderSummary();
         return;
     }
+    const grouped = {};
 
-    const allChecked = accounts.every(({ provider, username }) =>
-        accountState.selected.has(accountKey(provider, username))
-    );
+    accounts.forEach(acc => {
+        const providerKey = acc.provider || 'unknown';
+        if (!grouped[providerKey]) {
+            grouped[providerKey] = [];
+        }
+        grouped[providerKey].push(acc);
+    });
 
-    const items = accounts.map(({ provider, username, accountLabel }) => {
-    const display = accountLabel || username;
-    const key = accountKey(provider, username);
-    const checked = accountState.selected.has(key) ? 'checked' : '';
-    return `
-        <label class="account-item">
-            <input type="checkbox" data-provider="${provider}" data-username="${username}" ${checked}>
-            <span class="account-name">${display}</span>
-            <span class="account-provider">${provider}</span>
-            <button class="edit-label-btn" data-provider="${provider}" data-username="${username}" title="Edit label">✎</button>
-            <button class="delete-account-btn" data-provider="${provider}" data-username="${username}" title="Delete account">×</button>
-        </label>
-    `;
-}).join('');
+    let html = '';
 
-    listContainer.innerHTML = `
-        <label class="account-item select-all-item">
-            <input type="checkbox" id="toggle-visible-accounts" ${allChecked ? 'checked' : ''}>
-            <span class="account-name">Seleccionar visibles</span>
-        </label>
-        ${items}
-    `;
+    Object.keys(grouped).forEach(provider => {
+
+        const isCollapsed = accountState.collapsedProviders.has(provider);
+
+        const styles = {
+            Mastodon: { icon: 'icons/Mastodon_logo.png', border: '#6364FF' },
+            WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' }
+        };
+        const data = styles[provider] || { icon: 'icons/default.png', border: '#FF80FF' };
+        const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
+
+        html += `
+            <div class="provider-group">
+                <div class="provider-header" data-provider="${provider}">
+                    
+                    <div class="provider-left">
+                        <div class="provider-icon" style="border: 2px solid ${data.border}">
+                            <img src="${data.icon}">
+                        </div>
+                        <span class="provider-name">${displayName}</span>
+                    </div>
+
+                    <span class="toggle-icon">${isCollapsed ? '▶' : '▼'}</span>
+
+                </div>
+                
+                <div class="account-items ${isCollapsed ? 'collapsed' : ''}">
+        `;
+
+        grouped[provider].forEach(({ username, accountLabel }) => {
+            const display = accountLabel || username;
+            const key = accountKey(provider, username);
+            const checked = accountState.selected.has(key) ? 'checked' : '';
+
+            html += `
+                <label class="account-item">
+                    <input type="checkbox"
+                        data-provider="${provider}"
+                        data-username="${username}"
+                        ${checked}>
+
+                    <span class="account-name" title="${display}">${display}</span>
+
+                    <button class="edit-label-btn"
+                        data-provider="${provider}"
+                        data-username="${username}"
+                        title="Edit label">✎</button>
+
+                    <button class="delete-account-btn"
+                        data-provider="${provider}"
+                        data-username="${username}"
+                        title="Delete account">x</button>
+                </label>
+            `;
+        });
+
+        html += `
+                </div>
+            </div>
+        `;
+    });
+
+    listContainer.innerHTML = html;
+
+    document.querySelectorAll('.provider-header').forEach(header => {
+        header.addEventListener('click', () => {
+            const provider = header.dataset.provider;
+
+            if (accountState.collapsedProviders.has(provider)) {
+                accountState.collapsedProviders.delete(provider);
+            } else {
+                accountState.collapsedProviders.add(provider);
+            }
+
+            renderAccountList();
+        });
+    });
+
+    document.querySelectorAll('.account-item input').forEach(input => {
+        input.addEventListener('click', e => e.stopPropagation());
+    });
+
     renderSummary();
+}
+
+function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
+    return new Promise((resolve) => {
+
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modal = document.getElementById('modal');
+
+        const titleEl = document.getElementById('modal-title');
+        const bodyEl = document.getElementById('modal-body');
+        const confirmBtn = document.getElementById('modal-confirm');
+        const cancelBtn = document.getElementById('modal-cancel');
+
+        titleEl.textContent = title;
+        bodyEl.innerHTML = bodyHTML;
+        confirmBtn.textContent = confirmText;
+
+        confirmBtn.classList.toggle('danger', danger);
+
+        modalOverlay.classList.remove('hidden'); 
+        modalOverlay.classList.add('active');
+
+        modal.classList.add('active'); 
+
+        const close = () => {
+            modalOverlay.classList.remove('active');
+            modalOverlay.classList.add('hidden');
+
+            modal.classList.remove('active'); 
+        };
+
+        cancelBtn.onclick = () => {
+            close();
+            resolve(null); // cancel
+        };
+
+        confirmBtn.onclick = () => {
+            close();
+            resolve(true); // confirm
+        };
+
+        modalOverlay.onclick = () => {
+            close();
+            resolve(null);
+        };
+    });
 }
 
 function renderSummary() {
@@ -533,13 +641,6 @@ function initializeEventListeners() {
         updatePreview();
     });
 
-    document.getElementById('account-tabs').addEventListener('click', (event) => {
-        const tabButton = event.target.closest('button[data-tab]');
-        if (!tabButton) return;
-        accountState.activeTab = tabButton.getAttribute('data-tab');
-        renderAccounts();
-    });
-
     document.getElementById('account-list').addEventListener('change', (event) => {
         const target = event.target;
         if (target.id === 'toggle-visible-accounts') {
@@ -569,60 +670,83 @@ function initializeEventListeners() {
             updatePreview();
         }
     });
-        document.getElementById('account-list').addEventListener('click', async (e) => {
-            const deleteBtn = e.target.closest('.delete-account-btn');
-            if (!deleteBtn) return;
 
+    document.getElementById('account-list').addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-account-btn');
+        const labelBtn = e.target.closest('.edit-label-btn');
+
+        if (deleteBtn) {
             e.stopPropagation();
             e.preventDefault();
 
-            const provider = deleteBtn.getAttribute('data-provider');
-            const username = deleteBtn.getAttribute('data-username');
+            const provider = deleteBtn.dataset.provider;
+            const username = deleteBtn.dataset.username;
 
-            if (!confirm(`Delete account "${username}" (${provider})?`)) return;
+            const confirmed = await openModal({
+                title: "Delete account",
+                bodyHTML: `<p>Are you sure you want to remove <b>${username}</b>?</p>`,
+                confirmText: "Delete",
+                danger: true
+            });
 
-                try {
-                    const result = await eel.delete_account(provider, username)();
-                    if (result && result.success) {
-                        // Remove from selected set
-                        const key = accountKey(provider, username);
-                        accountState.selected.delete(key);
-                        // Refresh list
-                        await loadAccounts();
-                        showStatus('Account deleted successfully', 'success');
-                    } else {
-                        showStatus(result?.message || 'Error deleting account', 'error');
-                    }
-                    } catch (err) {
-                        showStatus('Error: ' + err, 'error');
+            if (!confirmed) return;
+
+            try {
+                const result = await eel.delete_account(provider, username)();
+
+                if (result && result.success) {
+                    const key = accountKey(provider, username);
+                    accountState.selected.delete(key);
+
+                    await loadAccounts();
+                    showStatus('Account deleted successfully', 'success');
+                } else {
+                    showStatus(result?.message || 'Error deleting account', 'error');
                 }
-        });
-        document.getElementById('account-list').addEventListener('click', async (e) => {
-            const labelBtn = e.target.closest('.edit-label-btn');
-            if (labelBtn) {
+
+            } catch (err) {
+                showStatus('Error: ' + err, 'error');
+            }
+        }
+
+        if (labelBtn) {
             e.stopPropagation();
-            const provider = labelBtn.getAttribute('data-provider');
-            const username = labelBtn.getAttribute('data-username');
+
+            const provider = labelBtn.dataset.provider;
+            const username = labelBtn.dataset.username;
+
             const currentLabel = getAccountLabel(provider, username);
-            const newLabel = prompt('Edit account label:', currentLabel || username);
-            if (newLabel === null) return; // cancelled
-        
-        try {
-            const result = await eel.update_account_label(provider, username, newLabel)();
-            if (result && result.success) {
-                updateAccountLabel(provider, username, newLabel.trim() || null);
-                renderAccountList();
-                updatePreview();
-                showStatus('Label updated', 'success');
-                    } else {
-                        showStatus(result?.message || 'Failed to update label', 'error');
-                    }
-                } catch (err) {
-                    showStatus('Error: ' + err, 'error');
+
+            const confirmed = await openModal({
+                title: "Edit account label",
+                bodyHTML: `<input id="edit-input" value="${currentLabel || username}">`,
+                confirmText: "Save"
+            });
+
+            if (!confirmed) return;
+
+            const input = document.getElementById('edit-input');
+            const newLabel = input.value.trim();
+
+            if (!newLabel) return;
+
+            try {
+                const result = await eel.update_account_label(provider, username, newLabel)();
+
+                if (result && result.success) {
+                    updateAccountLabel(provider, username, newLabel || null);
+                    renderAccountList();
+                    updatePreview();
+                    showStatus('Label updated', 'success');
+                } else {
+                    showStatus(result?.message || 'Failed to update label', 'error');
                 }
-                return;
-                }
-        });
+
+            } catch (err) {
+                showStatus('Error: ' + err, 'error');
+            }
+        }
+    });
 
     window.addEventListener('resize', syncSidebarHeight);
 }
