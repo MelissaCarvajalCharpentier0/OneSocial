@@ -380,12 +380,12 @@ function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
 
         cancelBtn.onclick = () => {
             close();
-            resolve(null); // cancel
+            resolve(null); 
         };
 
         confirmBtn.onclick = () => {
             close();
-            resolve(true); // confirm
+            resolve(true); 
         };
 
         modalOverlay.onclick = () => {
@@ -443,18 +443,15 @@ async function loadAccounts() {
         (response.accounts || []).forEach((account) => {
             const provider = account.provider ?? account[0];
             const username = account.username ?? account[1];
-            const accountLabel = account.account_label ?? account[2] ?? null; // null if not set
+            const accountLabel = account.account_label ?? account[2] ?? null; 
             if (!provider || !username) return;
             if (!grouped[provider]) grouped[provider] = [];
-            // Push a single object, not two values
             grouped[provider].push({ username, accountLabel });
         });
 
         // Sort by username or label
         Object.keys(grouped).forEach((provider) => {
             grouped[provider].sort((a, b) => a.username.localeCompare(b.username));
-            // If you want to sort by label when available:
-            // grouped[provider].sort((a, b) => (a.accountLabel || a.username).localeCompare(b.accountLabel || b.username));
         });
 
         accountState.accountsByProvider = grouped;
@@ -548,7 +545,7 @@ function updatePreview() {
     selectedAccounts.forEach((account) => {
         const provider = account.provider ?? account[0];
         const username = account.username ?? account[1];
-        const label = getAccountLabel(provider, username) || username;  // <-- use label
+        const label = getAccountLabel(provider, username) || username;  
 
         let contentHTML = '';
         const image = currentImage;
