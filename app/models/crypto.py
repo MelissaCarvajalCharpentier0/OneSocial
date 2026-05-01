@@ -37,6 +37,8 @@ from pathlib import Path
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
+from models.app_errors import CryptographyError
+
 
 def derive_key(password: bytes, salt: bytes) -> bytes:
     """
@@ -139,7 +141,7 @@ def decrypt_process_file(input_path, password):
         payload = json.load(f)
 
     if not isinstance(payload, dict) or 'salt' not in payload or 'data' not in payload:
-        raise ValueError("Invalid encrypted file format. Expected keys: 'salt' and 'data'.")
+        raise CryptographyError("Invalid encrypted file format. Expected keys: 'salt' and 'data'.")
 
     salt = base64.b64decode(payload['salt'])
     key = derive_key(password.encode('utf-8'), salt)
@@ -148,4 +150,4 @@ def decrypt_process_file(input_path, password):
     try:
         return decrypt_json(payload['data'], fernet)
     except InvalidToken:
-        raise ValueError("Incorrect password or corrupted encrypted data.") 
+        raise CryptographyError("Incorrect password or corrupted encrypted data.") 

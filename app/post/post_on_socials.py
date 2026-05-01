@@ -19,6 +19,8 @@ from pathlib import Path
 
 import requests
 
+from models.app_errors import ApiError, InputValueError, PublishError
+
 
 
 ####################### MASTONDON #######################
@@ -35,13 +37,16 @@ def upload_post_mastodon(text: str, image_path: Path, account):
         has a valid access token, then it uploads the image and creates a new status with the text and the media ID of the uploaded image.
     """
 
-    mastodon = Mastodon(
-        access_token=account.access_token,
-        api_base_url=f"https://{account.server}"
-    )
+    try:
+        mastodon = Mastodon(
+            access_token=account.access_token,
+            api_base_url=f"https://{account.server}"
+        )
 
-    media = mastodon.media_post(image_path)
-    mastodon.status_post(text, media_ids=[media])
+        media = mastodon.media_post(image_path)
+        mastodon.status_post(text, media_ids=[media])
+    except Exception as error:
+        raise PublishError("No se pudo publicar en Mastodon.") from error
 
 
 def upload_post_mastodon_text(text: str, account):
@@ -53,14 +58,17 @@ def upload_post_mastodon_text(text: str, account):
         - Uploads a text-only post to Mastodon. It ensures that the account has a valid access token and then creates a new status with the provided text.
     """
     if not account.access_token:
-        print("No hay access_token. Debes autenticar primero.")
+        raise InputValueError("No hay access_token. Debes autenticar primero.")
     
-    mastodon = Mastodon(
-        access_token=account.access_token,
-        api_base_url=f"https://{account.server}"
-    )
+    try:
+        mastodon = Mastodon(
+            access_token=account.access_token,
+            api_base_url=f"https://{account.server}"
+        )
 
-    mastodon.status_post(text)
+        mastodon.status_post(text)
+    except Exception as error:
+        raise PublishError("No se pudo publicar el texto en Mastodon.") from error
 
 
 
@@ -95,11 +103,13 @@ def publish_post_wordpress(account, title, content):
         "status": "publish"
     }
 
-    response = requests.post(url, headers=headers, data=data)
+    try:
+        response = requests.post(url, headers=headers, data=data, timeout=30)
+    except requests.RequestException as error:
+        raise ApiError("No se pudo publicar el post en WordPress.") from error
 
     if response.status_code != 200:
-        print("Error:", response.text)
-        return None
+        raise PublishError(f"Error publicando en WordPress: {response.text}")
 
     return response.json()
 
@@ -128,17 +138,23 @@ def upload_image_wp(token, site, image_path):
 
     mime_type, _ = mimetypes.guess_type(image_path)
 
-    with open(image_path, "rb") as img:
-        response = requests.post(
-            url,
-            headers=headers,
-            files={
-                'media[]': (image_path.name, img, mime_type)
-            }
-        )
+    try:
+        with open(image_path, "rb") as img:
+            response = requests.post(
+                url,
+                headers=headers,
+                files={
+                    'media[]': (image_path.name, img, mime_type)
+                },
+                timeout=30,
+            )
+    except OSError as error:
+        raise PublishError(f"No se pudo leer la imagen para WordPress: {image_path}") from error
+    except requests.RequestException as error:
+        raise ApiError("No se pudo subir la imagen a WordPress.") from error
 
     if response.status_code != 200:
-        return None
+        raise PublishError(f"Error subiendo imagen a WordPress: {response.text}")
 
     return response.json()
 
@@ -160,17 +176,15 @@ def publish_post_wordpress_with_image(account, title, content, image_path):
         function to create the post with the combined content. If any step fails, it prints an error message and returns None.
     """
 
-    media = upload_image_wp(account.access_token, int(account.site_id), image_path)
-
-    if not media:
-        print("Falló subida de imagen")
-        return None
-
-    image_url = media["media"][0]["URL"]
-
-    content_with_image = f'<img src="{image_url}" /><br>{content}'
-
-    return publish_post_wordpress(account, title, content_with_image)
+    try:
+        media = upload_image_wp(account.access_token, int(account.site_id), image_path)
+        image_url = media["media"][0]["URL"]
+        content_with_image = f'<img src="{image_url}" /><br>{content}'
+        return publish_post_wordpress(account, title, content_with_image)
+    except PublishError:
+        raise
+    except (KeyError, IndexError, TypeError, AttributeError) as error:
+        raise PublishError("La API de WordPress devolvió una respuesta inesperada al subir la imagen.") from error
 
 
 def publish_post_wordpress_with_featured_image(account, title, content, image_path):
@@ -190,29 +204,30 @@ def publish_post_wordpress_with_featured_image(account, title, content, image_pa
         Finally, it sends a POST request to create the post with the specified details.
     """
 
-    media = upload_image_wp(account.access_token, int(account.site_id), image_path)
+    try:
+        media = upload_image_wp(account.access_token, int(account.site_id), image_path)
+        media_id = media["media"][0]["ID"]
+        url = f"https://public-api.wordpress.com/rest/v1.1/sites/{int(account.site_id)}/posts/new"
 
-    if not media:
-        print("Falló subida de imagen")
-        return None
+        headers = {
+            "Authorization": f"Bearer {account.access_token}"
+        }
 
-    media_id = media["media"][0]["ID"]
-    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{int(account.site_id)}/posts/new"
+        data = {
+            "title": title,
+            "content": content,
+            "status": "publish",
+            "featured_image": media_id
+        }
 
-    headers = {
-        "Authorization": f"Bearer {account.access_token}"
-    }
-
-    data = {
-        "title": title,
-        "content": content,
-        "status": "publish",
-        "featured_image": media_id
-    }
-
-    response = requests.post(url, headers=headers, data=data)
+        response = requests.post(url, headers=headers, data=data, timeout=30)
+    except PublishError:
+        raise
+    except requests.RequestException as error:
+        raise ApiError("No se pudo publicar el post con imagen destacada en WordPress.") from error
+    except (KeyError, IndexError, TypeError, AttributeError) as error:
+        raise PublishError("La API de WordPress devolvió una respuesta inesperada al subir la imagen destacada.") from error
 
     if response.status_code != 200:
-        print("Error:", response.text)
-        return None
+        raise PublishError(f"Error publicando en WordPress: {response.text}")
     return response.json()
