@@ -41,5 +41,6 @@ class TokenStorageError(OSError):
 class PublishError(RuntimeError):
     category = ErrorCategory.PUBLISH
 
+
 class CryptographyError(RuntimeError):
     category = ErrorCategory.CRYPTOGRAPHY
