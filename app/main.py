@@ -205,6 +205,38 @@ def setup_wordpress_account(username, client_id, client_secret):
 
 
 @eel.expose
+def setup_bluesky_account(username, password):
+    """
+    - Input:
+        - username: str - The username of the WordPress account to connect.
+        - password: str - The client ID for the WordPress application.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the connection of a Bluesky account. It attempts to authenticate the account using the 
+        provided credentials and returns a success status and message indicating the result of the connection attempt.
+    """
+    try:
+        setup_bluesky_account_auth(username, password)
+
+        return {
+            'success': True,
+            'message': 'Autenticación completada correctamente'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
 def get_available_accounts():
     """
     input:

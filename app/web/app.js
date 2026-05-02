@@ -61,8 +61,10 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 // Expand/collapse forms
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
+const blueskyToggle = document.getElementById('toggle-bluesky-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
+const blueskyForm = document.getElementById('bluesky-form');
 
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
@@ -74,6 +76,12 @@ wordpressToggle.addEventListener('click', () => {
     wordpressForm.classList.toggle('hidden-form');
     const icon = wordpressToggle.querySelector('.expand-icon');
     icon.textContent = wordpressForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+blueskyToggle.addEventListener('click', () => {
+    blueskyForm.classList.toggle('hidden-form');
+    const icon = blueskyToggle.querySelector('.expand-icon');
+    icon.textContent = blueskyForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 // Mastodon: Get Auth URL & Connect
@@ -158,6 +166,34 @@ document.getElementById('link-wordpress-btn').addEventListener('click', async ()
         }
     } catch (err) {
         showLinkStatus('wordpress-status', 'Error: ' + err, 'error');
+    }
+});
+
+// Bluesky: Link account
+document.getElementById('link-bluesky-btn').addEventListener('click', async () => {
+    const username = document.getElementById('bk-username').value.trim();
+    const password = document.getElementById('bk-password').value.trim();
+    
+    if (!username || !password) {
+        showLinkStatus('bluesky-status', 'All fields required', 'error');
+        return;
+    }
+    
+    try {
+        showLinkStatus('bluesky-status', 'Starting Bluesky Login...', 'info');
+        const result = await eel.setup_bluesky_account(username, password)();
+        
+        if (result && result.success) {
+            showLinkStatus('bluesky-status', result.message || 'Account linked!', 'success');
+            document.getElementById('bk-username').value = '';
+            document.getElementById('bk-password').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('bluesky-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('bluesky-status', 'Error: ' + err, 'error');
     }
 });
 
@@ -266,7 +302,8 @@ function renderAccountList() {
 
         const styles = {
             Mastodon: { icon: 'icons/Mastodon_logo.png', border: '#6364FF' },
-            WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' }
+            WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
+            Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' }
         };
         const data = styles[provider] || { icon: 'icons/default.png', border: '#FF80FF' };
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);

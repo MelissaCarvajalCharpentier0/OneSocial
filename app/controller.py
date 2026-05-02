@@ -2,19 +2,17 @@
 
 =============================================================================================
 
-Name: main.py
+Name: controller.py
 Description: Main module for testing the functionalities of the project, including authentication and post creation on social media platforms.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
-Date: March 2026
-Version: 1.1
+Date: April 2026
+Version: 1.2
 
 =============================================================================================
 
 """
 
 from pathlib import Path
-import tkinter as tk
-from tkinter import filedialog
 import base64
 import binascii
 import subprocess
@@ -22,6 +20,7 @@ import subprocess
 from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
+from auth.bluesky_auth import *
 from models.app_errors import InputValueError
 
 from post.post_on_socials import *
@@ -294,6 +293,25 @@ def setup_mastodon_account_auth(code, username):
     save(tokens) 
 
 
+def setup_bluesky_account_auth(username, password):
+    """
+    - Input: username (str), password (str) 
+    - Description: Completes the authentication process for a Bluesky account by saving the token.
+    """
+
+    tokens = load()
+    bluesky_token = Token(
+            provider="Bluesky",
+            username=username,
+            password=password
+        )
+    
+    verify_bluesky_login(bluesky_token)
+    
+    tokens.append(bluesky_token)
+    save(tokens) 
+
+
 def process_image(image_path: Path) -> Path:
     """
     - Input: image_path (Path)
@@ -309,6 +327,7 @@ def process_image(image_path: Path) -> Path:
     print(f"Ruta completa de imagen: {full_path}")
 
     return full_path
+
 
 def save_image_from_base64(image_data: str, image_name: str) -> Path:
     """
