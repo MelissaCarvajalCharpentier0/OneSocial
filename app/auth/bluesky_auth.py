@@ -45,10 +45,7 @@ client.send_image(text='I love my cat', image=img_data, image_alt='My cat mitten
 
 def verify_bluesky_login(token):
     """
-    Verifies that a Bluesky/ATProto login works.
-
-    Returns a normalized dict for the UI/backend.
-    Does NOT publish anything.
+    - Description: Verifies that a Bluesky/ATProto login token works.
     """
 
     username = token.username
@@ -59,18 +56,8 @@ def verify_bluesky_login(token):
 
     try:
         client = Client()
-        profile = client.login(username, app_password)
-
-        return {
-            "success": True,
-            "code": "OK",
-            "message": "Bluesky account connected correctly.",
-            "provider": "Bluesky",
-            "username": getattr(profile, "handle", username),
-            "did": getattr(profile, "did", None),
-            "display_name": getattr(profile, "display_name", None),
-        }
-
+        client.login(username, app_password)
+    
     except UnauthorizedError as error:
         raise InputValueError("Access denied.")
 
