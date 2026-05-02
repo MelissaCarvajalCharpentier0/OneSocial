@@ -354,13 +354,10 @@ def update_display_name(provider, username, new_label):
             return {'success': False, 'message': 'Account not found'}
             
         return {'success': True, 'message': 'Label updated'}
-<<<<<<< CEB-39-T16-2-Refactorizar-la-interfaz
         
-=======
     except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
         print("ERROR:", str(e))
         return serialize_error(e)
->>>>>>> dev
     except Exception as e:
         print("ERROR:", str(e))
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
