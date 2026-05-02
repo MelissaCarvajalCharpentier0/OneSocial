@@ -329,12 +329,9 @@ def delete_account(provider, username):
     - Description: Deletes the account matching provider and username from the stored tokens.
     """
     try:
-        tokens = load()
-        original_len = len(tokens)
-        tokens = [t for t in tokens if not (t.provider == provider and t.username == username)]
-        if len(tokens) == original_len:
+        status = delete_token(provider, username)
+        if not status:
             return {'success': False, 'message': 'Account not found'}
-        save(tokens)
         return {'success': True, 'message': f'Account {username} ({provider}) removed'}
     except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
         print("ERROR:", str(e))
@@ -344,27 +341,26 @@ def delete_account(provider, username):
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
     
 @eel.expose
-def update_account_label(provider, username, new_label):
+def update_display_name(provider, username, new_label):
     """
     - Input: provider (str), username (str), new_label (str)
     - Output: dict with success and message
     - Description: Sets the account_label for the matching account.
     """
     try:
-        tokens = load()
-        found = False
-        for token in tokens:
-            if token.provider == provider and token.username == username:
-                token.account_label = new_label.strip() if new_label.strip() else None
-                found = True
-                break
-        if not found:
+        status = update_account_label(provider, username, new_label)
+
+        if not status:
             return {'success': False, 'message': 'Account not found'}
-        save(tokens)
+            
         return {'success': True, 'message': 'Label updated'}
+<<<<<<< CEB-39-T16-2-Refactorizar-la-interfaz
+        
+=======
     except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
         print("ERROR:", str(e))
         return serialize_error(e)
+>>>>>>> dev
     except Exception as e:
         print("ERROR:", str(e))
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
@@ -387,7 +383,7 @@ if __name__ == '__main__':
             'index.html',
             size=(window_width, window_height),
             position=(window_x, window_y),
-            mode='chrome',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,
