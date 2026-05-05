@@ -21,8 +21,8 @@ from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 from auth.bluesky_auth import *
-from models.app_errors import InputValueError
 from auth.reddit_auth import *
+from models.app_errors import InputValueError
 
 from post.post_on_socials import *
 
@@ -162,6 +162,10 @@ def general_upload_post(tokens, text, title, image_path=None):
                 publish_post_wordpress_with_featured_image(account, title, text, image_path)
             else:
                 publish_post_wordpress(account, title, text)
+        elif account.provider == "Reddit":
+            if image_path:
+                raise InputValueError("Reddit no soporta imagenes en esta version.")
+            publish_post_reddit_text(title, text, account)
         else:
             raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
@@ -183,6 +187,31 @@ def save_new_account(username, client_id, client_secret, provider, tokens):
     )
     if username not in [token.username for token in tokens]:
         tokens.append(new_account)
+    save(tokens)
+
+
+def save_or_update_reddit_account(username, client_id, client_secret, subreddit, provider, tokens):
+    """
+    - Input: Reddit account info, current tokens
+    - Description: Saves a new Reddit account or updates an existing one.
+    """
+
+    for token in tokens:
+        if token.provider == provider and token.username == username:
+            token.client_id = client_id
+            token.client_secret = client_secret
+            token.subreddit = subreddit
+            save(tokens)
+            return
+
+    new_account = Token(
+        provider=provider,
+        username=username,
+        client_id=client_id,
+        client_secret=client_secret,
+        subreddit=subreddit,
+    )
+    tokens.append(new_account)
     save(tokens)
 
 
@@ -223,16 +252,14 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
     save(tokens)
 
 
-def register_and_auth_reddit(provider, username, client_id, client_secret):
+def register_and_auth_reddit(provider, username, client_id, client_secret, subreddit):
     """
     Effects:
-        - Initiates the authentication process for Reddit accounts and stores the resulting credentials.
-    Description:
-        - Reads the stored tokens, adds or updates the Reddit account, then performs the OAuth flow to obtain
-          an access token and identity information from Reddit.
+        - Initiates the authentication process for Reddit accounts and stores tokens.
     """
+
     tokens = load()
-    save_new_account(username, client_id, client_secret, provider, tokens)
+    save_or_update_reddit_account(username, client_id, client_secret, subreddit, provider, tokens)
     tokens = load()
 
     for account in tokens:
@@ -242,13 +269,8 @@ def register_and_auth_reddit(provider, username, client_id, client_secret):
         if account.username != username:
             continue
 
-        print(f"\nProcesando cuenta: {account.username}")
-
         ensure_reddit_token(account)
-
-        success = verify_reddit_access(account)
-
-        print(f"Resultado: {'OK' if success else 'FAIL'}")
+        verify_reddit_access(account)
 
     save(tokens)
 

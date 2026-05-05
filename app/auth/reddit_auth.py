@@ -28,7 +28,7 @@ AUTHORIZATION_URL = "https://www.reddit.com/api/v1/authorize"
 TOKEN_URL = "https://www.reddit.com/api/v1/access_token"
 USER_INFO_URL = "https://oauth.reddit.com/api/v1/me"
 USER_AGENT = "OneSocial/1.0 (by /u/onesocial)"
-REDDIT_SCOPES = ["identity"]
+REDDIT_SCOPES = ["identity", "submit"]
 
 auth_code = None
 auth_error = None
@@ -276,6 +276,21 @@ def _apply_token_data(account, token_data):
         account.access_expires_at = (now + timedelta(seconds=int(expires_in))).isoformat()
 
 
+def _is_access_token_expired(account):
+    if not account.access_expires_at:
+        return False
+
+    try:
+        expires_at = datetime.fromisoformat(account.access_expires_at)
+    except ValueError:
+        return False
+
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    return datetime.now(timezone.utc) >= expires_at
+
+
 def ensure_reddit_token(account):
     """
     - Input:
@@ -286,7 +301,7 @@ def ensure_reddit_token(account):
         - Ensures that a Reddit access token exists, starting the OAuth flow if necessary.
     """
 
-    if account.access_token:
+    if account.access_token and not _is_access_token_expired(account):
         return account.access_token
 
     if not account.client_id:
@@ -319,7 +334,7 @@ def verify_reddit_access(account):
         - Verifies the stored token by calling Reddit's identity endpoint.
     """
 
-    if not account.access_token and account.refresh_token:
+    if (not account.access_token or _is_access_token_expired(account)) and account.refresh_token:
         token_data = refresh_access_token(account.client_id, account.client_secret, account.refresh_token)
         _apply_token_data(account, token_data)
 

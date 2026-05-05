@@ -962,3 +962,60 @@ textarea {
 .wp-content {
     padding: 14px;
 }
+
+
+/* ============================= */
+/*             Reddit            */
+/* ============================= */
+
+.reddit-post {
+    background: #141414;
+    border-radius: 12px;
+    border: 1px solid #2d2d2d;
+    padding: 14px;
+    color: #e6e6e6;
+}
+
+.reddit-header {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.reddit-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #ff4500;
+}
+
+.reddit-user {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.reddit-handle {
+    font-size: 0.75rem;
+    color: #9e9e9e;
+}
+
+.reddit-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+.reddit-body {
+    font-size: 0.88rem;
+    color: #cfcfcf;
+    white-space: pre-wrap;
+}
+
+.reddit-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    color: #9e9e9e;
+    font-size: 0.8rem;
+}

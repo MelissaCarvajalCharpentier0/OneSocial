@@ -237,30 +237,35 @@ def setup_bluesky_account(username, password):
 
 
 @eel.expose
-def setup_reddit_account(username, client_id, client_secret):
+def setup_reddit_account(username, client_id, client_secret, subreddit):
     """
     - Input:
-        - username: str - Local label for the Reddit account.
-        - client_id: str - The client ID for the Reddit application.
-        - client_secret: str - The client secret for the Reddit application.
+        - username: str - The username of the Reddit account to connect.
+        - client_id: str - The Reddit application client ID.
+        - client_secret: str - The Reddit application client secret.
+        - subreddit: str - Default subreddit for posting.
     - Output:
         - A dictionary containing the success status and a message regarding the connection attempt.
     - Description:
-        - Handles the connection of a Reddit account via OAuth and stores the resulting token data.
+        - Handles the connection of a Reddit account via OAuth and stores tokens.
     """
     try:
         provider = "Reddit"
-        register_and_auth_reddit(provider, username, client_id, client_secret)
+        register_and_auth_reddit(provider, username, client_id, client_secret, subreddit)
 
         return {
             'success': True,
-            'message': 'Autenticación completada correctamente'
+            'message': 'Autenticacion completada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -436,12 +441,17 @@ if __name__ == '__main__':
     print("Opening application window...")
     
     try:
+        if sys.platform.startswith('linux') or sys.platform == 'darwin':
+            browser_mode = 'default'
+        else:
+            browser_mode = 'edge'
+
         # The sacred incantation that brings forth the interface from the machine
         eel.start(
             'index.html',
             size=(window_width, window_height),
             position=(window_x, window_y),
-            mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode=browser_mode,
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,
