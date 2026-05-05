@@ -19,9 +19,10 @@ from pathlib import Path
 
 import requests
 
+from atproto import Client
+from atproto_client.exceptions import UnauthorizedError, BadRequestError, NetworkError, RequestException, InvokeTimeoutError, LoginRequiredError
+
 from models.app_errors import ApiError, InputValueError, PublishError
-
-
 
 ####################### MASTONDON #######################
 
@@ -31,7 +32,7 @@ def upload_post_mastodon(text: str, image_path: Path, account):
     - Input: 
         - text: str - The text content of the post.
         - image_path: Path - The file path to the image to be uploaded.
-        - account: Account - The account object containing authentication details.
+        - account: Token - The account object containing authentication details.
     - Description: 
         - Uploads a post to Mastodon with the given text and image. It first ensures that the account 
         has a valid access token, then it uploads the image and creates a new status with the text and the media ID of the uploaded image.
@@ -53,7 +54,7 @@ def upload_post_mastodon_text(text: str, account):
     """
     - Input: 
         - text: str - The text content of the post.
-        - account: Account - The account object containing authentication details.
+        - account: Token - The account object containing authentication details.
     - Description: 
         - Uploads a text-only post to Mastodon. It ensures that the account has a valid access token and then creates a new status with the provided text.
     """
@@ -78,7 +79,7 @@ def upload_post_mastodon_text(text: str, account):
 def publish_post_wordpress(account, title, content):
     """
     - Input: 
-        - account: Account - The account object containing authentication details.
+        - account: Token - The account object containing authentication details.
         - title: str - The title of the post to be published.
         - content: str - The content of the post to be published.
     - Output: 
@@ -162,7 +163,7 @@ def upload_image_wp(token, site, image_path):
 def publish_post_wordpress_with_image(account, title, content, image_path):
     """
     - Input: 
-        - account: Account - The account object containing authentication details.
+        - account: Token - The account object containing authentication details.
         - title: str - The title of the post to be published.   
         - content: str - The content of the post to be published.
         - image_path: Path - The file path to the image to be included in the post
@@ -190,7 +191,7 @@ def publish_post_wordpress_with_image(account, title, content, image_path):
 def publish_post_wordpress_with_featured_image(account, title, content, image_path):
     """
     - Input: 
-        - account: Account - The account object containing authentication details.
+        - account: Token - The account object containing authentication details.
         - title: str - The title of the post to be published.   
         - content: str - The content of the post to be published.
         - image_path: Path - The file path to the image to be set as the featured image of the post
@@ -231,3 +232,62 @@ def publish_post_wordpress_with_featured_image(account, title, content, image_pa
     if response.status_code != 200:
         raise PublishError(f"Error publicando en WordPress: {response.text}")
     return response.json()
+
+
+
+
+
+
+######################## BLUESKY ########################
+
+
+def publish_post_bluesky(token, title, content, image_path):
+    """
+    - Input: 
+        - token: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+        - image_path: Path - The file path to the image to be set as the featured image of the post
+    - Description: 
+        - Publishes a post to Bluesky with an image using the provided account, title, content, 
+        and image file path.
+    """
+
+    
+
+    raise(NotImplementedError)
+
+
+def publish_post_bluesky_text(token, title, content):
+    """
+    - Input: 
+        - token: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+    - Description: 
+        - Publishes an only text post to Bluesky using the provided account, title and content.
+    """
+
+    if title: # Title not None
+        text = f"{title}\n{content}"
+    else:
+        text = f"{content}"
+
+    try:
+        client = Client()
+        client.login(token.username, token.password)
+        client.send_post(text)
+    
+    except UnauthorizedError as error:
+        raise InputValueError("Access denied.")
+    except BadRequestError as error:
+        raise ApiError("Invalid request for bluesky. Check post length or content.")
+    except InvokeTimeoutError as error:
+        raise ApiError("No response from Bluesky API.")
+    except (NetworkError, RequestException) as error:
+        raise ApiError("Could not reach Bluesky/ATProto server.")
+    except LoginRequiredError as error:
+        raise ApiError("Bluesky login failed or session was not created.")
+    except Exception as error:
+        raise ApiError("Unexpected error while posting to Bluesky.") from error #Temporary to catch errors REMOVE LATER -Joq
+

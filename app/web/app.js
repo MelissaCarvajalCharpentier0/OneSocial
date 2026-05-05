@@ -622,13 +622,8 @@ async function createPost() {
         return;
     }
     
-    if (header.length > 100) {
-        showStatus('Header exceeds 100 characters', 'error');
-        return;
-    }
-    
-    if (body.length > 500) {
-        showStatus('Body exceeds 500 characters', 'error');
+    if (header.length + body.length > 299) {
+        showStatus('Header and body exceeds 299 character limit', 'error');
         return;
     }
 
