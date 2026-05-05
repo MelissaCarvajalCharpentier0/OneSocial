@@ -513,6 +513,8 @@ eel.expose(clearForm);
 function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
+    fileName.textContent = "No file selected";
+    currentImage = null;
     updatePreview();
     updateCounters();
     syncSidebarHeight();
