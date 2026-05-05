@@ -61,9 +61,11 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 // Expand/collapse forms
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
+const redditToggle = document.getElementById('toggle-reddit-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
+const redditForm = document.getElementById('reddit-form');
 const blueskyForm = document.getElementById('bluesky-form');
 
 mastodonToggle.addEventListener('click', () => {
@@ -76,6 +78,12 @@ wordpressToggle.addEventListener('click', () => {
     wordpressForm.classList.toggle('hidden-form');
     const icon = wordpressToggle.querySelector('.expand-icon');
     icon.textContent = wordpressForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+redditToggle.addEventListener('click', () => {
+    redditForm.classList.toggle('hidden-form');
+    const icon = redditToggle.querySelector('.expand-icon');
+    icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 blueskyToggle.addEventListener('click', () => {
@@ -166,6 +174,36 @@ document.getElementById('link-wordpress-btn').addEventListener('click', async ()
         }
     } catch (err) {
         showLinkStatus('wordpress-status', 'Error: ' + err, 'error');
+    }
+});
+
+// Reddit: Link account
+document.getElementById('link-reddit-btn').addEventListener('click', async () => {
+    const username = document.getElementById('reddit-username').value.trim();
+    const clientId = document.getElementById('reddit-client-id').value.trim();
+    const clientSecret = document.getElementById('reddit-client-secret').value.trim();
+
+    if (!username || !clientId) {
+        showLinkStatus('reddit-status', 'Account label and client ID required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('reddit-status', 'Starting Reddit OAuth...', 'info');
+        const result = await eel.setup_reddit_account(username, clientId, clientSecret)();
+
+        if (result && result.success) {
+            showLinkStatus('reddit-status', result.message || 'Account linked!', 'success');
+            document.getElementById('reddit-username').value = '';
+            document.getElementById('reddit-client-id').value = '';
+            document.getElementById('reddit-client-secret').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('reddit-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
 });
 

@@ -22,6 +22,7 @@ from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 from auth.bluesky_auth import *
 from models.app_errors import InputValueError
+from auth.reddit_auth import *
 
 from post.post_on_socials import *
 
@@ -219,6 +220,36 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
         print(f"Resultado: {'OK' if success else 'FAIL'}")
 
     # Guardar JSON actualizado con token
+    save(tokens)
+
+
+def register_and_auth_reddit(provider, username, client_id, client_secret):
+    """
+    Effects:
+        - Initiates the authentication process for Reddit accounts and stores the resulting credentials.
+    Description:
+        - Reads the stored tokens, adds or updates the Reddit account, then performs the OAuth flow to obtain
+          an access token and identity information from Reddit.
+    """
+    tokens = load()
+    save_new_account(username, client_id, client_secret, provider, tokens)
+    tokens = load()
+
+    for account in tokens:
+        if account.provider != "Reddit":
+            continue
+
+        if account.username != username:
+            continue
+
+        print(f"\nProcesando cuenta: {account.username}")
+
+        ensure_reddit_token(account)
+
+        success = verify_reddit_access(account)
+
+        print(f"Resultado: {'OK' if success else 'FAIL'}")
+
     save(tokens)
 
 
