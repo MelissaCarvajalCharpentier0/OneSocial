@@ -253,9 +253,36 @@ def publish_post_bluesky(token, title, content, image_path):
         and image file path.
     """
 
-    
+    if title: # Title not None
+        text = f"{title}\n{content}"
+    else:
+        text = f"{content}"
 
-    raise(NotImplementedError)
+    try:
+        with open(image_path, 'rb') as file:
+            data = file.read()
+
+    except Exception as error:
+        raise InputValueError("Error loading image.")
+
+
+    try:
+        client = Client()
+        client.login(token.username, token.password)
+        client.send_image(text=text, image=data, image_alt='')
+    
+    except UnauthorizedError:
+        raise InputValueError("Access denied.")
+    except BadRequestError:
+        raise ApiError("Invalid request for bluesky. Check post length or content.")
+    except InvokeTimeoutError:
+        raise ApiError("No response from Bluesky API.")
+    except (NetworkError, RequestException):
+        raise ApiError("Could not reach Bluesky/ATProto server.")
+    except LoginRequiredError:
+        raise ApiError("Bluesky login failed or session was not created.")
+    except Exception as error:
+        raise ApiError("Unexpected error while posting to Bluesky.") from error
 
 
 def publish_post_bluesky_text(token, title, content):
@@ -278,16 +305,16 @@ def publish_post_bluesky_text(token, title, content):
         client.login(token.username, token.password)
         client.send_post(text)
     
-    except UnauthorizedError as error:
+    except UnauthorizedError:
         raise InputValueError("Access denied.")
-    except BadRequestError as error:
+    except BadRequestError:
         raise ApiError("Invalid request for bluesky. Check post length or content.")
-    except InvokeTimeoutError as error:
+    except InvokeTimeoutError:
         raise ApiError("No response from Bluesky API.")
-    except (NetworkError, RequestException) as error:
+    except (NetworkError, RequestException):
         raise ApiError("Could not reach Bluesky/ATProto server.")
-    except LoginRequiredError as error:
+    except LoginRequiredError:
         raise ApiError("Bluesky login failed or session was not created.")
     except Exception as error:
-        raise ApiError("Unexpected error while posting to Bluesky.") from error #Temporary to catch errors REMOVE LATER -Joq
+        raise ApiError("Unexpected error while posting to Bluesky.") from error
 

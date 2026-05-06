@@ -50,13 +50,13 @@ def verify_bluesky_login(token):
         client = Client()
         client.login(username, app_password)
     
-    except UnauthorizedError as error:
+    except UnauthorizedError:
         raise InputValueError("Access denied.")
-    except BadRequestError as error:
+    except BadRequestError:
         raise ApiError("Invalid request for bluesky.")
-    except InvokeTimeoutError as error:
+    except InvokeTimeoutError:
         raise ApiError("No response from Bluesky API.")
-    except (NetworkError, RequestException) as error:
+    except (NetworkError, RequestException):
         raise ApiError("Could not reach Bluesky/ATProto server.")
     except Exception as error:
-        raise Exception("Unexpected error at Bluesky login.")
+        raise Exception("Unexpected error at Bluesky login.") from error
