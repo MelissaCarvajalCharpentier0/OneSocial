@@ -412,7 +412,7 @@ if __name__ == '__main__':
             'index.html',
             size=(window_width, window_height),
             position=(window_x, window_y),
-            mode='edge',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode='default',  # TODO: Consider switching to 'default' browser for better compatibility
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,

@@ -13,17 +13,9 @@ Version: 1.0
 """
 
 from atproto import Client
-from atproto_client.exceptions import (
-    UnauthorizedError,
-    BadRequestError,
-    NetworkError,
-    RequestException,
-    InvokeTimeoutError,
-    ModelError,
-    AtProtocolError,
-)
+from atproto_client.exceptions import UnauthorizedError, BadRequestError, NetworkError, RequestException, InvokeTimeoutError
 
-from models.app_errors import InputValueError, ApiError, TokenStorageError
+from models.app_errors import InputValueError, ApiError
 
 """
 client = Client()
@@ -58,17 +50,13 @@ def verify_bluesky_login(token):
         client = Client()
         client.login(username, app_password)
     
-    except UnauthorizedError as error:
+    except UnauthorizedError:
         raise InputValueError("Access denied.")
-
-    except BadRequestError as error:
+    except BadRequestError:
         raise ApiError("Invalid request for bluesky.")
-
-    except InvokeTimeoutError as error:
-        raise ApiError ("No response from Bluesky API.")
-
-    except (NetworkError, RequestException) as error:
-        raise ApiError ("Could not reach Bluesky/ATProto server.")
-
+    except InvokeTimeoutError:
+        raise ApiError("No response from Bluesky API.")
+    except (NetworkError, RequestException):
+        raise ApiError("Could not reach Bluesky/ATProto server.")
     except Exception as error:
-        raise Exception ("Unexpected error at Bluesky login.")
+        raise Exception("Unexpected error at Bluesky login.") from error

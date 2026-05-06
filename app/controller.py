@@ -138,7 +138,7 @@ def update_account_label(provider, username, new_label):
 def general_upload_post(tokens, text, title, image_path=None):
     """
     - Input: 
-        - account: Account - The account object containing authentication details and provider information.
+        - account: Token - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
         - title: str - The title of the post.
 
@@ -161,6 +161,11 @@ def general_upload_post(tokens, text, title, image_path=None):
                 publish_post_wordpress_with_featured_image(account, title, text, image_path)
             else:
                 publish_post_wordpress(account, title, text)
+        elif account.provider == "Bluesky":
+            if image_path: 
+                publish_post_bluesky(account, title, text, image_path)
+            else:
+                publish_post_bluesky_text(account, title, text)
         else:
             raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
