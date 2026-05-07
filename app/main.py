@@ -237,6 +237,51 @@ def setup_bluesky_account(username, password):
 
 
 @eel.expose
+def connect_linkedin(client_id):
+    try:
+        setup_linkedin_account(client_id)
+        return {
+            'success': True,
+            'message': 'Browser opened for LinkedIn authentication'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def auth_linkedin(username, client_id, client_secret, code):
+    try:
+        setup_linkedin_account_auth(username, client_id, client_secret, code)
+
+        return {
+            'success': True,
+            'message': 'LinkedIn account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+    
+
+@eel.expose
 def get_available_accounts():
     """
     input:

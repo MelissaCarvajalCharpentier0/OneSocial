@@ -21,6 +21,7 @@ from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 from auth.bluesky_auth import *
+from auth.linkedin_auth import *
 from models.app_errors import InputValueError
 
 from post.post_on_socials import *
@@ -374,3 +375,37 @@ def save_image_from_base64(image_data: str, image_name: str) -> Path:
         f.write(image_bytes)
 
     return full_path
+
+def setup_linkedin_account(client_id):
+    auth_url = get_linkedin_auth_url(client_id)
+
+    subprocess.run(
+        f'start "" "{auth_url}"',
+        shell=True
+    )
+
+    return 1
+
+
+def setup_linkedin_account_auth(username, client_id, client_secret, code):
+
+    tokens = load()
+
+    new_token = create_linkedin_token(
+        client_id,
+        client_secret,
+        code
+    )
+    new_token.account_label = username
+
+    exists = any(
+        token.provider == "LinkedIn"
+        and token.provider_user_id
+        == new_token.provider_user_id
+        for token in tokens
+    )
+
+    if not exists:
+        tokens.append(new_token)
+
+    save(tokens)

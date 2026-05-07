@@ -62,9 +62,11 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
+const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
+const linkedinForm = document.getElementById('linkedin-form');
 
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
@@ -82,6 +84,12 @@ blueskyToggle.addEventListener('click', () => {
     blueskyForm.classList.toggle('hidden-form');
     const icon = blueskyToggle.querySelector('.expand-icon');
     icon.textContent = blueskyForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+linkedinToggle.addEventListener('click', () => {
+    linkedinForm.classList.toggle('hidden-form');
+    const icon = linkedinToggle.querySelector('.expand-icon');
+    icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 // Mastodon: Get Auth URL & Connect
@@ -197,6 +205,37 @@ document.getElementById('link-bluesky-btn').addEventListener('click', async () =
     }
 });
 
+
+// LinkedIn: Abrir OAuth URL y conectar
+document.getElementById("get-linkedin-url-btn").addEventListener("click", async () => {
+    const clientId = document.getElementById("ln-client-id").value;
+    const status = document.getElementById("linkedin-status");
+
+    const response =
+        await eel.connect_linkedin(clientId,)();
+    status.textContent = response.message;
+});
+
+
+document.getElementById("link-linkedin-btn").addEventListener("click", async () => {
+    const username = document.getElementById("ln-username").value;
+    const clientId = document.getElementById("ln-client-id").value;
+    const clientSecret = document.getElementById("ln-client-secret").value;
+    const code = document.getElementById("ln-code").value;
+    const status = document.getElementById("linkedin-status");
+
+    const response =
+        await eel.auth_linkedin(
+            username,
+            clientId,
+            clientSecret,
+            code
+        )();
+
+    status.textContent = response.message;
+});
+
+
 function showLinkStatus(elementId, message, type) {
     const el = document.getElementById(elementId);
     el.textContent = message;
@@ -303,7 +342,8 @@ function renderAccountList() {
         const styles = {
             Mastodon: { icon: 'icons/Mastodon_logo.png', border: '#6364FF' },
             WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
-            Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' }
+            Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
+            LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' }
         };
         const data = styles[provider] || { icon: 'icons/default.png', border: '#FF80FF' };
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
