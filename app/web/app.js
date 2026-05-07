@@ -62,9 +62,11 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
+const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
+const wordpressRestForm = document.getElementById('wordpress-rest-form');
 
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
@@ -82,6 +84,11 @@ blueskyToggle.addEventListener('click', () => {
     blueskyForm.classList.toggle('hidden-form');
     const icon = blueskyToggle.querySelector('.expand-icon');
     icon.textContent = blueskyForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+wordpressRestToggle.addEventListener('click', () => {
+    wordpressRestForm.classList.toggle('hidden-form');
+    const icon = wordpressRestToggle.querySelector('.expand-icon');
+    icon.textContent = wordpressRestForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 // Mastodon: Get Auth URL & Connect
@@ -194,6 +201,36 @@ document.getElementById('link-bluesky-btn').addEventListener('click', async () =
         }
     } catch (err) {
         showLinkStatus('bluesky-status', 'Error: ' + err, 'error');
+    }
+});
+// Self‑hosted WordPress link handler
+document.getElementById('link-wordpress-rest-btn').addEventListener('click', async () => {
+    const siteUrl = document.getElementById('wp-rest-url').value.trim();
+    const username = document.getElementById('wp-rest-username').value.trim();
+    const appPassword = document.getElementById('wp-rest-password').value.trim();
+    
+    if (!siteUrl || !username || !appPassword) {
+        showLinkStatus('wordpress-rest-status', 'All fields required', 'error');
+        return;
+    }
+    
+    try {
+        showLinkStatus('wordpress-rest-status', 'Verifying credentials...', 'info');
+        // Calls connect_wordpress_rest from main.py
+        const result = await eel.connect_wordpress_rest(siteUrl, username, appPassword)();
+        
+        if (result && result.success) {
+            showLinkStatus('wordpress-rest-status', result.message, 'success');
+            document.getElementById('wp-rest-url').value = '';
+            document.getElementById('wp-rest-username').value = '';
+            document.getElementById('wp-rest-password').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('wordpress-rest-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('wordpress-rest-status', 'Error: ' + err, 'error');
     }
 });
 
@@ -586,6 +623,8 @@ function updatePreview() {
         if (provider === 'Mastodon') {
             contentHTML = renderMastodon(label, username, header, body, image);
         } else if (provider === 'WordPress') {
+            contentHTML = renderWordPress(label, username, header, body, image);
+        } else if (provider === 'WordPress-REST') {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else {
             contentHTML = `

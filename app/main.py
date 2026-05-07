@@ -202,14 +202,57 @@ def setup_wordpress_account(username, client_id, client_secret):
             'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
+    
+@eel.expose
+def connect_wordpress_rest(site_url, username, app_password):
+    """
+    - Input: site_url (str), username (str), app_password (str)
+    - Output: dict with success and message
+    - Description: Saves a self-hosted WordPress account using REST API.
+    """
+    try:
+        provider = "WordPress-REST"
+        tokens = load()
+
+        # Avoid duplicates (same site_url + username)
+        already = any(
+            t.provider == provider and t.username == username and t.base_url == site_url.rstrip('/')
+            for t in tokens
+        )
+        if already:
+            return {'success': True, 'message': 'Account already linked.'}
+
+        new_token = Token(
+            provider=provider,
+            username=username,
+            password=app_password,
+            base_url=site_url.rstrip('/')
+        )
+        tokens.append(new_token)
+        save(tokens)
+
+        # Optionally verify credentials instantly
+        try:
+            verify_wordpress_rest(new_token)
+            return {'success': True, 'message': 'Connected and verified.'}
+        except Exception as ve:
+            # Remove if verification fails
+            tokens = load()
+            tokens = [t for t in tokens if not (t.provider == provider and t.username == username and t.base_url == site_url.rstrip('/'))]
+            save(tokens)
+            return {'success': False, 'message': f'Could not verify credentials: {ve}'}
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {'success': False, 'message': str(e)}
 
 
 @eel.expose
 def setup_bluesky_account(username, password):
     """
     - Input:
-        - username: str - The username of the WordPress account to connect.
-        - password: str - The client ID for the WordPress application.
+        - username: str - The username of the Bluesky account to connect.
+        - password: str - The password for the Bluesky account.
     - Output:
         - A dictionary containing the success status and a message regarding the connection attempt.
     - Description:

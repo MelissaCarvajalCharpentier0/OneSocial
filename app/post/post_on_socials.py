@@ -21,6 +21,9 @@ import requests
 
 from models.app_errors import ApiError, InputValueError, PublishError
 
+from requests.auth import HTTPBasicAuth
+import json
+
 
 
 ####################### MASTONDON #######################
@@ -231,3 +234,96 @@ def publish_post_wordpress_with_featured_image(account, title, content, image_pa
     if response.status_code != 200:
         raise PublishError(f"Error publicando en WordPress: {response.text}")
     return response.json()
+
+####################### WORDPRESSREST #######################
+def verify_wordpress_rest(account):
+    """
+    Verify the REST API credentials by fetching the current user.
+    Raises an exception on failure.
+    """
+    url = f"{account.base_url}/wp-json/wp/v2/users/me"
+
+    headers = {
+        "User-Agent": "OneSocial/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    # Disable the Expect header (causes 417/412 on some servers)
+    session = requests.Session()
+    session.trust_env = False  # avoid system proxy issues
+
+    resp = session.get(
+        url,
+        auth=HTTPBasicAuth(account.username, account.password),
+        headers=headers,
+        timeout=15
+    )
+
+    if resp.status_code != 200:
+        # Add a bit more diagnostic info
+        detail = resp.text[:200] if resp.text else "No response body"
+        raise Exception(
+            f"Verification failed: HTTP {resp.status_code}. "
+            f"Reason: {resp.reason}. Detail: {detail}"
+        )
+
+    return True
+
+def publish_post_wordpress_rest(account, title, content, image_path=None):
+    wp_url = f"{account.base_url}/wp-json/wp/v2"
+    headers = {
+        "User-Agent": "OneSocial/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    session = requests.Session()
+    session.trust_env = False
+
+    # 1. Create the post
+    post_data = {
+        "title": title,
+        "content": content,
+        "status": "publish"
+    }
+    r = session.post(
+        f"{wp_url}/posts",
+        json=post_data,
+        auth=HTTPBasicAuth(account.username, account.password),
+        headers=headers,
+        timeout=30
+    )
+    if r.status_code not in (200, 201):
+        raise Exception(f"Post creation failed: {r.status_code} {r.text}")
+
+    post_id = r.json()["id"]
+
+    # 2. Upload image if provided
+    if image_path:
+        image_path = Path(image_path)
+        if image_path.is_file():
+            media_url = f"{wp_url}/media"
+            with open(image_path, 'rb') as img:
+                mime = f"image/{image_path.suffix[1:]}"
+                files = {'file': (image_path.name, img, mime)}
+                r_media = session.post(
+                    media_url,
+                    files=files,
+                    auth=HTTPBasicAuth(account.username, account.password),
+                    headers={"User-Agent": "OneSocial/1.0"},  # no Content-Type here (multipart sets it)
+                    timeout=30
+                )
+            if r_media.status_code not in (200, 201):
+                raise Exception(f"Image upload failed: {r_media.status_code} {r_media.text}")
+
+            media_id = r_media.json()["id"]
+
+            # Set featured image
+            featured_data = {"featured_media": media_id}
+            session.post(
+                f"{wp_url}/posts/{post_id}",
+                json=featured_data,
+                auth=HTTPBasicAuth(account.username, account.password),
+                headers=headers
+            )
