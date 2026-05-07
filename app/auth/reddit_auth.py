@@ -4,7 +4,7 @@
 
 Name: reddit_auth.py
 Description: Module for handling Reddit authentication and token management.
-Author: GitHub Copilot
+Author: Melissa Carvajal
 Date: April 2026
 Version: 1.0
 
