@@ -307,7 +307,7 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
                 }
 
         title = header if header else None
-        text = body if body else header
+        text = body if body else None
         new_image_path = None
 
         if image_data:
