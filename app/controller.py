@@ -22,6 +22,7 @@ from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 from auth.bluesky_auth import *
 from models.app_errors import InputValueError
+from auth.reddit_auth import *
 
 from post.post_on_socials import *
 
@@ -136,7 +137,7 @@ def update_account_label(provider, username, new_label):
 
 
 def general_upload_post(tokens, text, title, image_path=None):
-    """
+        """
     - Input: 
         - account: Token - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
@@ -148,26 +149,28 @@ def general_upload_post(tokens, text, title, image_path=None):
         - If the provider is "Mastodon", it calls the upload_post_mastodon function with the text and image path.
         - If the provider is "WordPress", it calls the publish_post_wordpress_with_image function with the account, text as title, text as content, and image path.
         - If the provider is not recognized, it prints a message indicating that the provider is not supported.
+        - If the provider is "wordpress-rest", it calls the publish_post_wordpress_rest function with the account, title, text, and image path.
     """
-
-    for account in tokens:
-        if account.provider == "Mastodon":
-            if image_path:
-                upload_post_mastodon(title + "\n" + text, image_path, account)
+        for account in tokens:
+            if account.provider == "Mastodon":
+                if image_path:
+                    upload_post_mastodon(title + "\n" + text, image_path, account)
+                else:
+                    upload_post_mastodon_text(title + "\n" + text, account)
+            elif account.provider == "WordPress":
+                if image_path: 
+                    publish_post_wordpress_with_featured_image(account, title, text, image_path)
+                else:
+                    publish_post_wordpress(account, title, text)
+            elif account.provider == "WordPress-REST":
+                publish_post_wordpress_rest(account, title, text, image_path)
+            elif account.provider == "Bluesky":
+                if image_path: 
+                    publish_post_bluesky(account, title, text, image_path)
+                else:
+                    publish_post_bluesky_text(account, title, text)
             else:
-                upload_post_mastodon_text(title + "\n" + text, account)
-        elif account.provider == "WordPress":
-            if image_path: 
-                publish_post_wordpress_with_featured_image(account, title, text, image_path)
-            else:
-                publish_post_wordpress(account, title, text)
-        elif account.provider == "Bluesky":
-            if image_path: 
-                publish_post_bluesky(account, title, text, image_path)
-            else:
-                publish_post_bluesky_text(account, title, text)
-        else:
-            raise InputValueError(f"Proveedor {account.provider} no soportado.")   
+                raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
 
 def save_new_account(username, client_id, client_secret, provider, tokens):
@@ -224,6 +227,36 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
         print(f"Resultado: {'OK' if success else 'FAIL'}")
 
     # Guardar JSON actualizado con token
+    save(tokens)
+
+
+def register_and_auth_reddit(provider, username, client_id, client_secret):
+    """
+    Effects:
+        - Initiates the authentication process for Reddit accounts and stores the resulting credentials.
+    Description:
+        - Reads the stored tokens, adds or updates the Reddit account, then performs the OAuth flow to obtain
+          an access token and identity information from Reddit.
+    """
+    tokens = load()
+    save_new_account(username, client_id, client_secret, provider, tokens)
+    tokens = load()
+
+    for account in tokens:
+        if account.provider != "Reddit":
+            continue
+
+        if account.username != username:
+            continue
+
+        print(f"\nProcesando cuenta: {account.username}")
+
+        ensure_reddit_token(account)
+
+        success = verify_reddit_access(account)
+
+        print(f"Resultado: {'OK' if success else 'FAIL'}")
+
     save(tokens)
 
 
