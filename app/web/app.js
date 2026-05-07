@@ -11,6 +11,14 @@ const accountState = {
     collapsedProviders: new Set()
 };
 
+function escapeHTML(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
 
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
@@ -380,7 +388,7 @@ function renderAccountList() {
             WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
             Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' }
         };
-        const data = styles[provider] || { icon: 'icons/default.png', border: '#FF80FF' };
+        const data = styles[provider] || { icon: 'icons/default.png', border: '#BB9167' };
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
 
         html += `
@@ -588,6 +596,8 @@ eel.expose(clearForm);
 function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
+    fileName.textContent = "No file selected";
+    currentImage = null;
     updatePreview();
     updateCounters();
     syncSidebarHeight();
@@ -643,8 +653,8 @@ function renderWordPress(label, username, header, body, image) {
 // tiene que también añadir el css correspondiente
 
 function updatePreview() {
-    const header = document.getElementById('post-header').value;
-    const body = document.getElementById('post-body').value;
+    const header = escapeHTML(document.getElementById('post-header').value);
+    const body = escapeHTML(document.getElementById('post-body').value);
     const container = document.getElementById('preview-container');
     container.innerHTML = '';
 
@@ -652,8 +662,8 @@ function updatePreview() {
 
     selectedAccounts.forEach((account) => {
         const provider = account.provider ?? account[0];
-        const username = account.username ?? account[1];
-        const label = getAccountLabel(provider, username) || username;  
+        const username = escapeHTML(account.username) ?? account[1];
+        const label = escapeHTML(getAccountLabel(provider, username)) || username;  
 
         let contentHTML = '';
         const image = currentImage;
@@ -699,13 +709,8 @@ async function createPost() {
         return;
     }
     
-    if (header.length > 100) {
-        showStatus('Header exceeds 100 characters', 'error');
-        return;
-    }
-    
-    if (body.length > 500) {
-        showStatus('Body exceeds 500 characters', 'error');
+    if (header.length + body.length > 299) {
+        showStatus('Header and body exceeds 299 character limit', 'error');
         return;
     }
 
