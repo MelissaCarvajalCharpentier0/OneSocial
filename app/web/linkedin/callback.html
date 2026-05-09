@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>LinkedIn Authentication</title>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+
+            font-family: Inter, Arial, sans-serif;
+
+            background:
+                linear-gradient(
+                    135deg,
+                    #0f172a,
+                    #111827
+                );
+
+            color: white;
+
+            min-height: 100vh;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            padding: 24px;
+        }
+
+        .card {
+
+            width: 100%;
+            max-width: 700px;
+
+            background: rgba(255,255,255,0.06);
+
+            border: 1px solid rgba(255,255,255,0.08);
+
+            border-radius: 20px;
+
+            padding: 32px;
+
+            backdrop-filter: blur(10px);
+
+            box-shadow:
+                0 10px 40px rgba(0,0,0,0.35);
+        }
+
+        .top {
+
+            display: flex;
+            align-items: center;
+            gap: 16px;
+
+            margin-bottom: 24px;
+        }
+
+        .linkedin-logo {
+
+            width: 54px;
+            height: 54px;
+
+            border-radius: 14px;
+
+            background: #0A66C2;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        h1 {
+
+            font-size: 28px;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+
+            color: #cbd5e1;
+            font-size: 15px;
+        }
+
+        .success-box {
+
+            background: rgba(34,197,94,0.12);
+
+            border:
+                1px solid rgba(34,197,94,0.35);
+
+            border-radius: 14px;
+
+            padding: 16px;
+
+            margin-bottom: 24px;
+        }
+
+        .success-title {
+
+            font-size: 18px;
+            font-weight: 600;
+
+            margin-bottom: 6px;
+        }
+
+        .code-label {
+
+            margin-bottom: 10px;
+
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+
+        textarea {
+
+            width: 100%;
+            height: 180px;
+
+            resize: none;
+
+            border: none;
+            outline: none;
+
+            border-radius: 14px;
+
+            padding: 16px;
+
+            background: #020617;
+
+            color: #93c5fd;
+
+            font-size: 14px;
+            line-height: 1.5;
+
+            margin-bottom: 18px;
+        }
+
+        .actions {
+
+            display: flex;
+            gap: 12px;
+
+            flex-wrap: wrap;
+        }
+
+        button {
+
+            border: none;
+            cursor: pointer;
+
+            border-radius: 12px;
+
+            padding: 12px 18px;
+
+            font-size: 14px;
+            font-weight: 600;
+
+            transition: 0.2s ease;
+        }
+
+        .copy-btn {
+
+            background: #0A66C2;
+            color: white;
+        }
+
+        .copy-btn:hover {
+
+            transform: translateY(-1px);
+            opacity: 0.92;
+        }
+
+        .close-btn {
+
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .close-btn:hover {
+
+            background: rgba(255,255,255,0.14);
+        }
+
+        .footer {
+
+            margin-top: 20px;
+
+            color: #94a3b8;
+
+            font-size: 13px;
+        }
+
+    </style>
+</head>
+
+<body>
+
+    <div class="card">
+
+        <div class="top">
+
+            <div class="linkedin-logo">
+                in
+            </div>
+
+            <div>
+                <h1>LinkedIn Connected</h1>
+
+                <div class="subtitle">
+                    OAuth authentication completed successfully
+                </div>
+            </div>
+        </div>
+
+        <div class="success-box">
+
+            <div class="success-title">
+                Authentication Successful
+            </div>
+
+            <p>
+                Copy the authorization code below and paste it into OneSocial.
+            </p>
+        </div>
+
+        <div class="code-label">
+            Authorization Code
+        </div>
+
+        <textarea
+            id="auth-code"
+            readonly
+        ></textarea>
+
+        <div class="actions">
+
+            <button
+                class="copy-btn"
+                onclick="copyCode()"
+            >
+                Copy Code
+            </button>
+        </div>
+
+        <div class="footer">
+            You may now return to OneSocial and complete account linking.
+        </div>
+
+    </div>
+
+    <script>
+
+        const params =
+            new URLSearchParams(
+                window.location.search
+            );
+
+        const code =
+            params.get("code");
+
+        const textarea =
+            document.getElementById(
+                "auth-code"
+            );
+
+        if (code) {
+
+            textarea.value = code;
+
+        } else {
+
+            textarea.value =
+                "No authorization code found.";
+        }
+
+        async function copyCode() {
+
+            try {
+
+                await navigator.clipboard.writeText(
+                    textarea.value
+                );
+
+                const button =
+                    document.querySelector(
+                        ".copy-btn"
+                    );
+
+                button.textContent =
+                    "Copied!";
+
+                setTimeout(() => {
+
+                    button.textContent =
+                        "Copy Code";
+
+                }, 2000);
+
+            } catch {
+
+                alert(
+                    "Failed to copy code"
+                );
+            }
+        }
+
+    </script>
+
+</body>
+</html>

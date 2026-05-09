@@ -145,6 +145,37 @@
                 <div id="bluesky-status" class="link-status"></div>
             </div>
         </div>
+
+        <!-- LinkedIn Section -->
+        <div class="link-section">
+            <button id="toggle-linkedin-form" class="link-provider-btn">
+                <span>LinkedIn</span>
+                <span class="expand-icon">▼</span>
+            </button>
+            <div id="linkedin-form" class="link-form hidden-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="ln-username" placeholder="Display name for this account">
+                </div>
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input type="text" id="ln-client-id" placeholder="LinkedIn Client ID">
+                </div>
+                <div class="form-group">
+                    <label>Client Secret</label>
+                    <input type="text" id="ln-client-secret" placeholder="LinkedIn Client Secret">
+                </div>
+                <button id="get-linkedin-url-btn" class="secondary-btn">Connect & Get URL</button>
+
+                <div class="form-group">
+                    <label>Auth Code (If Prompted)</label>
+                    <input type="text" id="ln-code" placeholder="Paste the code from OAuth">
+                </div>
+                
+                <button id="link-linkedin-btn" class="link-action-btn">Link with Auth Code</button>
+                <div id="linkedin-status" class="link-status"></div>
+            </div>
+        </div>
     </aside>
 
     <div id="modal" class="modal">

@@ -21,6 +21,7 @@ from models.token_manager import *
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 from auth.bluesky_auth import *
+from auth.linkedin_auth import *
 from models.app_errors import InputValueError
 
 from post.post_on_socials import *
@@ -38,9 +39,6 @@ FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
 
 
 
-
-
-
 def save(tokens: list[Token]):
     """
     Input: tokens: list[Token] - A list of Token objects representing the account tokens to be saved.
@@ -50,7 +48,6 @@ def save(tokens: list[Token]):
 
     json_data = write_json(tokens)
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
-
 
 
 def load():
@@ -82,6 +79,7 @@ def get_accounts() -> list[str, str]:
     tokens = load()
     return account_list(tokens)
 
+
 def delete_token(provider, username):
     """
     - Input: provider (str), username (str)
@@ -95,6 +93,7 @@ def delete_token(provider, username):
         return False
     save(tokens)
     return True
+
 
 def update_account_label(provider, username, new_label):
     """
@@ -113,26 +112,6 @@ def update_account_label(provider, username, new_label):
         return False
     save(tokens)
     return True
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 def general_upload_post(tokens, text, title, image_path=None):
@@ -166,6 +145,11 @@ def general_upload_post(tokens, text, title, image_path=None):
                 publish_post_bluesky(account, title, text, image_path)
             else:
                 publish_post_bluesky_text(account, title, text)
+        elif account.provider == "LinkedIn":
+            if image_path: 
+                publish_post_linkedin_with_image(account, title + "\n" + text, image_path)
+            else:
+                publish_post_linkedin_text(account, title + "\n" + text)
         else:
             raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
@@ -374,3 +358,71 @@ def save_image_from_base64(image_data: str, image_name: str) -> Path:
         f.write(image_bytes)
 
     return full_path
+
+
+def setup_linkedin_account(client_id):
+    """
+    - Input: 
+        - client_id (str): The LinkedIn application's client ID, used to 
+        identify the application during the authentication process.
+    - Output:
+        - int: A status code indicating the result of the operation. 
+        0 for success, 1 for navigator opened, 2 for error.
+    - Description:
+        - Initiates the authentication process for LinkedIn accounts by opening the 
+        authorization URL in the user's web browser. The function constructs the 
+        authorization URL using the provided client ID and a predefined redirect URI, 
+        then opens this URL in the default web browser to allow the user to authorize 
+        the application. The function returns a status code indicating whether the operation 
+        was successful or if there was an error.
+    """
+
+    auth_url = get_linkedin_auth_url(client_id)
+
+    subprocess.run(
+        f'start "" "{auth_url}"',
+        shell=True
+    )
+
+    return 1
+
+
+def setup_linkedin_account_auth(username, client_id, client_secret, code):
+    """
+    - Input:
+        - username (str): The username of the LinkedIn account being authenticated.
+        - client_id (str): The LinkedIn application's client ID, used to identify 
+        the application during the authentication process.
+        - client_secret (str): The LinkedIn application's client secret, used to 
+        authenticate the application during the token exchange process.
+        - code (str): The authorization code received from LinkedIn after the user 
+        has authorized the application, used to exchange for an access token.
+    - Output:
+        - int: A status code indicating the result of the operation. 
+        0 for success, 1 for error.
+    - Description:
+        - Completes the authentication process for a LinkedIn account by exchanging 
+        the authorization code for an access token and saving the account information. 
+        The function creates a new Token object for the LinkedIn account, populates it 
+        with the obtained access token and other relevant information, and then saves 
+        this information to the data file. The function returns a status code indicating 
+        whether the operation was successful or if there was an error.
+    """
+
+    tokens = load()
+
+    new_token = create_linkedin_token(client_id, client_secret, code)
+    new_token.account_label = username
+
+    exists = any(
+        token.provider == "LinkedIn"
+        and token.provider_user_id
+        == new_token.provider_user_id
+        for token in tokens
+    )
+
+    if not exists:
+        tokens.append(new_token)
+
+    save(tokens)
+
