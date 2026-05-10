@@ -280,33 +280,49 @@ def setup_bluesky_account(username, password):
 
 
 @eel.expose
-def setup_reddit_account(username, client_id, client_secret):
-    """
-    - Input:
-        - username: str - Local label for the Reddit account.
-        - client_id: str - The client ID for the Reddit application.
-        - client_secret: str - The client secret for the Reddit application.
-    - Output:
-        - A dictionary containing the success status and a message regarding the connection attempt.
-    - Description:
-        - Handles the connection of a Reddit account via OAuth and stores the resulting token data.
-    """
+def connect_linkedin(client_id):
     try:
-        provider = "Reddit"
-        register_and_auth_reddit(provider, username, client_id, client_secret)
-
+        setup_linkedin_account(client_id)
         return {
             'success': True,
-            'message': 'Autenticación completada correctamente'
+            'message': 'Browser opened for LinkedIn authentication'
         }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
 
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
+
+@eel.expose
+def auth_linkedin(username, client_id, client_secret, code):
+    try:
+        setup_linkedin_account_auth(username, client_id, client_secret, code)
+
+        return {
+            'success': True,
+            'message': 'LinkedIn account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+    
 
 @eel.expose
 def get_available_accounts():

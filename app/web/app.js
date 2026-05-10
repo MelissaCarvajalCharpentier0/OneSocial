@@ -72,11 +72,13 @@ const wordpressToggle = document.getElementById('toggle-wordpress-form');
 const redditToggle = document.getElementById('toggle-reddit-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
+const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const redditForm = document.getElementById('reddit-form');
 const blueskyForm = document.getElementById('bluesky-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
+const linkedinForm = document.getElementById('linkedin-form');
 
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
@@ -105,6 +107,12 @@ wordpressRestToggle.addEventListener('click', () => {
     wordpressRestForm.classList.toggle('hidden-form');
     const icon = wordpressRestToggle.querySelector('.expand-icon');
     icon.textContent = wordpressRestForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+linkedinToggle.addEventListener('click', () => {
+    linkedinForm.classList.toggle('hidden-form');
+    const icon = linkedinToggle.querySelector('.expand-icon');
+    icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 // Mastodon: Get Auth URL & Connect
@@ -280,6 +288,65 @@ document.getElementById('link-wordpress-rest-btn').addEventListener('click', asy
     }
 });
 
+
+// LinkedIn: Abrir OAuth URL y conectar
+document.getElementById('get-linkedin-url-btn').addEventListener('click', async () => {
+
+    const clientId = document.getElementById('ln-client-id').value.trim();
+
+    if (!clientId) {
+        showLinkStatus('linkedin-status', 'Client ID required', 'error');
+        return;
+    }
+
+    try {
+        const response = await eel.connect_linkedin(clientId)();
+
+        if (response.success) {
+            showLinkStatus('linkedin-status', response.message, 'success');
+        } else {
+            showLinkStatus('linkedin-status', response.message, 'error');
+        }
+
+    } catch (err) {
+        showLinkStatus('linkedin-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// LinkedIn: Link account with Auth Code
+document.getElementById('link-linkedin-btn').addEventListener('click', async () => {
+    const username =document.getElementById('ln-username').value.trim();
+    const clientId = document.getElementById('ln-client-id').value.trim();
+    const clientSecret = document.getElementById('ln-client-secret').value.trim();
+    const code = document.getElementById('ln-code').value.trim();
+
+    if (!username || !clientId || !clientSecret || !code) {
+        showLinkStatus('linkedin-status', 'All fields are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('linkedin-status', 'Linking LinkedIn account...', 'info');
+        const result = await eel.auth_linkedin(username, clientId, clientSecret, code)();
+
+        if (result && result.success) {
+            showLinkStatus('linkedin-status', result.message || 'LinkedIn account linked!', 'success');
+            document.getElementById('ln-username').value = '';
+            document.getElementById('ln-client-id').value = '';
+            document.getElementById('ln-client-secret').value = '';
+            document.getElementById('ln-code').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('linkedin-status', result?.message || 'LinkedIn link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('linkedin-status', 'Error: ' + err, 'error');
+    }
+});
+
+
 function showLinkStatus(elementId, message, type) {
     const el = document.getElementById(elementId);
     el.textContent = message;
@@ -384,11 +451,12 @@ function renderAccountList() {
         const isCollapsed = accountState.collapsedProviders.has(provider);
 
         const styles = {
-            Mastodon: { icon: 'icons/Mastodon_logo.png', border: '#6364FF' },
-            WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
-            Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' }
+            Mastodon: { icon: 'icons/Mastodon_logo.png'},
+            WordPress: { icon: 'icons/WordPress_logo.png'},
+            Bluesky: { icon: 'icons/Bluesky_logo.png'},
+            LinkedIn: { icon: 'icons/LinkedIn_logo.png'}
         };
-        const data = styles[provider] || { icon: 'icons/default.png', border: '#BB9167' };
+        const data = styles[provider] || { icon: 'icons/default.png'};
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
 
         html += `
@@ -396,7 +464,7 @@ function renderAccountList() {
                 <div class="provider-header" data-provider="${provider}">
                     
                     <div class="provider-left">
-                        <div class="provider-icon" style="border: 2px solid ${data.border}">
+                        <div class="provider-icon">
                             <img src="${data.icon}">
                         </div>
                         <span class="provider-name">${displayName}</span>
@@ -647,6 +715,58 @@ function renderWordPress(label, username, header, body, image) {
     `;
 }
 
+function renderLinkedIn(label, username, header, body, image) {
+    const content = [header, body]
+        .filter(Boolean)
+        .join('<br>');
+
+    return `
+        <div class="linkedin-post">
+            <div class="linkedin-top">
+
+                <div class="linkedin-avatar">
+                    ${label ? label.charAt(0).toUpperCase() : 'L'}
+                </div>
+
+                <div class="linkedin-user-info">
+                    <div class="linkedin-name-row">
+                        <span class="linkedin-name">
+                            ${label || 'LinkedIn User'}
+                        </span>
+
+                        <span class="linkedin-you">
+                            • You
+                        </span>
+                    </div>
+
+                    <div class="linkedin-headline">
+                        ${username || '@linkedin-user'}
+                    </div>
+
+                    <div class="linkedin-meta">
+                        now • 🌐
+                    </div>
+                </div>
+                <div class="linkedin-menu"> ⋯</div>
+
+            </div>
+
+            <div class="linkedin-content">
+                <p>${content || 'Start writing your LinkedIn post...'}</p>
+                ${ image? ` <img src="${image}" class="linkedin-image"/>: ` : ''}
+
+            </div>
+
+            <div class="linkedin-actions">
+                <button>👍 Like</button>
+                <button>💬 Comment</button>
+                <button>🔁 Repost</button>
+                <button>✈ Send</button>
+            </div>
+        </div>
+    `;
+}
+
 // Por cada red, se debe hacer una funcion con la estructura anterior 
 // funtion render/NombreRed/(account, header, body, image)
 // Y en estas se pone la estructura del HTML específico de la red y se 
@@ -674,12 +794,28 @@ function updatePreview() {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider === 'WordPress-REST') {
             contentHTML = renderWordPress(label, username, header, body, image);
+        } else if (provider === 'LinkedIn') {
+            contentHTML = renderLinkedIn(label, username, header, body, image);
         } else {
             contentHTML = `
-                <div class="preview-card-social">
-                    <div>${header || 'Title'}</div>
-                    <div>${body || 'Content...'}</div>
-                    ${image ? `<img src="${image}" />` : ''}
+                <div class="generic-preview">
+                    <div class="generic-preview-header">
+                        ${header || 'Untitled Post'}
+                    </div>
+
+                    <div class="generic-preview-body">
+                        <span>${body || 'Start writing your content...'}</span>
+                    </div>
+
+                    ${image? `
+                            <div class="generic-preview-image-wrapper">
+                                <img
+                                    src="${image}"
+                                    class="generic-preview-image"
+                                />
+                            </div>
+                        `: ''
+                    }
                 </div>
             `;
         }

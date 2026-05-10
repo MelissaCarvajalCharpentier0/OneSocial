@@ -653,7 +653,7 @@ textarea {
     width: 34px;
     height: 34px;
     border-radius: 50%;
-    background: #2a2a2a;
+    background: #252525;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -871,6 +871,59 @@ textarea {
 
 
 /* ============================= */
+/*            Generic            */
+/* ============================= */
+
+.generic-preview {
+    background: linear-gradient(145deg, #2a2a2a, #1c1c1c);
+    border-radius: 18px;
+    padding: 18px;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+    text-align: left;
+}
+
+.generic-preview-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.4;
+    text-align: left;
+}
+
+.generic-preview-body span {
+    display: block;
+    width: 100%;
+    text-align: left !important;
+}
+
+.generic-preview-image-wrapper {
+    width: 100%;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(255,255,255,0.03);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-height: 420px;
+}
+
+.generic-preview-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: contain;
+    max-height: 420px;
+}
+
+
+
+
+/* ============================= */
 /*            Mastodon           */
 /* ============================= */
 
@@ -961,4 +1014,122 @@ textarea {
 
 .wp-content {
     padding: 14px;
+}
+
+
+
+
+/* ============================= */
+/*           LinkedIn            */
+/* ============================= */
+
+.linkedin-post {
+    background: white;
+    border: 1px solid #d9d9d9;
+    border-radius: 12px;
+    padding: 14px;
+    max-width: 550px;
+    font-family: Arial, sans-serif;
+}
+
+.linkedin-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.linkedin-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #0a66c2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.linkedin-user-info {
+    flex: 1;
+}
+
+.linkedin-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.linkedin-name {
+    font-weight: 600;
+    font-size: 15px;
+    color: black;
+}
+
+.linkedin-you {
+    color: #666;
+    font-size: 14px;
+}
+
+.linkedin-headline {
+    color: #666;
+    font-size: 13px;
+    margin-top: 2px;
+}
+
+.linkedin-meta {
+    color: #777;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.linkedin-menu {
+    color: #666;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+.linkedin-content {
+    margin-top: 14px;
+}
+
+.linkedin-content p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.5;
+    color: #222;
+    white-space: pre-wrap;
+}
+
+.linkedin-image {
+    width: 100%;
+    margin-top: 12px;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.linkedin-actions {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e5e5;
+}
+
+.linkedin-actions button {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.linkedin-actions button:hover {
+    background: #f3f3f3;
 }
