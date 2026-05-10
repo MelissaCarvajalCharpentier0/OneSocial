@@ -11,6 +11,14 @@ const accountState = {
     collapsedProviders: new Set()
 };
 
+function escapeHTML(value) {
+    return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+}
 
 fileInput.addEventListener('change', () => {
     if (fileInput.files.length > 0) {
@@ -61,11 +69,15 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 // Expand/collapse forms
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
+const redditToggle = document.getElementById('toggle-reddit-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
+const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
+const redditForm = document.getElementById('reddit-form');
 const blueskyForm = document.getElementById('bluesky-form');
+const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
 
 mastodonToggle.addEventListener('click', () => {
@@ -80,10 +92,21 @@ wordpressToggle.addEventListener('click', () => {
     icon.textContent = wordpressForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
+redditToggle.addEventListener('click', () => {
+    redditForm.classList.toggle('hidden-form');
+    const icon = redditToggle.querySelector('.expand-icon');
+    icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
 blueskyToggle.addEventListener('click', () => {
     blueskyForm.classList.toggle('hidden-form');
     const icon = blueskyToggle.querySelector('.expand-icon');
     icon.textContent = blueskyForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+wordpressRestToggle.addEventListener('click', () => {
+    wordpressRestForm.classList.toggle('hidden-form');
+    const icon = wordpressRestToggle.querySelector('.expand-icon');
+    icon.textContent = wordpressRestForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 linkedinToggle.addEventListener('click', () => {
@@ -177,6 +200,36 @@ document.getElementById('link-wordpress-btn').addEventListener('click', async ()
     }
 });
 
+// Reddit: Link account
+document.getElementById('link-reddit-btn').addEventListener('click', async () => {
+    const username = document.getElementById('reddit-username').value.trim();
+    const clientId = document.getElementById('reddit-client-id').value.trim();
+    const clientSecret = document.getElementById('reddit-client-secret').value.trim();
+
+    if (!username || !clientId) {
+        showLinkStatus('reddit-status', 'Account label and client ID required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('reddit-status', 'Starting Reddit OAuth...', 'info');
+        const result = await eel.setup_reddit_account(username, clientId, clientSecret)();
+
+        if (result && result.success) {
+            showLinkStatus('reddit-status', result.message || 'Account linked!', 'success');
+            document.getElementById('reddit-username').value = '';
+            document.getElementById('reddit-client-id').value = '';
+            document.getElementById('reddit-client-secret').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('reddit-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('reddit-status', 'Error: ' + err, 'error');
+    }
+});
+
 // Bluesky: Link account
 document.getElementById('link-bluesky-btn').addEventListener('click', async () => {
     const username = document.getElementById('bk-username').value.trim();
@@ -202,6 +255,36 @@ document.getElementById('link-bluesky-btn').addEventListener('click', async () =
         }
     } catch (err) {
         showLinkStatus('bluesky-status', 'Error: ' + err, 'error');
+    }
+});
+// Self‑hosted WordPress link handler
+document.getElementById('link-wordpress-rest-btn').addEventListener('click', async () => {
+    const siteUrl = document.getElementById('wp-rest-url').value.trim();
+    const username = document.getElementById('wp-rest-username').value.trim();
+    const appPassword = document.getElementById('wp-rest-password').value.trim();
+    
+    if (!siteUrl || !username || !appPassword) {
+        showLinkStatus('wordpress-rest-status', 'All fields required', 'error');
+        return;
+    }
+    
+    try {
+        showLinkStatus('wordpress-rest-status', 'Verifying credentials...', 'info');
+        // Calls connect_wordpress_rest from main.py
+        const result = await eel.connect_wordpress_rest(siteUrl, username, appPassword)();
+        
+        if (result && result.success) {
+            showLinkStatus('wordpress-rest-status', result.message, 'success');
+            document.getElementById('wp-rest-url').value = '';
+            document.getElementById('wp-rest-username').value = '';
+            document.getElementById('wp-rest-password').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('wordpress-rest-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('wordpress-rest-status', 'Error: ' + err, 'error');
     }
 });
 
@@ -690,8 +773,8 @@ function renderLinkedIn(label, username, header, body, image) {
 // tiene que también añadir el css correspondiente
 
 function updatePreview() {
-    const header = document.getElementById('post-header').value;
-    const body = document.getElementById('post-body').value;
+    const header = escapeHTML(document.getElementById('post-header').value);
+    const body = escapeHTML(document.getElementById('post-body').value);
     const container = document.getElementById('preview-container');
     container.innerHTML = '';
 
@@ -699,8 +782,8 @@ function updatePreview() {
 
     selectedAccounts.forEach((account) => {
         const provider = account.provider ?? account[0];
-        const username = account.username ?? account[1];
-        const label = getAccountLabel(provider, username) || username;  
+        const username = escapeHTML(account.username) ?? account[1];
+        const label = escapeHTML(getAccountLabel(provider, username)) || username;  
 
         let contentHTML = '';
         const image = currentImage;
@@ -708,6 +791,8 @@ function updatePreview() {
         if (provider === 'Mastodon') {
             contentHTML = renderMastodon(label, username, header, body, image);
         } else if (provider === 'WordPress') {
+            contentHTML = renderWordPress(label, username, header, body, image);
+        } else if (provider === 'WordPress-REST') {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider === 'LinkedIn') {
             contentHTML = renderLinkedIn(label, username, header, body, image);
