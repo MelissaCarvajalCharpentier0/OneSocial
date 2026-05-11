@@ -125,6 +125,29 @@
                 <div id="wordpress-status" class="link-status"></div>
             </div>
         </div>
+                <!-- WordPress Self-Hosted Section -->
+        <div class="link-section">
+            <button id="toggle-wordpress-rest-form" class="link-provider-btn">
+                <span>WordPress (Self‑Hosted)</span>
+                <span class="expand-icon">▼</span>
+            </button>
+            <div id="wordpress-rest-form" class="link-form hidden-form">
+                <div class="form-group">
+                    <label>Site URL</label>
+                    <input type="text" id="wp-rest-url" placeholder="https://yoursite.com">
+                </div>
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="wp-rest-username" placeholder="Your WordPress username">
+                </div>
+                <div class="form-group">
+                    <label>Application Password</label>
+                    <input type="password" id="wp-rest-password" placeholder="Your application password">
+                </div>
+                <button id="link-wordpress-rest-btn" class="link-action-btn">Link Account</button>
+                <div id="wordpress-rest-status" class="link-status"></div>
+            </div>
+        </div>
 
         <!-- Bluesky Section -->
         <div class="link-section">
@@ -146,6 +169,7 @@
             </div>
         </div>
 
+                
         <!-- Reddit Section -->
         <div class="link-section">
             <button id="toggle-reddit-form" class="link-provider-btn">
@@ -171,6 +195,37 @@
                 </div>
                 <button id="link-reddit-btn" class="link-action-btn">Link Reddit Account</button>
                 <div id="reddit-status" class="link-status"></div>
+            </div>
+        </div>
+
+        <!-- LinkedIn Section -->
+        <div class="link-section">
+            <button id="toggle-linkedin-form" class="link-provider-btn">
+                <span>LinkedIn</span>
+                <span class="expand-icon">▼</span>
+            </button>
+            <div id="linkedin-form" class="link-form hidden-form">
+                <div class="form-group">
+                    <label>Username</label>
+                    <input type="text" id="ln-username" placeholder="Display name for this account">
+                </div>
+                <div class="form-group">
+                    <label>Client ID</label>
+                    <input type="text" id="ln-client-id" placeholder="LinkedIn Client ID">
+                </div>
+                <div class="form-group">
+                    <label>Client Secret</label>
+                    <input type="text" id="ln-client-secret" placeholder="LinkedIn Client Secret">
+                </div>
+                <button id="get-linkedin-url-btn" class="secondary-btn">Connect & Get URL</button>
+
+                <div class="form-group">
+                    <label>Auth Code (If Prompted)</label>
+                    <input type="text" id="ln-code" placeholder="Paste the code from OAuth">
+                </div>
+                
+                <button id="link-linkedin-btn" class="link-action-btn">Link with Auth Code</button>
+                <div id="linkedin-status" class="link-status"></div>
             </div>
         </div>
     </aside>
