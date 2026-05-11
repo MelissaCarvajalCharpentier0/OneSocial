@@ -782,7 +782,7 @@ function updatePreview() {
 
     selectedAccounts.forEach((account) => {
         const provider = account.provider ?? account[0];
-        const username = escapeHTML(account.username) ?? account[1];
+        const username = escapeHTML(account.username ?? account[1] ?? '');
         const label = escapeHTML(getAccountLabel(provider, username)) || username;  
 
         let contentHTML = '';
