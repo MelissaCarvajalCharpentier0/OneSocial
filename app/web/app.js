@@ -69,14 +69,14 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 // Expand/collapse forms
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
-const redditToggle = document.getElementById('toggle-reddit-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
+const redditToggle = document.getElementById('toggle-reddit-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
-const redditForm = document.getElementById('reddit-form');
 const blueskyForm = document.getElementById('bluesky-form');
+const redditForm = document.getElementById('reddit-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
 
@@ -90,12 +90,6 @@ wordpressToggle.addEventListener('click', () => {
     wordpressForm.classList.toggle('hidden-form');
     const icon = wordpressToggle.querySelector('.expand-icon');
     icon.textContent = wordpressForm.classList.contains('hidden-form') ? '▼' : '▲';
-});
-
-redditToggle.addEventListener('click', () => {
-    redditForm.classList.toggle('hidden-form');
-    const icon = redditToggle.querySelector('.expand-icon');
-    icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 blueskyToggle.addEventListener('click', () => {
@@ -113,6 +107,12 @@ linkedinToggle.addEventListener('click', () => {
     linkedinForm.classList.toggle('hidden-form');
     const icon = linkedinToggle.querySelector('.expand-icon');
     icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+redditToggle.addEventListener('click', () => {
+    redditForm.classList.toggle('hidden-form');
+    const icon = redditToggle.querySelector('.expand-icon');
+    icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 // Mastodon: Get Auth URL & Connect
@@ -197,36 +197,6 @@ document.getElementById('link-wordpress-btn').addEventListener('click', async ()
         }
     } catch (err) {
         showLinkStatus('wordpress-status', 'Error: ' + err, 'error');
-    }
-});
-
-// Reddit: Link account
-document.getElementById('link-reddit-btn').addEventListener('click', async () => {
-    const username = document.getElementById('reddit-username').value.trim();
-    const clientId = document.getElementById('reddit-client-id').value.trim();
-    const clientSecret = document.getElementById('reddit-client-secret').value.trim();
-
-    if (!username || !clientId) {
-        showLinkStatus('reddit-status', 'Account label and client ID required', 'error');
-        return;
-    }
-
-    try {
-        showLinkStatus('reddit-status', 'Starting Reddit OAuth...', 'info');
-        const result = await eel.setup_reddit_account(username, clientId, clientSecret)();
-
-        if (result && result.success) {
-            showLinkStatus('reddit-status', result.message || 'Account linked!', 'success');
-            document.getElementById('reddit-username').value = '';
-            document.getElementById('reddit-client-id').value = '';
-            document.getElementById('reddit-client-secret').value = '';
-            await loadAccounts();
-            setTimeout(() => toggleLinkSidebar(false), 1500);
-        } else {
-            showLinkStatus('reddit-status', result?.message || 'Link failed', 'error');
-        }
-    } catch (err) {
-        showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
 });
 
@@ -347,6 +317,38 @@ document.getElementById('link-linkedin-btn').addEventListener('click', async () 
 });
 
 
+// Reddit: Link account
+document.getElementById('link-reddit-btn').addEventListener('click', async () => {
+    const username = document.getElementById('reddit-username').value.trim();
+    const clientId = document.getElementById('reddit-client-id').value.trim();
+    const clientSecret = document.getElementById('reddit-client-secret').value.trim();
+    const subreddit = document.getElementById('reddit-subreddit').value.trim();
+
+    if (!username || !clientId || !clientSecret || !subreddit) {
+        showLinkStatus('reddit-status', 'All fields required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('reddit-status', 'Starting Reddit OAuth...', 'info');
+        const result = await eel.setup_reddit_account(username, clientId, clientSecret, subreddit)();
+
+        if (result && result.success) {
+            showLinkStatus('reddit-status', result.message || 'Account linked!', 'success');
+            document.getElementById('reddit-username').value = '';
+            document.getElementById('reddit-client-id').value = '';
+            document.getElementById('reddit-client-secret').value = '';
+            document.getElementById('reddit-subreddit').value = '';
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('reddit-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('reddit-status', 'Error: ' + err, 'error');
+    }
+});
+
 function showLinkStatus(elementId, message, type) {
     const el = document.getElementById(elementId);
     el.textContent = message;
@@ -451,10 +453,10 @@ function renderAccountList() {
         const isCollapsed = accountState.collapsedProviders.has(provider);
 
         const styles = {
-            Mastodon: { icon: 'icons/Mastodon_logo.png'},
-            WordPress: { icon: 'icons/WordPress_logo.png'},
-            Bluesky: { icon: 'icons/Bluesky_logo.png'},
-            LinkedIn: { icon: 'icons/LinkedIn_logo.png'}
+            Mastodon: { icon: 'icons/Mastodon_logo.png', border: '#6364FF' },
+            WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
+            Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
+            Reddit: { icon: 'icons/default.png', border: '#ff4500' }
         };
         const data = styles[provider] || { icon: 'icons/default.png'};
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -757,6 +759,20 @@ function renderWordPress(label, username, header, body, image) {
     `;
 }
 
+function renderReddit(label, username, header, body) {
+    return `
+        <div class="reddit-post">
+            <div class="reddit-header">
+                <div class="reddit-avatar"></div>
+                <div>
+                    <div class="reddit-user">${label}</div>
+                    <div class="reddit-handle">${username}</div>
+                </div>
+            </div>
+            <div class="reddit-title">${header || 'Post title'}</div>
+            <div class="reddit-body">${body || 'Your post content...'}</div>
+            <div class="reddit-actions">
+                <span>▲</span><span>▼</span><span>💬</span><span>🔗</span>
 function renderLinkedIn(label, username, header, body, image) {
     const content = [header, body]
         .filter(Boolean)
@@ -941,6 +957,8 @@ function updatePreview() {
             contentHTML = renderMastodon(label, username, header, body, image);
         } else if (provider === 'WordPress') {
             contentHTML = renderWordPress(label, username, header, body, image);
+        } else if (provider === 'Reddit') {
+            contentHTML = renderReddit(label, username, header, body);
         } else if (provider === 'WordPress-REST') {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider == 'Bluesky'){
@@ -993,6 +1011,16 @@ async function createPost() {
 
     if (selectedAccounts.length === 0) {
         showStatus('Select at least one account before publishing', 'error');
+        return;
+    }
+
+    const hasReddit = selectedAccounts.some((account) => {
+        const provider = account.provider ?? account[0];
+        return provider === 'Reddit';
+    });
+
+    if (hasReddit && !header) {
+        showStatus('Reddit requires a header title', 'error');
         return;
     }
     

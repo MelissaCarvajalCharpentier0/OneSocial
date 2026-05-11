@@ -43,6 +43,7 @@ class Token:
     client_secret: Optional[str] = None
     site_id: Optional[str] = None
     server: Optional[str] = None
+    subreddit: Optional[str] = None
 
 
 
@@ -79,5 +80,6 @@ class Token:
             "client_id": self.client_id,
             "client_secret": self.client_secret,
             "site_id": self.site_id,
-            "server": self.server
+            "server": self.server,
+            "subreddit": self.subreddit
         }
