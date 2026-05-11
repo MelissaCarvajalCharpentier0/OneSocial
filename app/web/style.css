@@ -990,6 +990,71 @@ textarea {
     font-size: 0.85rem;
 }
 
+.mastodon-avatar {
+    background: #dbeafe;
+    color: #6364ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    border-radius: 8px;
+}
+
+.mastodon-small-icon {
+    width: 14px;
+    height: 14px;
+    fill: currentColor;
+    vertical-align: -2px;
+    margin-right: 4px;
+}
+
+.mastodon-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    color: #b8b9cf;
+}
+
+.mastodon-action-btn {
+    background: transparent;
+    border: none;
+    color: #b8b9cf;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 32px;
+    height: 30px;
+    padding: 0 4px;
+    border-radius: 999px;
+    font-size: 13px;
+    transition: color 0.15s ease, background 0.15s ease;
+}
+
+.mastodon-action-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.reply-icon {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  color: #e0e0e0;
+  transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.reply-icon:hover {
+  color: #6c9eff;
+  transform: translateX(-2px);
+}
+
 
 
 
@@ -1132,4 +1197,214 @@ textarea {
 
 .linkedin-actions button:hover {
     background: #f3f3f3;
+}
+
+.linkedin-menu {
+    background: transparent;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.linkedin-menu svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.linkedin-menu:hover {
+    background: #f3f3f3;
+}
+
+.linkedin-actions {
+    display: flex;
+    justify-content: space-around;
+    gap: 4px;
+    margin-top: 14px;
+    padding-top: 10px;
+    border-top: 1px solid #e5e5e5;
+}
+
+.linkedin-action-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #666;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border-radius: 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex: 1;
+}
+
+.linkedin-action-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: currentColor;
+}
+
+.linkedin-action-btn:hover {
+    background: #f3f3f3;
+    color: #0a66c2;
+}
+
+
+
+
+/* ============================= */
+/*            Bluesky            */
+/* ============================= */
+
+.bluesky-post {
+    background: #0f1824;
+    border: 1px solid #25384f;
+    border-radius: 16px;
+    padding: 12px 15px 12px 18px;
+    color: #f1f3f5;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    max-width: 560px;
+    font-family: InterVariable, system-ui, -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+.bluesky-avatar {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    background: #1c2736;
+    border: 1px solid rgba(72, 91, 117, 0.7);
+    color: #dce8f7;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+
+.bluesky-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.bluesky-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.bluesky-user {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 5px;
+    min-width: 0;
+}
+
+.bluesky-name {
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 20px;
+}
+
+.bluesky-handle {
+    color: #abb8c9;
+    font-size: 14px;
+    line-height: 20px;
+}
+
+.bluesky-icon-btn,
+.bluesky-action-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: #8aa2bd;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bluesky-icon-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    flex-shrink: 0;
+}
+
+.bluesky-icon-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+}
+
+.bluesky-icon-btn:hover,
+.bluesky-action-btn:hover {
+    color: #1d9bf0;
+}
+
+.bluesky-content {
+    margin-top: 4px;
+}
+
+.bluesky-content p {
+    color: #f1f3f5;
+    font-size: 15px;
+    line-height: 20px;
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.bluesky-image-wrapper {
+    margin-top: 10px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #485b75;
+    background: #1c2736;
+    max-height: 520px;
+}
+
+.bluesky-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    max-height: 520px;
+}
+
+.bluesky-actions {
+    margin-top: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 100%;
+    padding-right: 8px;
+}
+
+.bluesky-action-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 999px;
+}
+
+.bluesky-action-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
 }
