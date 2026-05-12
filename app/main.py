@@ -211,7 +211,7 @@ def connect_wordpress_rest(site_url, username, app_password):
     - Description: Saves a self-hosted WordPress account using REST API.
     """
     try:
-        provider = "WordPress-REST"
+        provider = "WordPressREST"
         tokens = load()
 
         # Avoid duplicates (same site_url + username)
@@ -299,6 +299,12 @@ def setup_reddit_account(username, client_id, client_secret, subreddit):
         return {
             'success': True,
             'message': 'Autenticacion completada correctamente'
+        }
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+@eel.expose
 def connect_linkedin(client_id):
     try:
         setup_linkedin_account(client_id)
@@ -517,7 +523,7 @@ if __name__ == '__main__':
         if sys.platform.startswith('linux') or sys.platform == 'darwin':
             browser_mode = 'default'
         else:
-            browser_mode = 'edge'
+            browser_mode = 'default'  
 
         # The sacred incantation that brings forth the interface from the machine
         eel.start(

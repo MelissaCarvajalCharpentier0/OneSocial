@@ -70,13 +70,13 @@ closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
 const mastodonToggle = document.getElementById('toggle-mastodon-form');
 const wordpressToggle = document.getElementById('toggle-wordpress-form');
 const blueskyToggle = document.getElementById('toggle-bluesky-form');
-const redditToggle = document.getElementById('toggle-reddit-form');
+// const redditToggle = document.getElementById('toggle-reddit-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
-const redditForm = document.getElementById('reddit-form');
+// const redditForm = document.getElementById('reddit-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
 
@@ -109,11 +109,11 @@ linkedinToggle.addEventListener('click', () => {
     icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
-redditToggle.addEventListener('click', () => {
+/* redditToggle.addEventListener('click', () => {
     redditForm.classList.toggle('hidden-form');
     const icon = redditToggle.querySelector('.expand-icon');
     icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
-});
+}); */
 
 // Mastodon: Get Auth URL & Connect
 document.getElementById('get-mastodon-url-btn').addEventListener('click', async () => {
@@ -318,7 +318,7 @@ document.getElementById('link-linkedin-btn').addEventListener('click', async () 
 
 
 // Reddit: Link account
-document.getElementById('link-reddit-btn').addEventListener('click', async () => {
+/* document.getElementById('link-reddit-btn').addEventListener('click', async () => {
     const username = document.getElementById('reddit-username').value.trim();
     const clientId = document.getElementById('reddit-client-id').value.trim();
     const clientSecret = document.getElementById('reddit-client-secret').value.trim();
@@ -347,7 +347,7 @@ document.getElementById('link-reddit-btn').addEventListener('click', async () =>
     } catch (err) {
         showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
-});
+}); */
 
 function showLinkStatus(elementId, message, type) {
     const el = document.getElementById(elementId);
@@ -455,8 +455,10 @@ function renderAccountList() {
         const styles = {
             Mastodon: { icon: 'icons/Mastodon_logo.png', border: '#6364FF' },
             WordPress: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
+            WordPressREST: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
             Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
-            Reddit: { icon: 'icons/default.png', border: '#ff4500' }
+            LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' },
+            // Reddit: { icon: 'icons/default.png', border: '#ff4500' }
         };
         const data = styles[provider] || { icon: 'icons/default.png'};
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -493,15 +495,17 @@ function renderAccountList() {
 
                     <span class="account-name" title="${display}">${display}</span>
 
-                    <button class="edit-label-btn"
-                        data-provider="${provider}"
-                        data-username="${username}"
-                        title="Edit label">✎</button>
+                    <div class="account-actions">
+                        <button class="edit-label-btn"
+                            data-provider="${provider}"
+                            data-username="${username}"
+                            title="Edit label">✎</button>
 
-                    <button class="delete-account-btn"
-                        data-provider="${provider}"
-                        data-username="${username}"
-                        title="Delete account">x</button>
+                        <button class="delete-account-btn"
+                            data-provider="${provider}"
+                            data-username="${username}"
+                            title="Delete account">x</button>
+                    </div>
                 </label>
             `;
         });
@@ -759,7 +763,7 @@ function renderWordPress(label, username, header, body, image) {
     `;
 }
 
-function renderReddit(label, username, header, body) {
+/* function renderReddit(label, username, header, body) {
     return `
         <div class="reddit-post">
             <div class="reddit-header">
@@ -773,6 +777,11 @@ function renderReddit(label, username, header, body) {
             <div class="reddit-body">${body || 'Your post content...'}</div>
             <div class="reddit-actions">
                 <span>▲</span><span>▼</span><span>💬</span><span>🔗</span>
+            </div>
+        </div>
+    `;
+}*/
+
 function renderLinkedIn(label, username, header, body, image) {
     const content = [header, body]
         .filter(Boolean)
@@ -959,7 +968,7 @@ function updatePreview() {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider === 'Reddit') {
             contentHTML = renderReddit(label, username, header, body);
-        } else if (provider === 'WordPress-REST') {
+        } else if (provider === 'WordPressREST') {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider == 'Bluesky'){
             contentHTML = renderBluesky(label, username, header, body, image);

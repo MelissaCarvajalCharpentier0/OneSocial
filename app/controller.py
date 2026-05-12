@@ -141,7 +141,7 @@ def general_upload_post(tokens, text, title, image_path=None):
                     publish_post_wordpress_with_featured_image(account, title, text, image_path)
                 else:
                     publish_post_wordpress(account, title, text)
-            elif account.provider == "WordPress-REST":
+            elif account.provider == "WordPressREST":
                 publish_post_wordpress_rest(account, title, text, image_path)
             elif account.provider == "Bluesky":
                 if image_path: 
@@ -153,19 +153,12 @@ def general_upload_post(tokens, text, title, image_path=None):
                     publish_post_linkedin_with_image(account, title + "\n" + text, image_path)
                 else:
                     publish_post_linkedin_text(account, title + "\n" + text)
+            elif account.provider == "Reddit":
+                if image_path:
+                    raise InputValueError("Reddit no soporta imagenes en esta version.")
+                publish_post_reddit_text(title, text, account)
             else:
-                upload_post_mastodon_text(title + "\n" + text, account)
-        elif account.provider == "WordPress":
-            if image_path: 
-                publish_post_wordpress_with_featured_image(account, title, text, image_path)
-            else:
-                publish_post_wordpress(account, title, text)
-        elif account.provider == "Reddit":
-            if image_path:
-                raise InputValueError("Reddit no soporta imagenes en esta version.")
-            publish_post_reddit_text(title, text, account)
-        else:
-            raise InputValueError(f"Proveedor {account.provider} no soportado.")   
+                raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
 
 
