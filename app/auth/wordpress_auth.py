@@ -15,7 +15,6 @@ Version: 1.0
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import subprocess
 import urllib.parse
-import webbrowser
 import threading
 import requests
 

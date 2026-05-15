@@ -18,17 +18,21 @@ import binascii
 import subprocess
 
 from models.token_manager import *
+from models.app_errors import InputValueError
+from models.crypto import encrypt_process_file, decrypt_process_file
+
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
 from auth.bluesky_auth import *
 from auth.linkedin_auth import *
-from models.app_errors import InputValueError
 from auth.reddit_auth import *
 
 from post.post_on_socials import *
 
-from models.crypto import encrypt_process_file, decrypt_process_file
 
+####################### -<<[]>>-- #######################
+#################### GLOBAL VARIABLES ###################
+####################### -<<[]>>-- #######################
 
 
 MASTER_KEY = "#OneSocial_Abrazo"
@@ -38,6 +42,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
 
 
+#########################################################
 
 
 def save(tokens: list[Token]):
@@ -45,6 +50,7 @@ def save(tokens: list[Token]):
     Input: tokens: list[Token] - A list of Token objects representing the account tokens to be saved.
     Output: None
     Description: Takes a list of Token objects, converts it to JSON format, and then encrypts the JSON data before saving it to a file.
+    This process overwrites the old tokens so it is advised to load the tokens first and add the new ones to save them.
     """
 
     json_data = write_json(tokens)
@@ -69,7 +75,7 @@ def load():
     return tokens
 
 
-def get_accounts() -> list[str, str]:
+def get_accounts() -> list[list[str]]:
     """
     Input: None
     Output: tokens: list[Token] - A list of Token objects representing the account tokens that were loaded from the file.
@@ -84,7 +90,7 @@ def get_accounts() -> list[str, str]:
 def delete_token(provider, username):
     """
     - Input: provider (str), username (str)
-    - Output: dict with success and message
+    - Output: bool
     - Description: Deletes the account matching provider and username from the stored tokens.
     """
     tokens = load()
@@ -121,14 +127,10 @@ def general_upload_post(tokens, text, title, image_path=None):
         - account: Token - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
         - title: str - The title of the post.
-
         - image_path: Path (optional) - The file path to the image to be included in the post, if applicable.
     - Description:
-        - Determines the social media platform based on the account's provider and calls the appropriate function to upload the post.
-        - If the provider is "Mastodon", it calls the upload_post_mastodon function with the text and image path.
-        - If the provider is "WordPress", it calls the publish_post_wordpress_with_image function with the account, text as title, text as content, and image path.
+        - If the provider is recognized the corresponding post function is called.
         - If the provider is not recognized, it prints a message indicating that the provider is not supported.
-        - If the provider is "wordpress-rest", it calls the publish_post_wordpress_rest function with the account, title, text, and image path.
     """
         for account in tokens:
             if account.provider == "Mastodon":

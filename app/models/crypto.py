@@ -32,7 +32,6 @@ Concepts:
 import base64
 import json
 import os
-from pathlib import Path
 
 from cryptography.fernet import Fernet, InvalidToken
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
