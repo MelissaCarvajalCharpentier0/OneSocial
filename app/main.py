@@ -306,6 +306,11 @@ def setup_reddit_account(username, client_id, client_secret, subreddit):
 
 @eel.expose
 def connect_linkedin(client_id):
+    """
+    - Input: client_id (str)
+    - Output: dict with success and message
+    - Description: Initiates LinkedIn OAuth flow by opening the browser for authentication.
+    """
     try:
         setup_linkedin_account(client_id)
         return {
@@ -328,6 +333,17 @@ def connect_linkedin(client_id):
 
 @eel.expose
 def auth_linkedin(username, client_id, client_secret, code):
+    """
+    - Input:
+        - username: str - The username of the LinkedIn account to connect.
+        - client_id: str - The LinkedIn application client ID.
+        - client_secret: str - The LinkedIn application client secret.
+        - code: str - The authorization code received from LinkedIn.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the authentication of a LinkedIn account using the provided credentials and authorization code.
+    """
     try:
         setup_linkedin_account_auth(username, client_id, client_secret, code)
 
