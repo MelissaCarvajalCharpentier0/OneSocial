@@ -25,16 +25,16 @@ from atproto_client.exceptions import UnauthorizedError, BadRequestError, Networ
 from models.app_errors import ApiError, InputValueError, PublishError
 from auth.reddit_auth import ensure_reddit_token
 
-REDDIT_SUBMIT_URL = "https://oauth.reddit.com/api/submit"
-REDDIT_USER_AGENT = "OneSocial/1.0 (by /u/onesocial)"
-
 from requests.auth import HTTPBasicAuth
-import json
 
 
+####################### -<<[]>>-- #######################
+#################### GLOBAL VARIABLES ###################
+####################### -<<[]>>-- #######################
 
 
-
+#REDDIT_SUBMIT_URL = "https://oauth.reddit.com/api/submit"
+#REDDIT_USER_AGENT = "OneSocial/1.0 (by /u/onesocial)"
 
 LINKEDIN_POST_URL = ("https://api.linkedin.com/v2/ugcPosts")
 
@@ -42,6 +42,7 @@ LINKEDIN_POST_URL = ("https://api.linkedin.com/v2/ugcPosts")
 
 
 ####################### MASTONDON #######################
+
 
 def upload_post_mastodon(text: str, image_path: Path, account):
     """
@@ -88,9 +89,8 @@ def upload_post_mastodon_text(text: str, account):
         raise PublishError("No se pudo publicar el texto en Mastodon.") from error
 
 
-
-
 ####################### WORDPRESS #######################
+
 
 def publish_post_wordpress(account, title, content):
     """
@@ -300,7 +300,11 @@ def publish_post_reddit_text(title: str, text: str, account):
         raise PublishError(f"Error publicando en Reddit: {errors}")
 
     return payload
+
+
 ####################### WORDPRESSREST #######################
+
+
 def verify_wordpress_rest(account):
     """
     Verify the REST API credentials by fetching the current user.
@@ -334,6 +338,7 @@ def verify_wordpress_rest(account):
         )
 
     return True
+
 
 def publish_post_wordpress_rest(account, title, content, image_path=None):
     wp_url = f"{account.base_url}/wp-json/wp/v2"
@@ -394,11 +399,8 @@ def publish_post_wordpress_rest(account, title, content, image_path=None):
             )
 
 
-
-
-
-
 ######################## BLUESKY ########################
+
 
 def publish_post_bluesky(token, title, content, image_path):
     """
@@ -478,9 +480,8 @@ def publish_post_bluesky_text(token, title, content):
         raise ApiError("Unexpected error while posting to Bluesky.") from error
 
 
-
-
 ####################### LinkedIn #######################
+
 
 def publish_post_linkedin_text(account, text):
     """
