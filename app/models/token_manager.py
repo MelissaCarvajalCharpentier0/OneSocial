@@ -3,10 +3,10 @@
 =============================================================================================
 
 Name: token_manager.py
-Description: Module for managing file operations in the project.
+Description: Module for managing token and file operations in the project.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
 Date: Abril 2026
-Version: 2.0
+Version: 2.1
 
 =============================================================================================
 
@@ -18,6 +18,7 @@ from pathlib import Path
 import shutil
 
 from models.token_auth import Token
+from models.app_errors import InputValueError, TokenStorageError
 
 ENCODING = "utf-8"
 INDENT = 2
@@ -25,7 +26,7 @@ INDENT = 2
 BASE_DIR = Path(os.path.expanduser("~")) / ".onesocial"
 BASE_DIR.mkdir(parents=True, exist_ok=True)
 
-IMAGE_FORMATS = (".png", ".jpg", ".jpeg")
+IMAGE_FORMATS = (".png", ".jpeg")
 POSTS_FOLDER = BASE_DIR / "posts"
 POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
@@ -39,10 +40,10 @@ def write_json(data: list[Token]) -> json:
     """
 
     if not isinstance(data, list):
-        raise TypeError("Data invalid.")
+        raise InputValueError("Data invalid.")
     for token in data:
         if not isinstance(token, Token):
-            raise TypeError("Token invalid.")
+            raise InputValueError("Token invalid.")
 
     return [token.to_dict() for token in data]
 
@@ -57,7 +58,7 @@ def read_json(json_file:list) -> list[Token]:
     """
 
     if not isinstance(json_file, list):
-        raise TypeError("Json_file invalid.")
+        raise InputValueError("Json_file invalid.")
     
     tokens = []
     for token_data in json_file:
@@ -92,10 +93,10 @@ def get_image(image_path: Path) -> str:
     """
 
     if not isinstance(image_path, Path):
-        raise TypeError("Image path invalid.")
+        raise InputValueError("Image path invalid.")
     
     if image_path.suffix.lower() not in IMAGE_FORMATS:
-        raise TypeError(f"Invalid image format (valid formats: {IMAGE_FORMATS})")
+        raise InputValueError(f"Invalid image format (valid formats: {IMAGE_FORMATS})")
     
     POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
@@ -106,6 +107,58 @@ def get_image(image_path: Path) -> str:
     print(f"Imagen guardada como: {new_name}")
     return new_name
 
+def delete_image(image_name: str):
+    """
+    - Input: image_name (str)
+    - Description: The image specified will be deleted from local app storage (in the folder specified by POSTS_FOLDER)
+    """
+    
+    if not isinstance(image_name, str):
+        raise InputValueError("Image name invalid.")
+    
+    image_path = POSTS_FOLDER / image_name
+
+    if not image_path.exists():
+        print(f"Image: {image_name} not found. Nothing was eliminated")
+        return
+
+    if not image_path.is_file():
+        raise InputValueError(f"Not a file: {image_name}")
+
+    try:
+        image_path.unlink()
+    except Exception as e:
+        raise TokenStorageError(f"No se pudo eliminar el archivo porque está en uso o no hay permisos: {image_name}") from e
+
+    print(f"Imagen eliminada: {image_name}")
+
+def delete_all_images():
+    """
+    - Description: Deletes all images from local app storage (in the folder specified by POSTS_FOLDER) and
+    resets post counter only if all images were deleted successfully.
+    """
+
+    POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
+    errors = []
+
+    for image_path in POSTS_FOLDER.iterdir():
+        if image_path.is_file() and image_path.suffix.lower() in IMAGE_FORMATS:
+            try:
+                image_path.unlink()
+            except Exception as error:
+                errors.append((image_path.name, error))
+
+    if errors:
+        error_messages = "Errors found:\n".join(f"- {name}: {error}" for name, error in errors)
+        raise TokenStorageError(
+            "Could not erase all images"
+            "CounterID was NOT reset.\n"
+            f"{error_messages}"
+        )
+
+    COUNTER_FILE.write_text("0")
+    print("All images erased and CounterID was reset.")
+
 def account_list(raw_tokens: list[Token]) -> list[list[str]]:
     """
     - Input: raw_tokens (list[Token])
@@ -114,15 +167,20 @@ def account_list(raw_tokens: list[Token]) -> list[list[str]]:
     """
 
     if not isinstance(raw_tokens, list):
-        raise TypeError("Tokens got are invalid.")
+        raise InputValueError("Tokens got are invalid.")
     for token in raw_tokens:
         if not isinstance(token, Token):
-            raise TypeError("Invalid token found in tokens.")
+            raise InputValueError("Invalid token found in tokens.")
 
     accounts = []
     for token in raw_tokens:
         if token.provider != "" and token.username not in (None, ""):
-            accounts.append([token.provider, token.username])
+            accounts.append({
+                "provider": token.provider,
+                "username": token.username,
+                "display_name": token.account_label,
+                "email": token.email,
+            })
 
     return accounts
 
@@ -134,18 +192,18 @@ def filter_tokens_by_account(raw_tokens: list[Token], accounts: list[list[str]])
     """
 
     if not isinstance(raw_tokens, list):
-        raise TypeError("Tokens got are invalid.")
+        raise InputValueError("Tokens got are invalid.")
     for token in raw_tokens:
         if not isinstance(token, Token):
-            raise TypeError("Invalid token found in tokens.")
+            raise InputValueError("Invalid token found in tokens.")
         
     if not isinstance(accounts, list):
-        raise TypeError("The accounts should be a list of accounts.")
+        raise InputValueError("The accounts should be a list of accounts.")
     for account in accounts:
         if not isinstance(account, list) or len(account) != 2:
-            raise TypeError("Invalid account found. Each account must be a list")
+            raise InputValueError("Invalid account found. Each account must be a list")
         if not isinstance(account[0], str) or not isinstance(account[1], str):
-            raise TypeError("Invalid account found. Each account must have a social network provider AND a username as strings")
+            raise InputValueError("Invalid account found. Each account must have a social network provider AND a username as strings")
         
     filtered_tokens = []
     for token in raw_tokens:

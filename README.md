@@ -1,18 +1,27 @@
-# OneSocial v1.0
+# OneSocial v2.0
 
-Sistema de centralización de publicación en redes sociales.
+A system for centralizing social media posting.
 
-## Versión 1.0
+## Features
 
-- Vinculación de cuentas de Mastodon y Wordpress:
-La aplicación de escritorio puede guardar cuentas de Mastodon y Wordpress.
+### Publish posts to Mastodon, Bluesky, Wordpress and LinkedIn.
+> Posts include a title, body and an optional image
 
-- Publicación en Mastodon y Wordpress:
-Las publicaciones pueden tener header, body y una imagen.
+### Link your accounts for quick use
+> Turn in only the necesary credentials that are stored locally in your computer
 
 
-## Requisitos mínimos
+## New Features
 
-- Sistema operativo: Windows 11
-- Navegador: Edge
-- Almacenamiento: 100 MB mínimo
+- Account linking and publishing for new platforms:
+The app now supports Bluesky, self-hosted WordPress sites through the REST API, and LinkedIn.
+
+- Post previews before publishing:
+Posts now include a rendered preview of how they will appear once published, allowing users to review and correct their content before submission.
+
+
+## Minimum Requirements
+
+- Operating system: Windows 11
+- Browser: Edge (recommended), Firefox, Brave, Chrome
+- Storage: 100 MB minimum

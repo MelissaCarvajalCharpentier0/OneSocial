@@ -2,30 +2,37 @@
 
 =============================================================================================
 
-Name: main.py
+Name: controller.py
 Description: Main module for testing the functionalities of the project, including authentication and post creation on social media platforms.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
-Date: March 2026
-Version: 1.1
+Date: April 2026
+Version: 1.2
 
 =============================================================================================
 
 """
 
 from pathlib import Path
-import tkinter as tk
-from tkinter import filedialog
 import base64
+import binascii
 import subprocess
 
 from models.token_manager import *
+from models.app_errors import InputValueError
+from models.crypto import encrypt_process_file, decrypt_process_file
+
 from auth.mastodon_auth import *
 from auth.wordpress_auth import *
+from auth.bluesky_auth import *
+from auth.linkedin_auth import *
+from auth.reddit_auth import *
 
 from post.post_on_socials import *
 
-from models.crypto import encrypt_process_file, decrypt_process_file
 
+####################### -<<[]>>-- #######################
+#################### GLOBAL VARIABLES ###################
+####################### -<<[]>>-- #######################
 
 
 MASTER_KEY = "#OneSocial_Abrazo"
@@ -35,9 +42,7 @@ os.makedirs(DATA_DIR, exist_ok=True)
 FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
 
 
-
-
-
+#########################################################
 
 
 def save(tokens: list[Token]):
@@ -45,11 +50,11 @@ def save(tokens: list[Token]):
     Input: tokens: list[Token] - A list of Token objects representing the account tokens to be saved.
     Output: None
     Description: Takes a list of Token objects, converts it to JSON format, and then encrypts the JSON data before saving it to a file.
+    This process overwrites the old tokens so it is advised to load the tokens first and add the new ones to save them.
     """
 
     json_data = write_json(tokens)
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
-
 
 
 def load():
@@ -70,7 +75,7 @@ def load():
     return tokens
 
 
-def get_accounts() -> list[str, str]:
+def get_accounts() -> list[list[str]]:
     """
     Input: None
     Output: tokens: list[Token] - A list of Token objects representing the account tokens that were loaded from the file.
@@ -82,34 +87,81 @@ def get_accounts() -> list[str, str]:
     return account_list(tokens)
 
 
-def general_upload_post(tokens, text, title, image_path=None):
+def delete_token(provider, username):
     """
+    - Input: provider (str), username (str)
+    - Output: bool
+    - Description: Deletes the account matching provider and username from the stored tokens.
+    """
+    tokens = load()
+    original_len = len(tokens)
+    tokens = [t for t in tokens if not (t.provider == provider and t.username == username)]
+    if len(tokens) == original_len:
+        return False
+    save(tokens)
+    return True
+
+
+def update_account_label(provider, username, new_label):
+    """
+    - Input: provider (str), username (str), new_label (str)
+    - Output: True for success and False for failure
+    - Description: Sets the account_label for the matching account.
+    """
+    tokens = load()
+    found = False
+    for token in tokens:
+        if token.provider == provider and token.username == username:
+            token.account_label = new_label.strip() if new_label.strip() else None
+            found = True
+            break
+    if not found:
+        return False
+    save(tokens)
+    return True
+
+
+def general_upload_post(tokens, text, title, image_path=None):
+        """
     - Input: 
-        - account: Account - The account object containing authentication details and provider information.
+        - account: Token - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
         - title: str - The title of the post.
-
         - image_path: Path (optional) - The file path to the image to be included in the post, if applicable.
     - Description:
-        - Determines the social media platform based on the account's provider and calls the appropriate function to upload the post.
-        - If the provider is "Mastodon", it calls the upload_post_mastodon function with the text and image path.
-        - If the provider is "WordPress", it calls the publish_post_wordpress_with_image function with the account, text as title, text as content, and image path.
+        - If the provider is recognized the corresponding post function is called.
         - If the provider is not recognized, it prints a message indicating that the provider is not supported.
     """
+        for account in tokens:
+            if account.provider == "Mastodon":
+                if image_path:
+                    upload_post_mastodon(title + "\n" + text, image_path, account)
+                else:
+                    upload_post_mastodon_text(title + "\n" + text, account)
+            elif account.provider == "WordPress":
+                if image_path: 
+                    publish_post_wordpress_with_featured_image(account, title, text, image_path)
+                else:
+                    publish_post_wordpress(account, title, text)
+            elif account.provider == "WordPressREST":
+                publish_post_wordpress_rest(account, title, text, image_path)
+            elif account.provider == "Bluesky":
+                if image_path: 
+                    publish_post_bluesky(account, title, text, image_path)
+                else:
+                    publish_post_bluesky_text(account, title, text)
+            elif account.provider == "LinkedIn":
+                if image_path: 
+                    publish_post_linkedin_with_image(account, title + "\n" + text, image_path)
+                else:
+                    publish_post_linkedin_text(account, title + "\n" + text)
+            elif account.provider == "Reddit":
+                if image_path:
+                    raise InputValueError("Reddit no soporta imagenes en esta version.")
+                publish_post_reddit_text(title, text, account)
+            else:
+                raise InputValueError(f"Proveedor {account.provider} no soportado.")   
 
-    for account in tokens:
-        if account.provider == "Mastodon":
-            if image_path:
-                upload_post_mastodon(title + "\n" + text, image_path, account)
-            else:
-                upload_post_mastodon_text(title + "\n" + text, account)
-        elif account.provider == "WordPress":
-            if image_path: 
-                publish_post_wordpress_with_featured_image(account, title, text, image_path)
-            else:
-                publish_post_wordpress(account, title, text)
-        else:
-            print(f"Proveedor {account.provider} no soportado.")    
 
 
 def save_new_account(username, client_id, client_secret, provider, tokens):
@@ -129,6 +181,31 @@ def save_new_account(username, client_id, client_secret, provider, tokens):
     )
     if username not in [token.username for token in tokens]:
         tokens.append(new_account)
+    save(tokens)
+
+
+def save_or_update_reddit_account(username, client_id, client_secret, subreddit, provider, tokens):
+    """
+    - Input: Reddit account info, current tokens
+    - Description: Saves a new Reddit account or updates an existing one.
+    """
+
+    for token in tokens:
+        if token.provider == provider and token.username == username:
+            token.client_id = client_id
+            token.client_secret = client_secret
+            token.subreddit = subreddit
+            save(tokens)
+            return
+
+    new_account = Token(
+        provider=provider,
+        username=username,
+        client_id=client_id,
+        client_secret=client_secret,
+        subreddit=subreddit,
+    )
+    tokens.append(new_account)
     save(tokens)
 
 
@@ -169,7 +246,30 @@ def register_and_auth_wordpress(provider, username, client_id, client_secret):
     save(tokens)
 
 
-def setup_mastodon_account(provider, username, password):
+def register_and_auth_reddit(provider, username, client_id, client_secret, subreddit):
+    """
+    Effects:
+        - Initiates the authentication process for Reddit accounts and stores tokens.
+    """
+
+    tokens = load()
+    save_or_update_reddit_account(username, client_id, client_secret, subreddit, provider, tokens)
+    tokens = load()
+
+    for account in tokens:
+        if account.provider != "Reddit":
+            continue
+
+        if account.username != username:
+            continue
+
+        ensure_reddit_token(account)
+        verify_reddit_access(account)
+
+    save(tokens)
+
+
+def setup_mastodon_account(provider, username):
     """
     Effects:
         - Initiates the authentication process for Mastodon accounts by ensuring that a valid access token is  
@@ -180,17 +280,18 @@ def setup_mastodon_account(provider, username, password):
         calls the function to ensure that a valid access token is obtained. It then verifies the credentials by making 
         an API call to Mastodon and prints the user information if successful. Finally, it saves the updated tokens 
         back to "data.json".
+    Return codes:
+        0: Success
+        1: Get code navigator opened
+        2: Not found
     """
     tokens = load()
-    if username not in [t.username for t in tokens]:
-        tokens.append(Token(
+    new_token = Token(
             provider=provider,
-            username=username,
-            password=password
-        ))
-        save(tokens)
-
-    ensure_mastodon_app()
+            username=username
+        )
+    
+    tokens.append(new_token)
     
     for account in tokens: 
         if account.provider != "Mastodon":
@@ -203,14 +304,15 @@ def setup_mastodon_account(provider, username, password):
         token = ensure_mastodon_token(account)
 
         if token:
-            save(tokens)
-            return True
-
+            return 0
+        
+        save(tokens)
+        ensure_mastodon_app(account)
         auth_url = get_mastodon_auth_url(account)
         subprocess.run(f'start "" "{auth_url}"', shell=True)
+        return 1
 
-    save(tokens)
-    return False
+    return 2
 
 
 def setup_mastodon_account_auth(code, username):
@@ -238,6 +340,25 @@ def setup_mastodon_account_auth(code, username):
     save(tokens) 
 
 
+def setup_bluesky_account_auth(username, password):
+    """
+    - Input: username (str), password (str) 
+    - Description: Completes the authentication process for a Bluesky account by saving the token.
+    """
+
+    tokens = load()
+    bluesky_token = Token(
+            provider="Bluesky",
+            username=username,
+            password=password
+        )
+    
+    verify_bluesky_login(bluesky_token)
+    
+    tokens.append(bluesky_token)
+    save(tokens) 
+
+
 def process_image(image_path: Path) -> Path:
     """
     - Input: image_path (Path)
@@ -253,6 +374,7 @@ def process_image(image_path: Path) -> Path:
     print(f"Ruta completa de imagen: {full_path}")
 
     return full_path
+
 
 def save_image_from_base64(image_data: str, image_name: str) -> Path:
     """
@@ -270,14 +392,17 @@ def save_image_from_base64(image_data: str, image_name: str) -> Path:
     """
 
     if not image_data:
-        raise ValueError("No image data provided")
+        raise InputValueError("No image data provided")
 
-    header, encoded = image_data.split(",", 1)
-    image_bytes = base64.b64decode(encoded)
+    try:
+        header, encoded = image_data.split(",", 1)
+        image_bytes = base64.b64decode(encoded)
+    except (ValueError, binascii.Error) as error:
+        raise InputValueError("Invalid base64 image payload") from error
 
     suffix = Path(image_name).suffix.lower()
     if suffix not in IMAGE_FORMATS:
-        raise TypeError(f"Formato inválido: {suffix}")
+        raise InputValueError(f"Formato inválido: {suffix}")
 
     destiny = Path(POSTS_FOLDER)
     destiny.mkdir(parents=True, exist_ok=True)
@@ -291,3 +416,71 @@ def save_image_from_base64(image_data: str, image_name: str) -> Path:
         f.write(image_bytes)
 
     return full_path
+
+
+def setup_linkedin_account(client_id):
+    """
+    - Input: 
+        - client_id (str): The LinkedIn application's client ID, used to 
+        identify the application during the authentication process.
+    - Output:
+        - int: A status code indicating the result of the operation. 
+        0 for success, 1 for navigator opened, 2 for error.
+    - Description:
+        - Initiates the authentication process for LinkedIn accounts by opening the 
+        authorization URL in the user's web browser. The function constructs the 
+        authorization URL using the provided client ID and a predefined redirect URI, 
+        then opens this URL in the default web browser to allow the user to authorize 
+        the application. The function returns a status code indicating whether the operation 
+        was successful or if there was an error.
+    """
+
+    auth_url = get_linkedin_auth_url(client_id)
+
+    subprocess.run(
+        f'start "" "{auth_url}"',
+        shell=True
+    )
+
+    return 1
+
+
+def setup_linkedin_account_auth(username, client_id, client_secret, code):
+    """
+    - Input:
+        - username (str): The username of the LinkedIn account being authenticated.
+        - client_id (str): The LinkedIn application's client ID, used to identify 
+        the application during the authentication process.
+        - client_secret (str): The LinkedIn application's client secret, used to 
+        authenticate the application during the token exchange process.
+        - code (str): The authorization code received from LinkedIn after the user 
+        has authorized the application, used to exchange for an access token.
+    - Output:
+        - int: A status code indicating the result of the operation. 
+        0 for success, 1 for error.
+    - Description:
+        - Completes the authentication process for a LinkedIn account by exchanging 
+        the authorization code for an access token and saving the account information. 
+        The function creates a new Token object for the LinkedIn account, populates it 
+        with the obtained access token and other relevant information, and then saves 
+        this information to the data file. The function returns a status code indicating 
+        whether the operation was successful or if there was an error.
+    """
+
+    tokens = load()
+
+    new_token = create_linkedin_token(client_id, client_secret, code)
+    new_token.account_label = username
+
+    exists = any(
+        token.provider == "LinkedIn"
+        and token.provider_user_id
+        == new_token.provider_user_id
+        for token in tokens
+    )
+
+    if not exists:
+        tokens.append(new_token)
+
+    save(tokens)
+

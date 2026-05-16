@@ -18,11 +18,10 @@ Praise the Omnissiah for the blessed connectivity between flesh and machine.
 import eel
 import os
 import sys
-import base64
 import tkinter as tk
-from datetime import datetime
 from controller import *
-from pathlib import Path
+
+from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
 # Get the directory where this script is located
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -76,8 +75,23 @@ def get_default_window_size():
     return width, height
 
 
+def serialize_error(error):
+    """
+    - Input: error (Exception) - The exception to serialize
+    - Output: dict - A dictionary containing the success status, error type, and message
+    - Description: Converts an exception into a structured dictionary format for frontend consumption.
+    """
+    error_category = getattr(error.__class__, "category", ErrorCategory.UNKNOWN)
+    payload = {
+        'success': False,
+        'error_type': error_category.value,
+        'message': str(error),
+    }
+    return payload
+
+
 @eel.expose
-def connect_mastodon(username, password):
+def connect_mastodon(username):
     """
     - Input: 
         - username: str - The username of the Mastodon account to connect.  
@@ -90,12 +104,17 @@ def connect_mastodon(username, password):
     """
     try:
         provider = "Mastodon"
-        auth_ok = setup_mastodon_account(provider, username, password)
+        auth_ok = setup_mastodon_account(provider, username)
 
-        if not auth_ok:
+        if auth_ok == 1:
             return {
                 'success': False,
                 'message': 'Se abrió el navegador para autenticar. Completa el proceso.'
+            }
+        elif auth_ok == 2:
+            return {
+                'success': False,
+                'message': 'Ocurrió un error al parsear el token. Token no guardado'
             }
 
         return {
@@ -103,10 +122,14 @@ def connect_mastodon(username, password):
             'message': 'Cuenta conectada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
     
@@ -132,10 +155,14 @@ def auth_mastodon(code, username):
             'message': 'Autenticación completada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -162,13 +189,180 @@ def setup_wordpress_account(username, client_id, client_secret):
             'message': 'Autenticación completada correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
+
+@eel.expose
+def connect_wordpress_rest(site_url, username, app_password):
+    """
+    - Input: site_url (str), username (str), app_password (str)
+    - Output: dict with success and message
+    - Description: Saves a self-hosted WordPress account using REST API.
+    """
+    try:
+        provider = "WordPressREST"
+        tokens = load()
+
+        # Avoid duplicates (same site_url + username)
+        already = any(
+            t.provider == provider and t.username == username and t.base_url == site_url.rstrip('/')
+            for t in tokens
+        )
+        if already:
+            return {'success': True, 'message': 'Account already linked.'}
+
+        new_token = Token(
+            provider=provider,
+            username=username,
+            password=app_password,
+            base_url=site_url.rstrip('/')
+        )
+        tokens.append(new_token)
+        save(tokens)
+
+        # Optionally verify credentials instantly
+        try:
+            verify_wordpress_rest(new_token)
+            return {'success': True, 'message': 'Connected and verified.'}
+        except Exception as ve:
+            # Remove if verification fails
+            tokens = load()
+            tokens = [t for t in tokens if not (t.provider == provider and t.username == username and t.base_url == site_url.rstrip('/'))]
+            save(tokens)
+            return {'success': False, 'message': f'Could not verify credentials: {ve}'}
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {'success': False, 'message': str(e)}
+
+
+@eel.expose
+def setup_bluesky_account(username, password):
+    """
+    - Input:
+        - username: str - The username of the Bluesky account to connect.
+        - password: str - The password for the Bluesky account.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the connection of a Bluesky account. It attempts to authenticate the account using the 
+        provided credentials and returns a success status and message indicating the result of the connection attempt.
+    """
+    try:
+        setup_bluesky_account_auth(username, password)
+
+        return {
+            'success': True,
+            'message': 'Autenticación completada correctamente'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def setup_reddit_account(username, client_id, client_secret, subreddit):
+    """
+    - Input:
+        - username: str - The username of the Reddit account to connect.
+        - client_id: str - The Reddit application client ID.
+        - client_secret: str - The Reddit application client secret.
+        - subreddit: str - Default subreddit for posting.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the connection of a Reddit account via OAuth and stores tokens.
+    """
+    try:
+        provider = "Reddit"
+        register_and_auth_reddit(provider, username, client_id, client_secret, subreddit)
+
+        return {
+            'success': True,
+            'message': 'Autenticacion completada correctamente'
+        }
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+
+@eel.expose
+def connect_linkedin(client_id):
+    """
+    - Input: client_id (str)
+    - Output: dict with success and message
+    - Description: Initiates LinkedIn OAuth flow by opening the browser for authentication.
+    """
+    try:
+        setup_linkedin_account(client_id)
+        return {
+            'success': True,
+            'message': 'Browser opened for LinkedIn authentication'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def auth_linkedin(username, client_id, client_secret, code):
+    """
+    - Input:
+        - username: str - The username of the LinkedIn account to connect.
+        - client_id: str - The LinkedIn application client ID.
+        - client_secret: str - The LinkedIn application client secret.
+        - code: str - The authorization code received from LinkedIn.
+    - Output:
+        - A dictionary containing the success status and a message regarding the connection attempt.
+    - Description:
+        - Handles the authentication of a LinkedIn account using the provided credentials and authorization code.
+    """
+    try:
+        setup_linkedin_account_auth(username, client_id, client_secret, code)
+
+        return {
+            'success': True,
+            'message': 'LinkedIn account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+    
 
 @eel.expose
 def get_available_accounts():
@@ -190,11 +384,17 @@ def get_available_accounts():
             'success': True,
             'accounts': accounts
         }
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        payload = serialize_error(e)
+        payload['accounts'] = []
+        return payload
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
             'accounts': [],
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -235,7 +435,7 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
                 }
 
         title = header if header else None
-        text = body if body else header
+        text = body if body else None
         new_image_path = None
 
         if image_data:
@@ -248,10 +448,14 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
             'message': 'Post publicado correctamente'
         }
 
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
     except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
 
@@ -277,8 +481,52 @@ def get_app_info():
         'dark_mode': True  # Even the Machine Spirit prefers the darkness between stars
     }
 
+
+@eel.expose
+def delete_account(provider, username):
+    """
+    - Input: provider (str), username (str)
+    - Output: dict with success and message
+    - Description: Deletes the account matching provider and username from the stored tokens.
+    """
+    try:
+        status = delete_token(provider, username)
+        if not status:
+            return {'success': False, 'message': 'Account not found'}
+        return {'success': True, 'message': f'Account {username} ({provider}) removed'}
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
+    
+
+@eel.expose
+def update_display_name(provider, username, new_label):
+    """
+    - Input: provider (str), username (str), new_label (str)
+    - Output: dict with success and message
+    - Description: Sets the account_label for the matching account.
+    """
+    try:
+        status = update_account_label(provider, username, new_label)
+
+        if not status:
+            return {'success': False, 'message': 'Account not found'}
+            
+        return {'success': True, 'message': 'Label updated'}
+        
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
+
+
 # Start the application
-if __name__ == '__main__':
+def main():
     window_width, window_height = get_default_window_size()
     window_x = max(0, (window_width // 10))
     window_y = max(0, (window_height // 10))
@@ -290,12 +538,17 @@ if __name__ == '__main__':
     print("Opening application window...")
     
     try:
+        if sys.platform.startswith('linux') or sys.platform == 'darwin':
+            browser_mode = 'default'
+        else:
+            browser_mode = 'default'  
+
         # The sacred incantation that brings forth the interface from the machine
         eel.start(
             'index.html',
             size=(window_width, window_height),
             position=(window_x, window_y),
-            mode='chrome',  # TODO: Consider switching to 'default' browser for better compatibility
+            mode=browser_mode,
             # The Machine Spirit currently favors Firefox, but we shall perform the rites of 
             # browser-agnosticism in future versions. The flesh is weak, but the code is strong.
             port=8080,
@@ -309,3 +562,7 @@ if __name__ == '__main__':
     
     print("Application closed")
     print("The cog turns no more. Glory to the Omnissiah.")
+
+
+if __name__ == '__main__':
+    main()
