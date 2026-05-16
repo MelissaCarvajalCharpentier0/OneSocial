@@ -18,11 +18,8 @@ Praise the Omnissiah for the blessed connectivity between flesh and machine.
 import eel
 import os
 import sys
-import base64
 import tkinter as tk
-from datetime import datetime
 from controller import *
-from pathlib import Path
 
 from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
@@ -202,7 +199,8 @@ def setup_wordpress_account(username, client_id, client_secret):
             'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
-    
+
+
 @eel.expose
 def connect_wordpress_rest(site_url, username, app_password):
     """
@@ -303,6 +301,7 @@ def setup_reddit_account(username, client_id, client_secret, subreddit):
     except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
         print("ERROR:", str(e))
         return serialize_error(e)
+
 
 @eel.expose
 def connect_linkedin(client_id):
@@ -482,6 +481,7 @@ def get_app_info():
         'dark_mode': True  # Even the Machine Spirit prefers the darkness between stars
     }
 
+
 @eel.expose
 def delete_account(provider, username):
     """
@@ -501,6 +501,7 @@ def delete_account(provider, username):
         print("ERROR:", str(e))
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
     
+
 @eel.expose
 def update_display_name(provider, username, new_label):
     """
@@ -523,8 +524,9 @@ def update_display_name(provider, username, new_label):
         print("ERROR:", str(e))
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
 
+
 # Start the application
-if __name__ == '__main__':
+def main():
     window_width, window_height = get_default_window_size()
     window_x = max(0, (window_width // 10))
     window_y = max(0, (window_height // 10))
@@ -560,3 +562,7 @@ if __name__ == '__main__':
     
     print("Application closed")
     print("The cog turns no more. Glory to the Omnissiah.")
+
+
+if __name__ == '__main__':
+    main()
