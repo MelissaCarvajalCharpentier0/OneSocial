@@ -20,6 +20,7 @@ import os
 import sys
 import tkinter as tk
 from controller import *
+from post.wordpress_post import verify_wordpress_rest
 
 from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
