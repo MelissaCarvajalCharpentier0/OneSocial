@@ -27,7 +27,15 @@ from auth.bluesky_auth import *
 from auth.linkedin_auth import *
 from auth.reddit_auth import *
 
-from post.post_on_socials import *
+from post.mastodon_post import upload_post_mastodon, upload_post_mastodon_text
+from post.wordpress_post import (
+    publish_post_wordpress,
+    publish_post_wordpress_with_featured_image,
+    publish_post_wordpress_rest,
+)
+from post.bluesky_post import publish_post_bluesky, publish_post_bluesky_text
+from post.linkedin_post import publish_post_linkedin_text, publish_post_linkedin_with_image
+from post.reddit_post import publish_post_reddit_text
 
 
 ####################### -<<[]>>-- #######################

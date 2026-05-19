@@ -966,8 +966,8 @@ function updatePreview() {
             contentHTML = renderMastodon(label, username, header, body, image);
         } else if (provider === 'WordPress') {
             contentHTML = renderWordPress(label, username, header, body, image);
-        } else if (provider === 'Reddit') {
-            contentHTML = renderReddit(label, username, header, body);
+        /*} else if (provider === 'Reddit') {
+            contentHTML = renderReddit(label, username, header, body);*/
         } else if (provider === 'WordPressREST') {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider == 'Bluesky'){
@@ -1023,7 +1023,7 @@ async function createPost() {
         return;
     }
 
-    const hasReddit = selectedAccounts.some((account) => {
+    /*const hasReddit = selectedAccounts.some((account) => {
         const provider = account.provider ?? account[0];
         return provider === 'Reddit';
     });
@@ -1031,7 +1031,7 @@ async function createPost() {
     if (hasReddit && !header) {
         showStatus('Reddit requires a header title', 'error');
         return;
-    }
+    }*/
     
     if (header.length + body.length > 299) {
         showStatus('Header and body exceeds 299 character limit', 'error');
