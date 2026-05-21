@@ -3,7 +3,8 @@
 =============================================================================================
 
 Name: controller.py
-Description: Main module for testing the functionalities of the project, including authentication and post creation on social media platforms.
+Description: Main module for testing the functionalities of the project, 
+    including authentication and post creation on social media platforms.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
 Date: April 2026
 Version: 1.2
@@ -62,6 +63,11 @@ def save(tokens: list[Token]):
     """
 
     json_data = write_json(tokens)
+    post_counter = get_post_counter()
+    json_data = {
+        "tokens": json_data,
+        "post_counter": post_counter,
+    }
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
 
 
@@ -377,7 +383,7 @@ def process_image(image_path: Path) -> Path:
     """
 
     new_name = get_image(image_path)  # "post_1.jpg"
-    full_path = Path(POSTS_FOLDER) / new_name
+    full_path = Path(IMAGES_FOLDER) / new_name
 
     print(f"Ruta completa de imagen: {full_path}")
 
@@ -412,7 +418,7 @@ def save_image_from_base64(image_data: str, image_name: str) -> Path:
     if suffix not in IMAGE_FORMATS:
         raise InputValueError(f"Formato inválido: {suffix}")
 
-    destiny = Path(POSTS_FOLDER)
+    destiny = Path(IMAGES_FOLDER)
     destiny.mkdir(parents=True, exist_ok=True)
 
     post_id = get_next_post_id()

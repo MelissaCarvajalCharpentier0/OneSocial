@@ -12,8 +12,13 @@ Version: 1.1
 
 """
 
+import mimetypes
+from pathlib import Path
 
-from post.post_on_socials import *
+import requests
+from requests.auth import HTTPBasicAuth
+
+from models.app_errors import ApiError, PublishError
 
 def publish_post_wordpress(account, title, content):
     """

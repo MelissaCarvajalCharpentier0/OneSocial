@@ -15,12 +15,18 @@ Praise the Omnissiah for the blessed connectivity between flesh and machine.
 =============================================================================================
 """
 
+import base64
+import binascii
 import eel
 import os
 import sys
 import tkinter as tk
+from pathlib import Path
+from uuid import uuid4
 from controller import *
+from models.token_manager import IMAGE_FORMATS, IMAGES_FOLDER
 from post.wordpress_post import verify_wordpress_rest
+from post.Post import Post
 
 from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
@@ -453,6 +459,86 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
         print("ERROR:", str(e))
         return serialize_error(e)
     except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def save_post(header, body, selected_accounts, scheduled_time, image_data=None, image_name=None):
+    """
+    input:
+        header - String containing the post title
+        body - String containing the post content
+        selected_accounts - List of selected accounts in [provider, username] format
+        scheduled_time - ISO-like string from datetime-local input
+        image_data - Base64 encoded image data (optional)
+        image_name - Name of the image file (optional)
+    output:
+        Dictionary with keys:
+            success - Boolean indicating if post was saved successfully
+            message - String with confirmation or error message
+    Description:
+        Saves a post draft with selected accounts and scheduled time to a .post file.
+    """
+    temp_image_path = None
+    try:
+        if image_data:
+            if not image_name:
+                raise InputValueError("Image name is required when image data is provided.")
+
+            try:
+                header_data, encoded = image_data.split(",", 1)
+                image_bytes = base64.b64decode(encoded)
+            except (ValueError, binascii.Error) as error:
+                raise InputValueError("Invalid base64 image payload") from error
+
+            suffix = Path(image_name).suffix.lower()
+            if suffix not in IMAGE_FORMATS:
+                raise InputValueError(f"Formato inválido: {suffix}")
+
+            IMAGES_FOLDER.mkdir(parents=True, exist_ok=True)
+            temp_image_path = IMAGES_FOLDER / f"temp_{uuid4().hex}{suffix}"
+            temp_image_path.write_bytes(image_bytes)
+
+        post = Post(
+            title=header,
+            content=body,
+            selected_accounts=selected_accounts,
+            scheduled_time=scheduled_time,
+            image=str(temp_image_path) if temp_image_path else None,
+        )
+        post_path = post.save()
+
+        if temp_image_path and temp_image_path.exists():
+            final_image_path = Path(post.image) if post.image else None
+            if not final_image_path or final_image_path.resolve() != temp_image_path.resolve():
+                temp_image_path.unlink()
+
+        return {
+            'success': True,
+            'message': f'Post guardado correctamente (ID {post.id})',
+            'post_id': post.id,
+            'post_path': str(post_path)
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        if temp_image_path and temp_image_path.exists():
+            try:
+                temp_image_path.unlink()
+            except OSError:
+                pass
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
+        if temp_image_path and temp_image_path.exists():
+            try:
+                temp_image_path.unlink()
+            except OSError:
+                pass
         print("ERROR:", str(e))
         return {
             'success': False,

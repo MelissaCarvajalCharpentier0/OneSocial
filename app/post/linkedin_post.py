@@ -12,7 +12,9 @@ Version: 1.1
 
 """
 
-from post.post_on_socials import *
+import requests
+
+from models.app_errors import PublishError
 
 
 LINKEDIN_POST_URL = ("https://api.linkedin.com/v2/ugcPosts")
