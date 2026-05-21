@@ -2,6 +2,7 @@ const fileInput = document.getElementById('image-input');
 const fileName = document.getElementById('file-name');
 const overlay = document.getElementById('overlay');
 let currentImage = null;
+let publishResults = [];
 
 const accountState = {
     accountsByProvider: {},
@@ -364,13 +365,17 @@ function showLinkStatus(elementId, message, type) {
 // ==================== EXISTING ACCOUNT FUNCTIONS ====================
 eel.expose(showStatus);
 function showStatus(message, type) {
-    const statusDiv = document.getElementById('status');
-    statusDiv.textContent = message;
-    statusDiv.className = `status ${type}`;
-    statusDiv.classList.remove('hidden');
-    
+    const statusBar = document.getElementById('publish-status-bar');
+    const statusText = document.getElementById('publish-status-text');
+
+    if (!statusBar || !statusText) return;
+    statusText.textContent = message;
+    statusBar.classList.remove('hidden');
+    statusBar.classList.remove('success', 'error', 'info');
+    statusBar.classList.add(type);
+
     setTimeout(() => {
-        statusDiv.classList.add('hidden');
+        statusBar.classList.add('hidden');
     }, 3000);
 }
 
@@ -429,7 +434,6 @@ function renderTabs() {
 function renderAccountList() {
     const listContainer = document.getElementById('account-list');
     const accounts = getAccountsForActiveTab();
-    console.log(accounts);
 
     if (accounts.length === 0) {
         listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
@@ -638,7 +642,7 @@ async function loadAccounts() {
             if (!grouped[provider]) grouped[provider] = [];
             grouped[provider].push({ username, accountLabel });
         });
-        console.log(grouped);
+
         // Sort by username or label
         Object.keys(grouped).forEach((provider) => {
             grouped[provider].sort((a, b) => a.username.localeCompare(b.username));
@@ -941,11 +945,6 @@ function renderBluesky(label, username, header, body, image) {
 }
 
 
-// Por cada red, se debe hacer una funcion con la estructura anterior 
-// funtion render/NombreRed/(account, header, body, image)
-// Y en estas se pone la estructura del HTML específico de la red y se 
-// tiene que también añadir el css correspondiente
-
 function updatePreview() {
     const header = escapeHTML(document.getElementById('post-header').value);
     const body = escapeHTML(document.getElementById('post-body').value);
@@ -1008,6 +1007,64 @@ function updatePreview() {
     });
 }
 
+
+function showPublishResults(results) {
+    publishResults = results || [];
+    const statusBar = document.getElementById('publish-status-bar');
+    const statusText = document.getElementById('publish-status-text');
+
+    const hasErrors = publishResults.some(r => !r.success);
+
+    statusBar.classList.remove('hidden');
+
+    statusText.textContent = hasErrors
+        ? 'Some posts failed'
+        : 'Published successfully';
+
+    statusText.className =
+        `status-text ${hasErrors ? 'error' : 'success'}`;
+
+    const list = document.getElementById('publish-details-list');
+
+    list.innerHTML = '';
+
+    const styles = {
+        Mastodon: 'icons/Mastodon_logo.png',
+        WordPress: 'icons/WordPress_logo.png',
+        WordPressREST: 'icons/WordPress_logo.png',
+        Bluesky: 'icons/Bluesky_logo.png',
+        LinkedIn: 'icons/LinkedIn_logo.png'
+    };
+
+    const sorted = [
+        ...publishResults.filter(r => !r.success),
+        ...publishResults.filter(r => r.success)
+    ];
+
+    sorted.forEach(result => {
+        const icon = styles[result.provider]
+            || 'icons/default.png';
+
+        list.innerHTML += `
+            <div class="publish-detail-item ${result.success ? 'success' : 'error'}">
+                <div class="publish-detail-icon">
+                    <img src="${icon}">
+                </div>
+
+                <div class="publish-detail-content">
+                    <div class="publish-detail-title">
+                        ${result.provider}
+                    </div>
+                    <div class="publish-detail-message">
+                        ${escapeHTML(String(result.message || '').trim())}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+}
+
+
 async function createPost() {
     const header = document.getElementById('post-header').value.trim();
     const body = document.getElementById('post-body').value.trim();
@@ -1054,16 +1111,46 @@ async function createPost() {
             };
         });
     }
+
+    publishResults = [];
+
+    const statusText = document.getElementById('publish-status-text');
+    const detailsList = document.getElementById('publish-details-list');
+    statusText.textContent = 'Ready';
+    statusText.className = 'status-text';
+    detailsList.innerHTML = '';
     
     showStatus('Creating post...', 'info');
     const result = await eel.create_post(header, body, imageData, imageName, selectedAccounts)();
 
-    if (result && result.success) {
-        showStatus(result.message || 'Post published successfully', 'success');
-        clearForm();
-        return;
+    if (result && result.results && result.results.length > 0) {
+        showPublishResults(result.results);
+        const hasErrors = result.results.some(r => !r.success);
+        showStatus(
+            hasErrors
+                ? 'Some posts failed'
+                : 'Post published successfully',
+            hasErrors ? 'error' : 'success'
+        );
+
+        if (!hasErrors) {
+            clearForm();
+        }
+
+    } else {
+        publishResults = [{
+            provider: 'System',
+            success: false,
+            message: result?.message || 'Unknown publish error'
+        }];
+
+        showPublishResults(publishResults);
+
+        showStatus(
+            'Failed to publish post',
+            'error'
+        );
     }
-    showStatus((result && result.message) || 'Error publishing post', 'error');
 }
 
 function initializeEventListeners() {
@@ -1183,6 +1270,25 @@ function initializeEventListeners() {
             }
         }
     });
+
+    const publishOverlay = document.getElementById('publish-details-overlay');
+    const publishModal = document.getElementById('publish-details-modal');
+
+    document.getElementById('open-status-details')
+        .addEventListener('click', () => {
+            publishOverlay.classList.add('active');
+            publishOverlay.classList.remove('hidden');
+            publishModal.classList.add('active');
+    });
+
+    function closePublishModal() {
+        publishOverlay.classList.remove('active');
+        publishOverlay.classList.add('hidden');
+        publishModal.classList.remove('active');
+    }
+
+    document.getElementById('close-publish-details').addEventListener('click', closePublishModal);
+    publishOverlay.addEventListener('click', closePublishModal);
 
     window.addEventListener('resize', syncSidebarHeight);
 }

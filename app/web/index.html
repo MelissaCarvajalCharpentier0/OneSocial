@@ -58,7 +58,22 @@
             <button class="post-button" onclick="createPost()">
                 Publish Post
             </button>
-            <div id="status" class="status hidden"></div>
+            
+            <div id="publish-status-bar" class="publish-status-bar hidden">
+                <div class="publish-status-left">
+                    <span class="status-label">
+                        Status
+                    </span>
+                    <span id="publish-status-text" class="status-text">
+                        Ready
+                    </span>
+                </div>
+
+                <button id="open-status-details" class="status-info-btn">
+                    ⓘ
+                </button>
+            </div>
+
         </div>
 
         <!-- Right Sidebar: Post Preview -->
@@ -240,6 +255,20 @@
     </div>
 
     <div id="modal-overlay" class="overlay hidden"></div>
+
+    <div id="publish-details-overlay" class="overlay hidden"></div>
+    <div id="publish-details-modal" class="publish-details-modal">
+        <div class="publish-details-header">
+            <h2>Publish Details</h2>
+            <button id="close-publish-details"
+                class="close-sidebar-btn">
+                &times;
+            </button>
+        </div>
+        <div id="publish-details-list"
+            class="publish-details-list">
+        </div>
+    </div>
 
     <script src="app.js"></script>
 </body>
