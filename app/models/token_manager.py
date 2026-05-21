@@ -26,7 +26,7 @@ INDENT = 2
 BASE_DIR = Path(os.path.expanduser("~")) / ".onesocial"
 BASE_DIR.mkdir(parents=True, exist_ok=True)
 
-IMAGE_FORMATS = (".png", ".jpeg")
+IMAGE_FORMATS = (".png", ".jpg")
 POSTS_FOLDER = BASE_DIR / "posts"
 POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
 

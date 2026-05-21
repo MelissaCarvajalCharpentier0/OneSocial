@@ -130,7 +130,7 @@ def update_account_label(provider, username, new_label):
 
 
 def general_upload_post(tokens, text, title, image_path=None):
-        """
+    """
     - Input: 
         - account: Token - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
@@ -140,7 +140,13 @@ def general_upload_post(tokens, text, title, image_path=None):
         - If the provider is recognized the corresponding post function is called.
         - If the provider is not recognized, it prints a message indicating that the provider is not supported.
     """
-        for account in tokens:
+    results = []
+
+    for account in tokens:
+        try:
+            content = "\n".join(
+                part for part in [title, text] if part
+            )
             if account.provider == "Mastodon":
                 if image_path:
                     upload_post_mastodon(title + "\n" + text, image_path, account)
@@ -168,7 +174,23 @@ def general_upload_post(tokens, text, title, image_path=None):
                     raise InputValueError("Reddit no soporta imagenes en esta version.")
                 publish_post_reddit_text(title, text, account)
             else:
-                raise InputValueError(f"Proveedor {account.provider} no soportado.")   
+                raise InputValueError(f"Proveedor {account.provider} no soportado.")
+
+            results.append({
+                'provider': account.provider,
+                'success': True,
+                'message': 'Publicado correctamente'
+            })
+            
+        except Exception as e:
+
+            results.append({
+                'provider': account.provider,
+                'success': False,
+                'message': str(e)
+            })
+
+    return results
 
 
 
