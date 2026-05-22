@@ -882,15 +882,10 @@ textarea {
 
 .publish-status-bar {
     margin-top: 18px;
-
     background: #252525;
-
     border: 1px solid #333;
-
     border-radius: 12px;
-
     padding: 12px 14px;
-
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -927,17 +922,11 @@ textarea {
 .status-info-btn {
     width: 28px;
     height: 28px;
-
     border-radius: 999px;
-
     border: none;
-
     background: #3a3a3a;
-
     color: white;
-
     cursor: pointer;
-
     transition: all 0.15s ease;
 }
 
@@ -945,10 +934,6 @@ textarea {
     background: #4a4a4a;
     transform: scale(1.05);
 }
-
-/* ============================= */
-/* Publish Details Modal */
-/* ============================= */
 
 .publish-details-modal {
     position: fixed;
@@ -989,6 +974,19 @@ textarea {
     flex-direction: column;
     gap: 12px;
     padding: 16px;
+}
+
+.publish-details-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.publish-details-list::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.publish-details-list:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .publish-detail-item {
