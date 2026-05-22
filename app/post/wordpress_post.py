@@ -12,7 +12,9 @@ Version: 1.1
 
 """
 
-
+from PIL import Image
+import tempfile
+import os
 from post.post_on_socials import *
 
 def publish_post_wordpress(account, title, content):
@@ -212,6 +214,10 @@ def verify_wordpress_rest(account):
 
 
 def publish_post_wordpress_rest(account, title, content, image_path=None):
+    """
+    Publish a post to a self-hosted WordPress site via REST API.
+    Converts any image to JPEG before upload to avoid server processing errors.
+    """
     wp_url = f"{account.base_url}/wp-json/wp/v2"
     headers = {
         "User-Agent": "OneSocial/1.0",
@@ -240,21 +246,48 @@ def publish_post_wordpress_rest(account, title, content, image_path=None):
 
     post_id = r.json()["id"]
 
-    # 2. Upload image if provided
+    # 2. Upload image if provided (with conversion)
     if image_path:
         image_path = Path(image_path)
         if image_path.is_file():
+            # --- Convert image to JPEG using Pillow ---
+            temp_jpg = None
+            try:
+                with Image.open(image_path) as img:
+                    # Convert to RGB (JPEG doesn't support alpha transparency)
+                    if img.mode in ("RGBA", "P"):
+                        img = img.convert("RGB")
+                    elif img.mode != "RGB":
+                        img = img.convert("RGB")
+
+                    # Save as JPEG to a temporary file
+                    temp_fd, temp_jpg = tempfile.mkstemp(suffix=".jpg")
+                    os.close(temp_fd)  # we only need the filename
+                    img.save(temp_jpg, "JPEG", quality=90)
+
+                upload_file = temp_jpg
+                mime_type = "image/jpeg"
+                file_name = os.path.basename(temp_jpg)
+            except Exception as e:
+                raise Exception(f"Image conversion failed: {e}")
+
+            # Upload the converted JPEG
             media_url = f"{wp_url}/media"
-            with open(image_path, 'rb') as img:
-                mime = f"image/{image_path.suffix[1:]}"
-                files = {'file': (image_path.name, img, mime)}
+            with open(upload_file, 'rb') as img:
+                files = {'file': (file_name, img, mime_type)}
                 r_media = session.post(
                     media_url,
                     files=files,
                     auth=HTTPBasicAuth(account.username, account.password),
-                    headers={"User-Agent": "OneSocial/1.0"},  # no Content-Type here (multipart sets it)
+                    headers={"User-Agent": "OneSocial/1.0"},
                     timeout=30
                 )
+            # Clean up the temporary file
+            try:
+                os.remove(upload_file)
+            except Exception:
+                pass
+
             if r_media.status_code not in (200, 201):
                 raise Exception(f"Image upload failed: {r_media.status_code} {r_media.text}")
 
