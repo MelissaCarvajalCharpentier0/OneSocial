@@ -161,7 +161,7 @@ def general_upload_post(tokens, text, title, image_path=None):
                     publish_post_wordpress_with_featured_image(account, title, text, image_path)
                 else:
                     publish_post_wordpress(account, title, text)
-            elif account.provider == "WordPress-REST":
+            elif account.provider == "WordPressREST":
                 publish_post_wordpress_rest(account, title, text, image_path)
             elif account.provider == "Bluesky":
                 if image_path: 
