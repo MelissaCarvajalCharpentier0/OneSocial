@@ -29,7 +29,7 @@ fileInput.addEventListener('change', () => {
         const reader = new FileReader();
         reader.onload = function (e) {
             currentImage = e.target.result;
-            updatePreview(); 
+            updateAllPreviews();
         };
 
         reader.readAsDataURL(file);
@@ -37,11 +37,130 @@ fileInput.addEventListener('change', () => {
     } else {
         fileName.textContent = "No file selected";
         currentImage = null;
-        updatePreview();
+        updateAllPreviews();
     }
 
     syncSidebarHeight();
 });
+
+// ==================== NAVBAR ====================
+const navButtons = document.querySelectorAll(".nav-btn");
+const views = document.querySelectorAll(".view");
+
+navButtons.forEach(button => {
+    button.addEventListener("click", () => {
+        const targetView = button.dataset.view;
+        navButtons.forEach(btn => {
+            btn.classList.remove("active");
+        });
+
+        button.classList.add("active");
+
+        views.forEach(view => {
+            view.classList.add("hidden-view");
+        });
+
+        document
+            .getElementById(targetView)
+            .classList.remove("hidden-view");
+
+    });
+
+});
+
+
+// ==================== SCHEDULE EDITOR ====================
+
+const openScheduleEditorBtn = document.getElementById('open-schedule-editor-btn');
+const closeEditorBtn = document.getElementById('close-editor-btn');
+const scheduleEditorSection = document.getElementById('schedule-editor-section');
+const calendarTopbar = document.querySelector('.calendar-topbar');
+const scheduledSection = document.querySelector('.scheduled-section');
+
+openScheduleEditorBtn.addEventListener('click', () => {
+    scheduleEditorSection.classList.remove('hidden');
+    calendarTopbar.classList.add('hidden');
+    scheduledSection.classList.add('hidden');
+
+});
+
+closeEditorBtn.addEventListener('click', () => {
+    scheduleEditorSection.classList.add('hidden');
+    calendarTopbar.classList.remove('hidden');
+    scheduledSection.classList.remove('hidden');
+
+});
+
+
+// ==================== SCHEDULED POSTS: Edit/Delete ====================
+
+document.addEventListener('click', async (e) => {
+
+    // DELETE
+    const deleteBtn = e.target.closest('.scheduled-delete-btn');
+
+    if (deleteBtn) {
+
+        const card = deleteBtn.closest('.scheduled-card');
+        const title = card.querySelector('.scheduled-card-title').textContent;
+
+        const confirmed = await openModal({
+            title: 'Delete scheduled post',
+            bodyHTML: `
+                <p>
+                    Are you sure you want to delete
+                    <b>${title}</b>?
+                </p>
+            `,
+            confirmText: 'Delete',
+            danger: true
+        });
+
+        if (!confirmed) return;
+
+        // delete logic here
+        card.remove();
+
+        showStatus('Scheduled post deleted', 'success');
+    }
+
+
+    // EDIT
+    const editBtn = e.target.closest('.scheduled-edit-btn');
+
+    if (editBtn) {
+        const card = editBtn.closest('.scheduled-card');
+        const postId = card.dataset.postId;
+
+        // AYUDA DE LA PATRONA
+        const result = await eel.get_scheduled_post(postId)();
+
+        if (!result.success) {
+            showStatus('Could not load scheduled post', 'error');
+            return;
+        }
+
+        const post = result.post;
+        scheduleEditorSection.classList.remove('hidden');
+
+        calendarTopbar.classList.add('hidden');
+        scheduledSection.classList.add('hidden');
+
+        document.getElementById('calendar-post-header').value = post.header || '';
+        document.getElementById('calendar-post-body').value = post.body || '';
+        document.getElementById('calendar-date').value = post.date || '';
+        document.getElementById('calendar-time').value = post.time || '';
+
+        const scheduleBtn = document.querySelector('.calendar-post-button');
+        scheduleBtn.textContent = 'Save Changes';
+
+        updateAllPreviews();
+    }
+
+});
+
+
+
 
 // ==================== LINK ACCOUNTS SIDEBAR ====================
 const linkSidebar = document.getElementById('link-sidebar');
@@ -431,13 +550,14 @@ function renderTabs() {
     }
 }
 
-function renderAccountList() {
-    const listContainer = document.getElementById('account-list');
+function renderAccountList(containerId = 'account-list', summaryId = 'account-summary') {
+    const listContainer = document.getElementById(containerId);
+    const summary = document.getElementById(summaryId);
     const accounts = getAccountsForActiveTab();
 
     if (accounts.length === 0) {
         listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
-        renderSummary();
+        renderSummary(summaryId);
         return;
     }
     const grouped = {};
@@ -522,7 +642,7 @@ function renderAccountList() {
 
     listContainer.innerHTML = html;
 
-    document.querySelectorAll('.provider-header').forEach(header => {
+    listContainer.querySelectorAll('.provider-header').forEach(header => {
         header.addEventListener('click', () => {
             const provider = header.dataset.provider;
 
@@ -532,15 +652,25 @@ function renderAccountList() {
                 accountState.collapsedProviders.add(provider);
             }
 
-            renderAccountList();
+            rerenderAllAccounts();
         });
     });
 
-    document.querySelectorAll('.account-item input').forEach(input => {
+    listContainer.querySelectorAll('.account-item input').forEach(input => {
         input.addEventListener('click', e => e.stopPropagation());
     });
 
-    renderSummary();
+    renderSummary(summaryId);
+}
+
+function rerenderAllAccounts() {
+    renderAccountList();
+    renderCalendarAccounts();
+}
+
+function updateAllPreviews() {
+    updatePreview();
+    updatePreview('calendar-preview-container');
 }
 
 function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
@@ -589,17 +719,28 @@ function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
     });
 }
 
-function renderSummary() {
-    const summary = document.getElementById('account-summary');
+function renderSummary(summaryId = 'account-summary') {
+    const summary = document.getElementById(summaryId);
+    if (!summary) return;
+
     const total = getAllAccountObjects().length;
     const selectedCount = accountState.selected.size;
-    summary.textContent = `${selectedCount} of ${total} account(s) selected`;
+
+    summary.textContent =
+        `${selectedCount} of ${total} account(s) selected`;
 }
 
 function renderAccounts() {
     renderTabs();
-    renderAccountList();
+    rerenderAllAccounts();
     syncSidebarHeight();
+}
+
+function renderCalendarAccounts() {
+    renderAccountList(
+        'calendar-account-list',
+        'calendar-account-summary'
+    );
 }
 
 function syncSidebarHeight() {
@@ -658,7 +799,8 @@ async function loadAccounts() {
         }
 
         renderAccounts();
-        updatePreview();
+        renderCalendarAccounts();
+        updateAllPreviews();
 
     } catch (error) {
         console.error(error);
@@ -676,7 +818,7 @@ function clearForm() {
     document.getElementById('post-body').value = '';
     fileName.textContent = "No file selected";
     currentImage = null;
-    updatePreview();
+    updateAllPreviews();
     updateCounters();
     syncSidebarHeight();
 }
@@ -945,10 +1087,10 @@ function renderBluesky(label, username, header, body, image) {
 }
 
 
-function updatePreview() {
+function updatePreview(containerId = 'preview-container') {
     const header = escapeHTML(document.getElementById('post-header').value);
     const body = escapeHTML(document.getElementById('post-body').value);
-    const container = document.getElementById('preview-container');
+    const container = document.getElementById(containerId);
     container.innerHTML = '';
 
     const selectedAccounts = getSelectedAccountsPayload();
@@ -1156,12 +1298,12 @@ async function createPost() {
 function initializeEventListeners() {
     document.getElementById('post-header').addEventListener('input', () => {
         updateCounters();
-        updatePreview();
+        updateAllPreviews();
     });
     
     document.getElementById('post-body').addEventListener('input', () => {
         updateCounters();
-        updatePreview();
+        updateAllPreviews();
     });
 
     document.getElementById('account-list').addEventListener('change', (event) => {
@@ -1176,8 +1318,8 @@ function initializeEventListeners() {
                     accountState.selected.delete(key);
                 }
             });
-            renderAccountList();
-            updatePreview();
+            rerenderAllAccounts();
+            updateAllPreviews();
             return;
         }
         if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
@@ -1189,8 +1331,8 @@ function initializeEventListeners() {
             } else {
                 accountState.selected.delete(key);
             }
-            renderAccountList();
-            updatePreview();
+            rerenderAllAccounts();
+            updateAllPreviews();
         }
     });
 
@@ -1258,8 +1400,115 @@ function initializeEventListeners() {
 
                 if (result && result.success) {
                     updateAccountLabel(provider, username, newLabel || null);
-                    renderAccountList();
-                    updatePreview();
+                    rerenderAllAccounts();
+                    updateAllPreviews();
+                    showStatus('Label updated', 'success');
+                } else {
+                    showStatus(result?.message || 'Failed to update label', 'error');
+                }
+
+            } catch (err) {
+                showStatus('Error: ' + err, 'error');
+            }
+        }
+    });
+
+    document.getElementById('calendar-account-list').addEventListener('change', (event) => {
+        const target = event.target;
+        if (target.id === 'toggle-visible-accounts') {
+            const accounts = getAccountsForActiveTab();
+            accounts.forEach(({ provider, username }) => {
+                const key = accountKey(provider, username);
+                if (target.checked) {
+                    accountState.selected.add(key);
+                } else {
+                    accountState.selected.delete(key);
+                }
+            });
+            rerenderAllAccounts();
+            updateAllPreviews();
+            return;
+        }
+        if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
+            const provider = target.getAttribute('data-provider');
+            const username = target.getAttribute('data-username');
+            const key = accountKey(provider, username);
+            if (target.checked) {
+                accountState.selected.add(key);
+            } else {
+                accountState.selected.delete(key);
+            }
+            rerenderAllAccounts();
+            updateAllPreviews();
+        }
+    });
+
+    document.getElementById('calendar-account-list').addEventListener('click', async (e) => {
+        const deleteBtn = e.target.closest('.delete-account-btn');
+        const labelBtn = e.target.closest('.edit-label-btn');
+
+        if (deleteBtn) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            const provider = deleteBtn.dataset.provider;
+            const username = deleteBtn.dataset.username;
+
+            const confirmed = await openModal({
+                title: "Delete account",
+                bodyHTML: `<p>Are you sure you want to remove <b>${username}</b>?</p>`,
+                confirmText: "Delete",
+                danger: true
+            });
+
+            if (!confirmed) return;
+
+            try {
+                const result = await eel.delete_account(provider, username)();
+
+                if (result && result.success) {
+                    const key = accountKey(provider, username);
+                    accountState.selected.delete(key);
+
+                    await loadAccounts();
+                    showStatus('Account deleted successfully', 'success');
+                } else {
+                    showStatus(result?.message || 'Error deleting account', 'error');
+                }
+
+            } catch (err) {
+                showStatus('Error: ' + err, 'error');
+            }
+        }
+
+        if (labelBtn) {
+            e.stopPropagation();
+
+            const provider = labelBtn.dataset.provider;
+            const username = labelBtn.dataset.username;
+
+            const currentLabel = getAccountLabel(provider, username);
+
+            const confirmed = await openModal({
+                title: "Edit account label",
+                bodyHTML: `<input id="edit-input" value="${currentLabel || username}">`,
+                confirmText: "Save"
+            });
+
+            if (!confirmed) return;
+
+            const input = document.getElementById('edit-input');
+            const newLabel = input.value.trim();
+
+            if (!newLabel) return;
+
+            try {
+                const result = await eel.update_display_name(provider, username, newLabel)();
+
+                if (result && result.success) {
+                    updateAccountLabel(provider, username, newLabel || null);
+                    rerenderAllAccounts();
+                    updateAllPreviews();
                     showStatus('Label updated', 'success');
                 } else {
                     showStatus(result?.message || 'Failed to update label', 'error');
@@ -1295,7 +1544,7 @@ function initializeEventListeners() {
 function initializeApplication() {
     initializeEventListeners();
     updateCounters();
-    updatePreview();
+    updateAllPreviews();
     loadAccounts();
     syncSidebarHeight();
 }
