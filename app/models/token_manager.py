@@ -30,7 +30,10 @@ IMAGE_FORMATS = (".png", ".jpg")
 POSTS_FOLDER = BASE_DIR / "posts"
 POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
 
-COUNTER_FILE = BASE_DIR / "post_counter.txt"
+IMAGES_FOLDER = BASE_DIR / "images"
+IMAGES_FOLDER.mkdir(parents=True, exist_ok=True)
+
+DATA_FILE = BASE_DIR / "data.dat"
 
 def write_json(data: list[Token]) -> json:
     """
@@ -47,7 +50,7 @@ def write_json(data: list[Token]) -> json:
 
     return [token.to_dict() for token in data]
 
-def read_json(json_file:list) -> list[Token]:
+def read_json(json_file: list | dict) -> list[Token]:
     """
     - Input: json_file (dict)
     - Output: tokens (list[Token])
@@ -57,30 +60,64 @@ def read_json(json_file:list) -> list[Token]:
     If an invalid token or value is read it will be ignored  
     """
 
+    if isinstance(json_file, dict):
+        if "tokens" not in json_file:
+            raise InputValueError("Json_file invalid.")
+        json_file = json_file.get("tokens", [])
+
     if not isinstance(json_file, list):
         raise InputValueError("Json_file invalid.")
     
     tokens = []
     for token_data in json_file:
         if isinstance(token_data, dict):
-            tokens.append(Token(**token_data))
+            try:
+                tokens.append(Token(**token_data))
+            except TypeError:
+                continue
 
     return tokens
+
+def _load_storage_payload() -> dict:
+    if not DATA_FILE.exists():
+        raise TokenStorageError("data.dat not found.")
+
+    try:
+        payload = json.loads(DATA_FILE.read_text(encoding=ENCODING))
+    except (OSError, json.JSONDecodeError) as error:
+        raise TokenStorageError("Invalid data.dat format.") from error
+
+    if not isinstance(payload, dict) or "salt" not in payload or "data" not in payload:
+        raise TokenStorageError("Invalid data.dat format.")
+
+    return payload
+
+
+def get_post_counter() -> int:
+    payload = _load_storage_payload()
+    counter = payload.get("post_counter", 0)
+    try:
+        return int(counter)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _write_post_counter(counter_value: int) -> None:
+    payload = _load_storage_payload()
+    payload["post_counter"] = counter_value
+    DATA_FILE.write_text(json.dumps(payload, indent=INDENT), encoding=ENCODING)
+
 
 def get_next_post_id() -> int:
     """
     - Output: next_id (int)
-    - Effects: Reads the data of the social networks' tokens from a unified json file and returns a list of valid Token objects
-    - Description: Retrieves the next post ID by reading and updating a counter stored in a text file. This ensures that each post has a unique identifier.
+    - Effects: Reads and updates the post counter stored in the encrypted data.dat file.
+    - Description: Retrieves the next post ID by reading and updating a counter stored in data.dat. This ensures that each post has a unique identifier.
     """
 
-    if not COUNTER_FILE.exists():
-        COUNTER_FILE.write_text("0")
-
-    current = int(COUNTER_FILE.read_text(encoding=ENCODING).strip())
+    current = get_post_counter()
     next_id = current + 1
-
-    COUNTER_FILE.write_text(str(next_id), encoding=ENCODING)
+    _write_post_counter(next_id)
 
     return next_id
 
@@ -88,7 +125,7 @@ def get_image(image_path: Path) -> str:
     """
     - Input: image_path (Path)
     - Output: new_name (str)
-    - Effects: The image will be copied and stored locally for publication in the folder specified by POSTS_FOLDER
+    - Effects: The image will be copied and stored locally for publication in the folder specified by IMAGES_FOLDER
     - Description: Validates the image path and format, then copies the image to a designated folder with a new name based on a unique post ID. Returns the new name of the copied image file.
     """
 
@@ -98,11 +135,11 @@ def get_image(image_path: Path) -> str:
     if image_path.suffix.lower() not in IMAGE_FORMATS:
         raise InputValueError(f"Invalid image format (valid formats: {IMAGE_FORMATS})")
     
-    POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
+    IMAGES_FOLDER.mkdir(parents=True, exist_ok=True)
 
     post_id = get_next_post_id()
     new_name = f"post_{post_id}{image_path.suffix.lower()}"
-    shutil.copy(image_path, POSTS_FOLDER / new_name)
+    shutil.copy(image_path, IMAGES_FOLDER / new_name)
 
     print(f"Imagen guardada como: {new_name}")
     return new_name
@@ -110,13 +147,13 @@ def get_image(image_path: Path) -> str:
 def delete_image(image_name: str):
     """
     - Input: image_name (str)
-    - Description: The image specified will be deleted from local app storage (in the folder specified by POSTS_FOLDER)
+    - Description: The image specified will be deleted from local app storage (in the folder specified by IMAGES_FOLDER)
     """
     
     if not isinstance(image_name, str):
         raise InputValueError("Image name invalid.")
     
-    image_path = POSTS_FOLDER / image_name
+    image_path = IMAGES_FOLDER / image_name
 
     if not image_path.exists():
         print(f"Image: {image_name} not found. Nothing was eliminated")
@@ -134,14 +171,14 @@ def delete_image(image_name: str):
 
 def delete_all_images():
     """
-    - Description: Deletes all images from local app storage (in the folder specified by POSTS_FOLDER) and
+    - Description: Deletes all images from local app storage (in the folder specified by IMAGES_FOLDER) and
     resets post counter only if all images were deleted successfully.
     """
 
-    POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
+    IMAGES_FOLDER.mkdir(parents=True, exist_ok=True)
     errors = []
 
-    for image_path in POSTS_FOLDER.iterdir():
+    for image_path in IMAGES_FOLDER.iterdir():
         if image_path.is_file() and image_path.suffix.lower() in IMAGE_FORMATS:
             try:
                 image_path.unlink()
@@ -156,7 +193,7 @@ def delete_all_images():
             f"{error_messages}"
         )
 
-    COUNTER_FILE.write_text("0")
+    _write_post_counter(0)
     print("All images erased and CounterID was reset.")
 
 def account_list(raw_tokens: list[Token]) -> list[list[str]]:

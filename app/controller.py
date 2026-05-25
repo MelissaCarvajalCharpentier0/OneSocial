@@ -3,7 +3,8 @@
 =============================================================================================
 
 Name: controller.py
-Description: Main module for testing the functionalities of the project, including authentication and post creation on social media platforms.
+Description: Main module for testing the functionalities of the project, 
+    including authentication and post creation on social media platforms.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
 Date: April 2026
 Version: 1.2
@@ -66,6 +67,11 @@ def save(tokens: list[Token]):
     """
 
     json_data = write_json(tokens)
+    post_counter = get_post_counter()
+    json_data = {
+        "tokens": json_data,
+        "post_counter": post_counter,
+    }
     encrypt_process_file(json_data, FILE_DIRECTORY, MASTER_KEY)
 
 
@@ -403,7 +409,7 @@ def process_image(image_path: Path) -> Path:
     """
 
     new_name = get_image(image_path)  # "post_1.jpg"
-    full_path = Path(POSTS_FOLDER) / new_name
+    full_path = Path(IMAGES_FOLDER) / new_name
 
     print(f"Ruta completa de imagen: {full_path}")
 

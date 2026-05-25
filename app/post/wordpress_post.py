@@ -15,7 +15,12 @@ Version: 1.1
 from PIL import Image
 import tempfile
 import os
-from post.post_on_socials import *
+import mimetypes
+from pathlib import Path
+import requests
+from requests.auth import HTTPBasicAuth
+
+from models.app_errors import ApiError, PublishError
 
 def publish_post_wordpress(account, title, content):
     """

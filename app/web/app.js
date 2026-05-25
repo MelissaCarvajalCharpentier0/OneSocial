@@ -816,6 +816,7 @@ eel.expose(clearForm);
 function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
+    document.getElementById('post-time').value = '';
     fileName.textContent = "No file selected";
     currentImage = null;
     updateAllPreviews();
@@ -1292,6 +1293,60 @@ async function createPost() {
             'Failed to publish post',
             'error'
         );
+    }
+}
+
+async function savePost() {
+    const header = document.getElementById('post-header').value.trim();
+    const body = document.getElementById('post-body').value.trim();
+    const selectedAccounts = getSelectedAccountsPayload();
+    const scheduledTime = document.getElementById('post-time').value;
+
+    if (!header && !body) {
+        showStatus('Please add a header or body to your post', 'error');
+        return;
+    }
+
+    if (selectedAccounts.length === 0) {
+        showStatus('Select at least one account before saving', 'error');
+        return;
+    }
+
+    if (!scheduledTime) {
+        showStatus('Select a scheduled time before saving', 'error');
+        return;
+    }
+
+    const fileInput = document.getElementById('image-input');
+    let imageData = null;
+    let imageName = null;
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        imageName = file.name;
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        await new Promise((resolve) => {
+            reader.onload = () => {
+                imageData = reader.result;
+                resolve();
+            };
+        });
+    }
+
+    showStatus('Saving post...', 'info');
+    try {
+        const result = await eel.save_post(header, body, selectedAccounts, scheduledTime, imageData, imageName)();
+
+        if (result && result.success) {
+            const successMessage = result.message || 'Post saved successfully';
+            showStatus(successMessage, 'success');
+            clearForm();
+            return;
+        }
+        showStatus((result && result.message) || 'Error saving post', 'error');
+    } catch (err) {
+        showStatus('Error saving post: ' + err, 'error');
     }
 }
 

@@ -12,7 +12,11 @@ Version: 1.1
 
 """
 
-from post.post_on_socials import *
+from pathlib import Path
+
+from mastodon import Mastodon
+
+from models.app_errors import InputValueError, PublishError
 
 def upload_post_mastodon(text: str, image_path: Path, account):
     """
