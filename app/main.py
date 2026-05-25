@@ -448,11 +448,17 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
         if image_data:
             new_image_path = save_image_from_base64(image_data, image_name)
 
-        general_upload_post(tokens, text, title, new_image_path)
+        results = general_upload_post(tokens, text, title, new_image_path)
+        has_errors = any(not r['success'] for r in results)
 
         return {
-            'success': True,
-            'message': 'Post publicado correctamente'
+            'success': not has_errors,
+            'results': results,
+            'message': (
+                'Algunas publicaciones fallaron'
+                if has_errors
+                else 'Post publicado correctamente'
+            )
         }
 
     except (InputValueError, ApiError, TokenStorageError, PublishError) as e:

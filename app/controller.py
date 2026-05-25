@@ -18,6 +18,10 @@ import base64
 import binascii
 import subprocess
 
+from PIL import Image
+import io
+import tempfile
+
 from models.token_manager import *
 from models.app_errors import InputValueError
 from models.crypto import encrypt_process_file, decrypt_process_file
@@ -136,7 +140,7 @@ def update_account_label(provider, username, new_label):
 
 
 def general_upload_post(tokens, text, title, image_path=None):
-        """
+    """
     - Input: 
         - account: Token - The account object containing authentication details and provider information.
         - text: str - The text content of the post to be published.
@@ -146,7 +150,13 @@ def general_upload_post(tokens, text, title, image_path=None):
         - If the provider is recognized the corresponding post function is called.
         - If the provider is not recognized, it prints a message indicating that the provider is not supported.
     """
-        for account in tokens:
+    results = []
+
+    for account in tokens:
+        try:
+            content = "\n".join(
+                part for part in [title, text] if part
+            )
             if account.provider == "Mastodon":
                 if image_path:
                     upload_post_mastodon(title + "\n" + text, image_path, account)
@@ -174,7 +184,23 @@ def general_upload_post(tokens, text, title, image_path=None):
                     raise InputValueError("Reddit no soporta imagenes en esta version.")
                 publish_post_reddit_text(title, text, account)
             else:
-                raise InputValueError(f"Proveedor {account.provider} no soportado.")   
+                raise InputValueError(f"Proveedor {account.provider} no soportado.")
+
+            results.append({
+                'provider': account.provider,
+                'success': True,
+                'message': 'Publicado correctamente'
+            })
+            
+        except Exception as e:
+
+            results.append({
+                'provider': account.provider,
+                'success': False,
+                'message': str(e)
+            })
+
+    return results
 
 
 
@@ -393,41 +419,43 @@ def process_image(image_path: Path) -> Path:
 def save_image_from_base64(image_data: str, image_name: str) -> Path:
     """
     - Input:
-        - image_data: str - A string containing the base64 encoded image data, typically in the format 
-        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
-        - image_name: str - The original name of the image file, used to determine the file extension.  
-    - Output:
-        - full_path: Path - The file path where the decoded image has been saved locally.
+        - image_data: str - base64 encoded image (with data URL prefix)
+        - image_name: str - original filename (only used for logging)
+    - Output: full_path (Path) to the saved JPEG file
     - Description:
-        - This function takes a base64 encoded image string and the original image name, decodes the image data, 
-        and saves it to a local file. It first validates the image format based on the file extension, then creates
-        a new file name using a unique post ID. The decoded image data is written to a new file in the designated
-        posts folder, and the full path to the saved image is returned.
+        Decodes base64, verifies & converts to JPEG using Pillow,
+        saves into POSTS_FOLDER with a unique post ID and .jpg extension.
     """
-
     if not image_data:
-        raise InputValueError("No image data provided")
+        raise ValueError("No image data provided")
 
-    try:
+    # 1. Decode base64 (skip the data URL header)
+    if ',' in image_data:
         header, encoded = image_data.split(",", 1)
-        image_bytes = base64.b64decode(encoded)
-    except (ValueError, binascii.Error) as error:
-        raise InputValueError("Invalid base64 image payload") from error
+    else:
+        encoded = image_data
+    image_bytes = base64.b64decode(encoded)
 
-    suffix = Path(image_name).suffix.lower()
-    if suffix not in IMAGE_FORMATS:
-        raise InputValueError(f"Formato inválido: {suffix}")
+    # 2. Open with Pillow – this handles ANY format Pillow knows
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+    except Exception as e:
+        raise ValueError(f"Cannot open image: {e}")
 
-    destiny = Path(IMAGES_FOLDER)
-    destiny.mkdir(parents=True, exist_ok=True)
+    # 3. Convert to RGB (JPEG doesn't support transparency)
+    if img.mode in ("RGBA", "P"):
+        img = img.convert("RGB")
+    elif img.mode != "RGB":
+        img = img.convert("RGB")
 
+    # 4. Prepare destination
+    POSTS_FOLDER.mkdir(parents=True, exist_ok=True)
     post_id = get_next_post_id()
-    new_name = f"post_{post_id}{suffix}"
+    new_name = f"post_{post_id}.jpg"
+    full_path = POSTS_FOLDER / new_name
 
-    full_path = destiny / new_name
-
-    with open(full_path, "wb") as f:
-        f.write(image_bytes)
+    # 5. Save as JPEG (quality 90)
+    img.save(full_path, "JPEG", quality=90)
 
     return full_path
 
