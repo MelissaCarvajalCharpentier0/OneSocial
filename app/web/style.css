@@ -793,8 +793,7 @@ body {
 
 .container {
     flex: 1;
-    min-width: 500px;
-    max-width: 700px;
+    width: 100%;
     min-height: calc(108vh - 40px);
     margin: 0;
     background: #2d2d2d;
