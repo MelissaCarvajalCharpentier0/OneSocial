@@ -46,6 +46,7 @@
                 </div>
             </div>
 
+
             <div class="form-group">
                 <label>Image</label>
                 <input type="file" id="image-input" accept=".png,.jpeg" hidden>
@@ -55,9 +56,12 @@
                 <span id="file-name">No file selected</span>
             </div>
 
-            <button class="post-button" onclick="createPost()">
-                Publish Post
-            </button>
+            <div class="post-actions">
+                <button class="post-button" onclick="createPost()">
+                    Publish Post
+                </button>
+
+            </div>
             <div id="status" class="status hidden"></div>
         </div>
 

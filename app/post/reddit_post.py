@@ -12,7 +12,10 @@ Version: 1.1
 
 """
 
-from post.post_on_socials import *
+import requests
+
+from auth.reddit_auth import ensure_reddit_token
+from models.app_errors import ApiError, InputValueError, PublishError
 
 REDDIT_SUBMIT_URL = "https://oauth.reddit.com/api/submit"
 REDDIT_USER_AGENT = "OneSocial/1.0 (by /u/onesocial)"
