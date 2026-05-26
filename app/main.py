@@ -21,12 +21,13 @@ import eel
 import os
 import sys
 import tkinter as tk
+from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 from controller import *
 from models.token_manager import IMAGE_FORMATS, IMAGES_FOLDER
 from post.wordpress_post import verify_wordpress_rest
-from post.Post import Post
+from post.Post import Post, load_post_by_id, load_posts
 
 from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
@@ -95,6 +96,15 @@ def serialize_error(error):
         'message': str(error),
     }
     return payload
+
+
+def _split_schedule_time(value: str) -> tuple[str, str]:
+    try:
+        parsed = datetime.fromisoformat(value)
+    except ValueError:
+        return value, ""
+
+    return parsed.date().isoformat(), parsed.strftime("%H:%M")
 
 
 @eel.expose
@@ -545,6 +555,94 @@ def save_post(header, body, selected_accounts, scheduled_time, image_data=None, 
                 temp_image_path.unlink()
             except OSError:
                 pass
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def get_scheduled_posts():
+    """
+    output:
+        Dictionary with keys:
+            success - Boolean indicating if posts were loaded
+            posts - List of scheduled post payloads
+    Description:
+        Loads all .post drafts from local storage for the UI.
+    """
+    try:
+        posts = load_posts()
+        payloads = []
+
+        for post in posts:
+            date_value, time_value = _split_schedule_time(post.scheduled_time)
+            payloads.append({
+                'id': post.id,
+                'header': post.title,
+                'body': post.content,
+                'date': date_value,
+                'time': time_value,
+                'scheduled_time': post.scheduled_time,
+                'selected_accounts': post.selected_accounts,
+                'image': post.image,
+            })
+
+        payloads.sort(key=lambda item: item.get('scheduled_time') or "")
+
+        return {
+            'success': True,
+            'posts': payloads,
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def get_scheduled_post(post_id):
+    """
+    input:
+        post_id - Post ID string or integer
+    output:
+        Dictionary with keys:
+            success - Boolean indicating if the post was loaded
+            post - Scheduled post payload
+    Description:
+        Loads a single .post draft by ID for editing.
+    """
+    try:
+        post = load_post_by_id(post_id)
+        date_value, time_value = _split_schedule_time(post.scheduled_time)
+
+        return {
+            'success': True,
+            'post': {
+                'id': post.id,
+                'header': post.title,
+                'body': post.content,
+                'date': date_value,
+                'time': time_value,
+                'scheduled_time': post.scheduled_time,
+                'selected_accounts': post.selected_accounts,
+                'image': post.image,
+            }
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+    except Exception as e:
         print("ERROR:", str(e))
         return {
             'success': False,

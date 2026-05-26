@@ -23,6 +23,12 @@ POSTS_DIR = POSTS_FOLDER
 IMAGES_DIR = IMAGES_FOLDER
 
 
+def _iter_post_files(posts_dir: Path) -> list[Path]:
+    if not posts_dir.exists():
+        return []
+    return sorted(posts_dir.glob("*.post"), key=lambda item: item.name)
+
+
 
 def _normalize_text(value: str | None) -> str:
     if value is None:
@@ -77,6 +83,50 @@ def _normalize_image(image) -> str | None:
     if not isinstance(image, str):
         raise InputValueError("Image path must be a string.")
     return image.strip()
+
+
+def load_post(post_path: Path):
+    if not post_path.exists() or not post_path.is_file():
+        raise InputValueError("Post file does not exist or is not a file.")
+
+    try:
+        content = post_path.read_text(encoding="utf-8")
+        data = json.loads(content)
+    except Exception as error:
+        raise InputValueError("Failed to load post data.") from error
+
+    post = Post(
+        title=data.get("title", ""),
+        content=data.get("content", ""),
+        selected_accounts=data.get("selected_accounts", []),
+        scheduled_time=data.get("scheduled_time", ""),
+        image=data.get("image")
+    )
+    post.id = data.get("id")
+    return post
+
+
+def load_post_by_id(post_id):
+    try:
+        post_id_value = int(post_id)
+    except (TypeError, ValueError) as error:
+        raise InputValueError("Post id is invalid.") from error
+
+    post_path = POSTS_DIR / f"{post_id_value}.post"
+    return load_post(post_path)
+
+
+def load_posts() -> list["Post"]:
+    posts_dir = POSTS_DIR
+    posts = []
+
+    for post_path in _iter_post_files(posts_dir):
+        try:
+            posts.append(load_post(post_path))
+        except InputValueError:
+            continue
+
+    return posts
 
 
 class Post:
