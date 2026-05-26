@@ -484,9 +484,10 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
 
 
 @eel.expose
-def save_post(header, body, selected_accounts, scheduled_time, image_data=None, image_name=None):
+def save_post(header, body, selected_accounts, scheduled_time, image_data=None, image_name=None, id=None):
     """
     input:
+        id - String containing the post ID
         header - String containing the post title
         body - String containing the post content
         selected_accounts - List of selected accounts in [provider, username] format

@@ -1,5 +1,7 @@
-const fileInput = document.getElementById('image-input');
-const fileName = document.getElementById('file-name');
+const fileInputCreate = document.getElementById('image-input');
+const fileInputSchedule = document.getElementById('calendar-image-input');
+const fileNameCreate = document.getElementById('file-name');
+const fileNameSchedule = document.getElementById('calendar-file-name');
 const overlay = document.getElementById('overlay');
 let currentImage = null;
 let publishResults = [];
@@ -21,10 +23,10 @@ function escapeHTML(value) {
         .replaceAll("'", '&#39;');
 }
 
-fileInput.addEventListener('change', () => {
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        fileName.textContent = file.name;
+fileInputCreate.addEventListener('change', () => {
+    if (fileInputCreate.files.length > 0) {
+        const file = fileInputCreate.files[0];
+        fileNameCreate.textContent = file.name;
 
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -35,7 +37,29 @@ fileInput.addEventListener('change', () => {
         reader.readAsDataURL(file);
 
     } else {
-        fileName.textContent = "No file selected";
+        fileNameCreate.textContent = "No file selected";
+        currentImage = null;
+        updateAllPreviews();
+    }
+
+    syncSidebarHeight();
+});
+
+fileInputSchedule.addEventListener('change', () => {
+    if (fileInputSchedule.files.length > 0) {
+        const file = fileInputSchedule.files[0];
+        fileNameSchedule.textContent = file.name;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            currentImage = e.target.result;
+            updateAllPreviews();
+        };
+
+        reader.readAsDataURL(file);
+
+    } else {
+        fileNameSchedule.textContent = "No file selected";
         currentImage = null;
         updateAllPreviews();
     }
@@ -498,6 +522,29 @@ function showStatus(message, type) {
     }, 3000);
 }
 
+
+eel.expose(showCalendarStatus);
+function showCalendarStatus(message, type) {
+    const statusBar = document.getElementById('calendar-publish-status-bar');
+    const statusText = document.getElementById('calendar-publish-status-text');
+
+    if (!statusBar || !statusText) return;
+
+    statusText.textContent = message;
+    statusBar.classList.remove('hidden');
+    statusText.classList.remove(
+        'success',
+        'error',
+        'info'
+    );
+
+    statusText.classList.add(type);
+
+    setTimeout(() => {
+        statusBar.classList.add('hidden');
+    }, 4000);
+}
+
 function accountKey(provider, username) {
     return `${provider}::${username}`;
 }
@@ -669,8 +716,17 @@ function rerenderAllAccounts() {
 }
 
 function updateAllPreviews() {
-    updatePreview();
-    updatePreview('calendar-preview-container');
+    updatePreview(
+        'preview-container',
+        'post-header',
+        'post-body'
+    );
+
+    updatePreview(
+        'calendar-preview-container',
+        'calendar-post-header',
+        'calendar-post-body'
+    );
 }
 
 function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
@@ -817,10 +873,28 @@ function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
     document.getElementById('post-time').value = '';
-    fileName.textContent = "No file selected";
+    fileNameCreate.textContent = "No file selected";
     currentImage = null;
     updateAllPreviews();
     updateCounters();
+    syncSidebarHeight();
+}
+
+eel.expose(clearCalendarForm);
+function clearCalendarForm() {
+    document.getElementById('calendar-post-header').value = '';
+    document.getElementById('calendar-post-body').value = '';
+    document.getElementById('calendar-time').value = '';
+    document.getElementById('calendar-date').value = '';
+
+    const fileNameSchedule = document.getElementById('calendar-file-name');
+    if (fileNameSchedule) {
+        fileNameSchedule.textContent = "No file selected";
+    }
+    
+    currentImage = null;
+    updateAllPreviews();
+    updateCountersSchedule();
     syncSidebarHeight();
 }
 
@@ -829,6 +903,13 @@ function updateCounters() {
     const body = document.getElementById('post-body').value;
     document.getElementById('header-count').textContent = header.length;
     document.getElementById('body-count').textContent = body.length;
+}
+
+function updateCountersSchedule() {
+    const header = document.getElementById('calendar-post-header').value;
+    const body = document.getElementById('calendar-post-body').value;
+    document.getElementById('calendar-header-count').textContent = header.length;
+    document.getElementById('calendar-body-count').textContent = body.length;
 }
 
 function renderMastodon(label, username, header, body, image) {
@@ -1088,9 +1169,9 @@ function renderBluesky(label, username, header, body, image) {
 }
 
 
-function updatePreview(containerId = 'preview-container') {
-    const header = escapeHTML(document.getElementById('post-header').value);
-    const body = escapeHTML(document.getElementById('post-body').value);
+function updatePreview(containerId = 'preview-container', headerId = 'post-header', bodyId = 'post-body') {
+    const header = escapeHTML(document.getElementById(headerId).value);
+    const body = escapeHTML(document.getElementById(bodyId).value);
     const container = document.getElementById(containerId);
     container.innerHTML = '';
 
@@ -1347,6 +1428,64 @@ async function savePost() {
         showStatus((result && result.message) || 'Error saving post', 'error');
     } catch (err) {
         showStatus('Error saving post: ' + err, 'error');
+    }
+}
+
+
+async function schedulePost() {
+    const header = document.getElementById('calendar-post-header').value;
+    const body = document.getElementById('calendar-post-body').value;
+    const date = document.getElementById('calendar-date').value;
+    const time = document.getElementById('calendar-time').value;
+
+    const scheduled_time = `${date}T${time}`;
+    const selectedAccounts = getSelectedAccountsPayload();
+
+    if (!header && !body) {
+        showCalendarStatus('Please add a header or body to your post', 'error');
+        return;
+    }
+
+    if (selectedAccounts.length === 0) {
+        showCalendarStatus('Select at least one account before saving', 'error');
+        return;
+    }
+
+    if (!date || !time) {
+        showCalendarStatus('Select a scheduled time before saving', 'error');
+        return;
+    }
+
+    const fileInput = document.getElementById('calendar-image-input');
+    let imageData = null;
+    let imageName = null;
+
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        imageName = file.name;
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        await new Promise((resolve) => {
+            reader.onload = () => {
+                imageData = reader.result;
+                resolve();
+            };
+        });
+    }
+
+    showCalendarStatus('Saving post...', 'info');
+    try {
+        const result = await eel.save_post(header, body, selectedAccounts, scheduled_time, imageData, imageName)();
+
+        if (result && result.success) {
+            const successMessage = result.message || 'Post saved successfully';
+            showCalendarStatus(successMessage, 'success');
+            clearCalendarForm();
+            return;
+        }
+        showCalendarStatus((result && result.message) || 'Error saving post', 'error');
+    } catch (err) {
+        showCalendarStatus('Error saving post: ' + err, 'error');
     }
 }
 
