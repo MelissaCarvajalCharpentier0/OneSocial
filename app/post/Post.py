@@ -140,6 +140,7 @@ class Post:
         self.selected_accounts = _normalize_accounts(selected_accounts)
         self.scheduled_time = _normalize_time(scheduled_time)
         self.image = _normalize_image(image)
+        self.published = "False"
 
         if not self.title and not self.content:
             raise InputValueError("Post title or content is required.")
@@ -192,4 +193,5 @@ class Post:
 
         return post_path
 
-    
+    def set_published(self):
+        self.published = "True" 
