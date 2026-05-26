@@ -527,7 +527,7 @@ def save_post(header, body, selected_accounts, scheduled_time, image_data=None, 
             scheduled_time=scheduled_time,
             image=str(temp_image_path) if temp_image_path else None,
         )
-        post_path = post.save()
+        post_path = post.save_by_id(id)
 
         if temp_image_path and temp_image_path.exists():
             final_image_path = Path(post.image) if post.image else None

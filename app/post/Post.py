@@ -161,12 +161,15 @@ class Post:
             "scheduled_time": self.scheduled_time,
             "image": self.image
         }
-
-    def save(self, base_dir: Path | str | None = None) -> Path:
+    
+    def save_by_id(self, id: int, base_dir: Path | str | None = None) -> Path:
         posts_dir = Path(base_dir) if base_dir is not None else POSTS_DIR
         posts_dir.mkdir(parents=True, exist_ok=True)
 
-        self.id = get_next_post_id()
+        if (id):
+            self.id = id
+        else:
+            self.id = get_next_post_id()
 
         if self.image:
             image_path = Path(self.image)
