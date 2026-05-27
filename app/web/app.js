@@ -5,6 +5,7 @@ const fileNameSchedule = document.getElementById('calendar-file-name');
 const overlay = document.getElementById('overlay');
 let currentImage = null;
 let publishResults = [];
+let editingPostId = null;
 
 const accountState = {
     accountsByProvider: {},
@@ -67,12 +68,45 @@ fileInputSchedule.addEventListener('change', () => {
     syncSidebarHeight();
 });
 
+
+function selectAllAccounts() {
+    accountState.selected.clear();
+
+    getAllAccountObjects().forEach(({ provider, username }) => {
+
+        accountState.selected.add(
+            accountKey(provider, username)
+        );
+    });
+
+    renderAccounts();
+    renderCalendarAccounts();
+    renderSummary();
+    renderSummary('calendar-account-summary');
+    updateAllPreviews();
+}
+
+function resetPublishStatusCalendar() {
+    const statusBar = document.getElementById('calendar-publish-status-bar');
+    const statusText = document.getElementById('calendar-publish-status-text');
+    statusText.textContent = 'Ready';
+
+    statusText.classList.remove(
+        'success',
+        'error',
+        'info'
+    );
+
+    statusBar.classList.add('hidden');
+}
+
 // ==================== NAVBAR ====================
 const navButtons = document.querySelectorAll(".nav-btn");
 const views = document.querySelectorAll(".view");
 
 navButtons.forEach(button => {
     button.addEventListener("click", () => {
+        loadScheduledPosts();
         const targetView = button.dataset.view;
         navButtons.forEach(btn => {
             btn.classList.remove("active");
@@ -113,7 +147,190 @@ closeEditorBtn.addEventListener('click', () => {
     calendarTopbar.classList.remove('hidden');
     scheduledSection.classList.remove('hidden');
 
+    resetPublishStatusCalendar();
+    const scheduleBtn = document.querySelector('.calendar-post-button');
+    scheduleBtn.textContent = 'Schedule Post';
+
+    loadScheduledPosts();
+    clearCalendarForm();
+    selectAllAccounts();
 });
+
+
+// ==================== LOADING SCHEDULED POSTS ====================
+
+function formatScheduledDate(date, time) {
+    const fullDate = new Date(`${date}T${time}`);
+
+    return fullDate.toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit'
+    }).replace(',', ' •');
+}
+
+async function loadScheduledPosts() {
+    const container = document.getElementById('scheduled-post-list');
+
+    // Clean container before loading new posts
+    container.innerHTML = '';
+
+    try {
+        const response = await eel.get_scheduled_posts()();
+        
+        if (!response.success) {
+            container.innerHTML = `
+                <div class="scheduled-empty">
+                    Failed to load scheduled posts
+                </div>
+            `;
+            return;
+        }
+
+        const posts = response.posts;
+
+        // No scheduled posts
+        if (posts.length === 0) {
+            container.innerHTML = `
+                <div class="scheduled-empty">
+                    No scheduled posts
+                </div>
+            `;
+            return;
+        }
+
+        posts.forEach(post => {
+
+            // Map provider names to abbreviations
+            const providerStyles = {
+                Mastodon: {
+                    icon: 'icons/Mastodon_logo.png',
+                    border: '#6364FF',
+                    group: 'mastodon'
+                },
+
+                WordPress: {
+                    icon: 'icons/WordPress_logo.png',
+                    border: '#21759B',
+                    group: 'wordpress'
+                },
+
+                WordPressREST: {
+                    icon: 'icons/WordPress_logo.png',
+                    border: '#21759B',
+                    group: 'wordpress'
+                },
+
+                Bluesky: {
+                    icon: 'icons/Bluesky_logo.png',
+                    border: '#1184FE',
+                    group: 'bluesky'
+                },
+
+                LinkedIn: {
+                    icon: 'icons/LinkedIn_logo.png',
+                    border: '#0077B5',
+                    group: 'linkedin'
+                },
+
+                Instagram: {
+                    icon: 'icons/Instagram_logo.png',
+                    border: '#E4405F',
+                    group: 'instagram'
+                },
+
+                Facebook: {
+                    icon: 'icons/Facebook_logo.png',
+                    border: '#1877F2',
+                    group: 'facebook'
+                },
+
+                Discord: {
+                    icon: 'icons/Discord_logo.png',
+                    border: '#5865F2',
+                    group: 'discord'
+                }
+            };
+
+            const uniqueGroups = [
+                ...new Set(
+                    (post.selected_accounts || [])
+                        .map(account => providerStyles[account.provider]?.group)
+                        .filter(Boolean)
+                )
+            ];
+
+            const platformIcons = uniqueGroups
+                .map(group => {
+
+                    const style = Object.values(providerStyles)
+                        .find(item => item.group === group);
+
+                    if (!style) return '';
+
+                    return `
+                        <div 
+                            class="scheduled-platform-icon"
+                            style="border-color: ${style.border};"
+                        >
+                            <img src="${style.icon}" alt="${group}">
+                        </div>
+                    `;
+                })
+                .join('');
+
+            //  Date formatting
+            const formattedDate = formatScheduledDate(post.date, post.time);
+
+            const card = document.createElement('div');
+            card.className = 'scheduled-card';
+            card.dataset.postId = post.id;
+
+            card.innerHTML = `
+                <div class="scheduled-card-top">
+                    <div class="scheduled-card-date">
+                        ${formattedDate}
+                    </div>
+
+                    <div class="scheduled-platforms">
+                        ${platformIcons}
+                    </div>
+                </div>
+
+                <div class="scheduled-card-title">
+                    ${post.header}
+                </div>
+
+                <div class="scheduled-card-body">
+                    ${post.body}
+                </div>
+
+                <div class="scheduled-card-actions">
+                    <button class="scheduled-edit-btn" data-id="${post.id}">
+                        Edit
+                    </button>
+
+                    <button class="scheduled-delete-btn" data-id="${post.id}">
+                        Delete
+                    </button>
+                </div>
+            `;
+
+            container.appendChild(card);
+        });
+
+    } catch (error) {
+        console.error(error);
+
+        container.innerHTML = `
+            <div class="scheduled-empty">
+                Unexpected error
+            </div>
+        `;
+    }
+}
+
 
 
 // ==================== SCHEDULED POSTS: Edit/Delete ====================
@@ -154,10 +371,11 @@ document.addEventListener('click', async (e) => {
 
     if (editBtn) {
         const card = editBtn.closest('.scheduled-card');
-        const postId = card.dataset.postId;
-
-        // AYUDA DE LA PATRONA
+        const postId = parseInt(card.dataset.postId);
+        editingPostId = postId;
         const result = await eel.get_scheduled_post(postId)();
+
+        resetPublishStatusCalendar();
 
         if (!result.success) {
             showStatus('Could not load scheduled post', 'error');
@@ -165,6 +383,18 @@ document.addEventListener('click', async (e) => {
         }
 
         const post = result.post;
+        accountState.selected.clear();
+
+        (post.selected_accounts || []).forEach(account => {
+
+            accountState.selected.add(
+                accountKey(account.provider, account.username)
+            );
+        });
+
+        renderCalendarAccounts();
+        renderSummary('calendar-account-summary');
+
         scheduleEditorSection.classList.remove('hidden');
 
         calendarTopbar.classList.add('hidden');
@@ -1433,6 +1663,8 @@ async function savePost() {
 
 
 async function schedulePost() {
+    loadScheduledPosts();
+
     const header = document.getElementById('calendar-post-header').value;
     const body = document.getElementById('calendar-post-body').value;
     const date = document.getElementById('calendar-date').value;
@@ -1475,12 +1707,14 @@ async function schedulePost() {
 
     showCalendarStatus('Saving post...', 'info');
     try {
-        const result = await eel.save_post(header, body, selectedAccounts, scheduled_time, imageData, imageName)();
+        const result = await eel.save_post(header, body, selectedAccounts, scheduled_time, imageData, imageName, editingPostId)();
 
         if (result && result.success) {
             const successMessage = result.message || 'Post saved successfully';
             showCalendarStatus(successMessage, 'success');
             clearCalendarForm();
+            selectAllAccounts();
+            editingPostId = null;
             return;
         }
         showCalendarStatus((result && result.message) || 'Error saving post', 'error');
