@@ -617,6 +617,22 @@ def update_display_name(provider, username, new_label):
         print("ERROR:", str(e))
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
 
+@eel.expose
+def connect_discord(label, webhook_url):
+    """Called from the UI to link a Discord webhook."""
+    try:
+        from controller import save_discord_account
+        save_discord_account(label.strip(), webhook_url.strip())
+        return {'success': True, 'message': 'Discord webhook linked'}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+@eel.expose
+def get_discord_accounts():
+    """Return list of Discord accounts for the UI (optional)"""
+    from controller import get_discord_accounts
+    return get_discord_accounts()
+
 
 # Start the application
 def main():

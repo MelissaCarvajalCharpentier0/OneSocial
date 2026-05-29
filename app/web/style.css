@@ -2424,3 +2424,56 @@ textarea {
     height: 18px;
     fill: currentColor;
 }
+
+/* Discord Preview Card */
+.discord-preview {
+    background: #2b2d31;
+    border-radius: 8px;
+    padding: 12px;
+    border-left: 4px solid #5865f2;
+    color: #dbdee1;
+    font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.discord-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.discord-label {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+.discord-bot-tag {
+    background: #5865f2;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.discord-preview-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.discord-preview-image {
+    max-width: 100%;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: 1px solid #404249;
+}
+
+.discord-title {
+    color: #dbdee1;
+    font-size: 0.9rem;
+    margin-left: 8px;
+    font-weight: 500;
+}

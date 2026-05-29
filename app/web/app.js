@@ -193,13 +193,14 @@ const blueskyToggle = document.getElementById('toggle-bluesky-form');
 // const redditToggle = document.getElementById('toggle-reddit-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
+const discordToggle = document.getElementById('toggle-discord-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
 // const redditForm = document.getElementById('reddit-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
-
+const discordForm = document.getElementById('discord-form');
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
     const icon = mastodonToggle.querySelector('.expand-icon');
@@ -234,6 +235,11 @@ linkedinToggle.addEventListener('click', () => {
     const icon = redditToggle.querySelector('.expand-icon');
     icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
 }); */
+discordToggle.addEventListener('click', () => {
+    discordForm.classList.toggle('hidden-form');
+    const icon = discordToggle.querySelector('.expand-icon');
+    icon.textContent = discordForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
 
 // Mastodon: Get Auth URL & Connect
 document.getElementById('get-mastodon-url-btn').addEventListener('click', async () => {
@@ -468,6 +474,31 @@ document.getElementById('link-linkedin-btn').addEventListener('click', async () 
         showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
 }); */
+//discord: Link account
+document.getElementById('link-discord-btn').addEventListener('click', async () => {
+    const label = document.getElementById('discord-label').value.trim();
+    const webhookUrl = document.getElementById('discord-webhook-url').value.trim();
+
+    if (!label || !webhookUrl) {
+        showLinkStatus('discord-status', 'Label and Webhook URL required', 'error');
+        return;
+    }
+    try {
+        showLinkStatus('discord-status', 'Linking Discord webhook...', 'info');
+        const result = await eel.connect_discord(label, webhookUrl)();
+        if (result && result.success) {
+            showLinkStatus('discord-status', result.message, 'success');
+            document.getElementById('discord-label').value = '';
+            document.getElementById('discord-webhook-url').value = '';
+            await loadAccounts();   // refresh the account list
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('discord-status', result?.message || 'Link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('discord-status', 'Error: ' + err, 'error');
+    }
+});
 
 function showLinkStatus(elementId, message, type) {
     const el = document.getElementById(elementId);
@@ -583,6 +614,7 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
             Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
             LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' },
             // Reddit: { icon: 'icons/default.png', border: '#ff4500' }
+            Discord: { icon: 'icons/Discord_logo.png', border: '#5865F2' } 
         };
         const data = styles[provider] || { icon: 'icons/default.png'};
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -1086,6 +1118,24 @@ function renderBluesky(label, username, header, body, image) {
         </div>
     `;
 }
+function renderDiscord(label, username, header, body, image) {
+    const fullContent = [header, body].filter(Boolean).join('\n');
+    const titleText = header ? header : '';
+    const bodyText = body ? body : '';
+    return `
+        <div class="discord-preview">
+            <div class="discord-preview-header">
+                <span class="discord-label">${label || 'Webhook'}</span>
+                <span class="discord-bot-tag">BOT</span>
+                ${titleText ? `<span class="discord-title">${titleText}</span>` : ''}
+            </div>
+            <div class="discord-preview-content">
+                ${bodyText ? bodyText : (titleText ? '' : 'Empty message')}
+                ${image ? `<img src="${image}" class="discord-preview-image"/>` : ''}
+            </div>
+        </div>
+    `;
+}
 
 
 function updatePreview(containerId = 'preview-container') {
@@ -1116,6 +1166,8 @@ function updatePreview(containerId = 'preview-container') {
             contentHTML = renderBluesky(label, username, header, body, image);
         } else if (provider === 'LinkedIn') {
             contentHTML = renderLinkedIn(label, username, header, body, image);
+        } else if (provider === 'Discord') {
+            contentHTML = renderDiscord(label, username, header, body, image);
         } else {
             contentHTML = `
                 <div class="generic-preview">
@@ -1176,7 +1228,8 @@ function showPublishResults(results) {
         WordPress: 'icons/WordPress_logo.png',
         WordPressREST: 'icons/WordPress_logo.png',
         Bluesky: 'icons/Bluesky_logo.png',
-        LinkedIn: 'icons/LinkedIn_logo.png'
+        LinkedIn: 'icons/LinkedIn_logo.png',
+        Discord: 'icons/Discord_logo.png'
     };
 
     const sorted = [
