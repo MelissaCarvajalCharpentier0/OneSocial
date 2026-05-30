@@ -21,7 +21,7 @@ from PIL import Image
 import io
 
 from models.token_manager import *
-from models.app_errors import InputValueError
+from models.app_errors import InputValueError, PublishError
 from models.crypto import encrypt_process_file, decrypt_process_file
 
 from auth.mastodon_auth import *
@@ -177,6 +177,20 @@ def general_upload_post(tokens, text, title, image_path=None):
                 if image_path:
                     raise InputValueError("Reddit no soporta imagenes en esta version.")
                 publish_post_reddit_text(title, text, account)
+            elif account.provider == "Discord":
+                from post.discord_post import send_discord_message, send_discord_message_with_image
+                webhook_url = account.access_token
+                if not webhook_url:
+                    raise PublishError("Discord webhook URL missing")
+    
+                # Decide which function to use based on image availability
+                if image_path:
+                    success = send_discord_message_with_image(webhook_url, content, str(image_path))
+                else:
+                    success = send_discord_message(webhook_url, content)
+    
+                if not success:
+                    raise PublishError("Discord webhook failed")
             else:
                 raise InputValueError(f"Proveedor {account.provider} no soportado.")
 
@@ -520,3 +534,23 @@ def setup_linkedin_account_auth(username, client_id, client_secret, code):
 
     save(tokens)
 
+def save_discord_account(label: str, webhook_url: str):
+    """
+    Save a Discord webhook as a Token (provider="Discord").
+    """
+    tokens = load()
+    # Remove any existing account with same label (optional)
+    tokens = [t for t in tokens if not (t.provider == "Discord" and t.username == label)]
+    new_token = Token(
+        provider="Discord",
+        username=label,                     # display label
+        access_token=webhook_url,           # store the webhook URL
+        account_label=label
+    )
+    tokens.append(new_token)
+    save(tokens)
+
+def get_discord_accounts():
+    """Return list of Discord accounts (label, webhook_url) for UI."""
+    tokens = load()
+    return [(t.username, t.access_token) for t in tokens if t.provider == "Discord"]

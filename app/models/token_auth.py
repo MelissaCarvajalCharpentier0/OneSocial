@@ -44,6 +44,7 @@ class Token:
     site_id: Optional[str] = None
     server: Optional[str] = None
     subreddit: Optional[str] = None
+    webhook_url: Optional[str] = None   # for Discord
 
 
 
@@ -81,5 +82,6 @@ class Token:
             "client_secret": self.client_secret,
             "site_id": self.site_id,
             "server": self.server,
-            "subreddit": self.subreddit
+            "subreddit": self.subreddit,
+            "webhook_url": self.webhook_url
         }
