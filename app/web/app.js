@@ -3,6 +3,7 @@ const fileName = document.getElementById('file-name');
 const overlay = document.getElementById('overlay');
 let currentImage = null;
 let publishResults = [];
+let instagramTokenPayload = null;
 
 const accountState = {
     accountsByProvider: {},
@@ -193,12 +194,14 @@ const blueskyToggle = document.getElementById('toggle-bluesky-form');
 // const redditToggle = document.getElementById('toggle-reddit-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
+const instagramToggle = document.getElementById('toggle-instagram-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
 // const redditForm = document.getElementById('reddit-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
+const instagramForm = document.getElementById('instagram-form');
 
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
@@ -227,6 +230,12 @@ linkedinToggle.addEventListener('click', () => {
     linkedinForm.classList.toggle('hidden-form');
     const icon = linkedinToggle.querySelector('.expand-icon');
     icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+instagramToggle.addEventListener('click', () => {
+    instagramForm.classList.toggle('hidden-form');
+    const icon = instagramToggle.querySelector('.expand-icon');
+    icon.textContent = instagramForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 /* redditToggle.addEventListener('click', () => {
@@ -437,6 +446,141 @@ document.getElementById('link-linkedin-btn').addEventListener('click', async () 
 });
 
 
+// Instagram: Abrir OAuth URL y conectar
+document.getElementById('get-instagram-url-btn').addEventListener('click', async () => {
+
+    const clientId = document.getElementById('ig-client-id').value.trim();
+
+    if (!clientId) {
+        showLinkStatus('instagram-status', 'Client ID required', 'error');
+        return;
+    }
+
+    try {
+        const response = await eel.connect_instagram(clientId)();
+
+        if (response.success) {
+            showLinkStatus('instagram-status', response.message, 'success');
+        } else {
+            showLinkStatus('instagram-status', response.message, 'error');
+        }
+
+    } catch (err) {
+        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Instagram: Load available pages/accounts
+document.getElementById('load-instagram-pages-btn').addEventListener('click', async () => {
+    const clientId = document.getElementById('ig-client-id').value.trim();
+    const clientSecret = document.getElementById('ig-client-secret').value.trim();
+    const code = document.getElementById('ig-code').value.trim();
+    const select = document.getElementById('ig-page-select');
+
+    if (!clientId || !clientSecret || !code) {
+        showLinkStatus('instagram-status', 'Client ID, secret, and code are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('instagram-status', 'Loading Instagram pages...', 'info');
+        const result = await eel.get_instagram_pages(clientId, clientSecret, code)();
+
+        if (!result || !result.success) {
+            showLinkStatus('instagram-status', result?.message || 'Failed to load pages', 'error');
+            return;
+        }
+
+        const accounts = result.accounts || [];
+        const tokenPayload = result.token_payload || null;
+
+        if (tokenPayload && tokenPayload.access_token) {
+            instagramTokenPayload = {
+                access_token: tokenPayload.access_token,
+                expires_in: tokenPayload.expires_in,
+                code,
+                client_id: clientId
+            };
+        } else {
+            instagramTokenPayload = null;
+        }
+        select.innerHTML = '<option value="">Auto (first available)</option>';
+
+        accounts.forEach((acc) => {
+            const option = document.createElement('option');
+            option.value = acc.page_id || '';
+            option.textContent = `${acc.page_name || 'Page'} • ${acc.instagram_username || 'instagram'}`;
+            select.appendChild(option);
+        });
+
+        showLinkStatus('instagram-status', 'Pages loaded', 'success');
+    } catch (err) {
+        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Instagram: Link account with Auth Code
+document.getElementById('link-instagram-btn').addEventListener('click', async () => {
+    const username = document.getElementById('ig-username').value.trim();
+    const clientId = document.getElementById('ig-client-id').value.trim();
+    const clientSecret = document.getElementById('ig-client-secret').value.trim();
+    const code = document.getElementById('ig-code').value.trim();
+    const selectedPageId = document.getElementById('ig-page-select').value.trim();
+
+    if (!clientId || !clientSecret || !code) {
+        showLinkStatus('instagram-status', 'Client ID, secret, and code are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('instagram-status', 'Linking Instagram account...', 'info');
+        let result = null;
+
+        if (
+            instagramTokenPayload
+            && instagramTokenPayload.access_token
+            && instagramTokenPayload.code === code
+            && instagramTokenPayload.client_id === clientId
+        ) {
+            result = await eel.auth_instagram_with_token(
+                username,
+                clientId,
+                clientSecret,
+                instagramTokenPayload.access_token,
+                instagramTokenPayload.expires_in,
+                selectedPageId || null
+            )();
+        } else {
+            result = await eel.auth_instagram(
+                username,
+                clientId,
+                clientSecret,
+                code,
+                selectedPageId || null
+            )();
+        }
+
+        if (result && result.success) {
+            showLinkStatus('instagram-status', result.message || 'Instagram account linked!', 'success');
+            document.getElementById('ig-username').value = '';
+            document.getElementById('ig-client-id').value = '';
+            document.getElementById('ig-client-secret').value = '';
+            document.getElementById('ig-code').value = '';
+            document.getElementById('ig-page-select').innerHTML = '<option value="">Auto (first available)</option>';
+            instagramTokenPayload = null;
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('instagram-status', result?.message || 'Instagram link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
 // Reddit: Link account
 /* document.getElementById('link-reddit-btn').addEventListener('click', async () => {
     const username = document.getElementById('reddit-username').value.trim();
@@ -582,6 +726,7 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
             WordPressREST: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
             Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
             LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' },
+            Instagram: { icon: 'icons/default.png', border: '#E1306C' },
             // Reddit: { icon: 'icons/default.png', border: '#ff4500' }
         };
         const data = styles[provider] || { icon: 'icons/default.png'};
@@ -1003,6 +1148,47 @@ function renderLinkedIn(label, username, header, body, image) {
     `;
 }
 
+function renderInstagram(label, username, header, body, image) {
+    const content = [header, body]
+        .filter(Boolean)
+        .join('<br>');
+
+    const avatarLetter = label ? label.charAt(0).toUpperCase() : 'I';
+    const cleanUsername = username ? username.replace(/^@/, '') : 'instagram-user';
+
+    return `
+        <div class="instagram-post">
+            <div class="instagram-header">
+                <div class="instagram-avatar">${avatarLetter}</div>
+                <div class="instagram-user">
+                    <div class="instagram-name">${label || 'Instagram User'}</div>
+                    <div class="instagram-handle">@${cleanUsername}</div>
+                </div>
+                <button class="instagram-menu" aria-label="More">...</button>
+            </div>
+
+            <div class="instagram-media">
+                ${
+                    image
+                        ? `<img src="${image}" class="instagram-image" />`
+                        : `<div class="instagram-image-placeholder">Image required</div>`
+                }
+            </div>
+
+            <div class="instagram-actions">
+                <span>Like</span>
+                <span>Comment</span>
+                <span>Share</span>
+            </div>
+
+            <div class="instagram-caption">
+                <span class="instagram-caption-name">${label || 'Instagram User'}</span>
+                <span class="instagram-caption-text">${content || 'Add a caption...'}</span>
+            </div>
+        </div>
+    `;
+}
+
 function renderBluesky(label, username, header, body, image) {
     const content = [header, body].filter(Boolean).join('\n');
     const avatarLetter = label ? label.charAt(0).toUpperCase() : 'B';
@@ -1116,6 +1302,8 @@ function updatePreview(containerId = 'preview-container') {
             contentHTML = renderBluesky(label, username, header, body, image);
         } else if (provider === 'LinkedIn') {
             contentHTML = renderLinkedIn(label, username, header, body, image);
+        } else if (provider === 'Instagram') {
+            contentHTML = renderInstagram(label, username, header, body, image);
         } else {
             contentHTML = `
                 <div class="generic-preview">
@@ -1176,7 +1364,8 @@ function showPublishResults(results) {
         WordPress: 'icons/WordPress_logo.png',
         WordPressREST: 'icons/WordPress_logo.png',
         Bluesky: 'icons/Bluesky_logo.png',
-        LinkedIn: 'icons/LinkedIn_logo.png'
+        LinkedIn: 'icons/LinkedIn_logo.png',
+        Instagram: 'icons/default.png'
     };
 
     const sorted = [
@@ -1220,6 +1409,18 @@ async function createPost() {
 
     if (selectedAccounts.length === 0) {
         showStatus('Select at least one account before publishing', 'error');
+        return;
+    }
+
+    const hasInstagram = selectedAccounts.some((account) => {
+        const provider = account.provider ?? account[0];
+        return provider === 'Instagram';
+    });
+
+    const imageInputCheck = document.getElementById('image-input');
+
+    if (hasInstagram && (!imageInputCheck || imageInputCheck.files.length === 0)) {
+        showStatus('Instagram requires an image to publish', 'error');
         return;
     }
 
@@ -1351,6 +1552,18 @@ async function savePost() {
 }
 
 function initializeEventListeners() {
+    ['ig-client-id', 'ig-client-secret', 'ig-code'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.addEventListener('input', () => {
+            instagramTokenPayload = null;
+            const select = document.getElementById('ig-page-select');
+            if (select) {
+                select.innerHTML = '<option value="">Auto (first available)</option>';
+            }
+        });
+    });
+
     document.getElementById('post-header').addEventListener('input', () => {
         updateCounters();
         updateAllPreviews();

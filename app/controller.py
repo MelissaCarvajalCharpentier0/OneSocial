@@ -16,6 +16,7 @@ Version: 1.2
 from pathlib import Path
 import base64
 import subprocess
+import webbrowser
 
 from PIL import Image
 import io
@@ -29,12 +30,14 @@ from auth.wordpress_auth import *
 from auth.bluesky_auth import *
 from auth.linkedin_auth import *
 from auth.reddit_auth import *
+from auth.instagram_auth import *
 
 from post.mastodon_post import upload_post_mastodon, upload_post_mastodon_text
 from post.wordpress_post import publish_post_wordpress, publish_post_wordpress_with_featured_image, publish_post_wordpress_rest
 from post.bluesky_post import publish_post_bluesky, publish_post_bluesky_text
 from post.linkedin_post import publish_post_linkedin_text, publish_post_linkedin_with_image
 from post.reddit_post import publish_post_reddit_text
+from post.instagram_post import publish_post_instagram
 
 
 ####################### -<<[]>>-- #######################
@@ -177,6 +180,8 @@ def general_upload_post(tokens, text, title, image_path=None):
                 if image_path:
                     raise InputValueError("Reddit no soporta imagenes en esta version.")
                 publish_post_reddit_text(title, text, account)
+            elif account.provider == "Instagram":
+                publish_post_instagram(account, title, text, image_path)
             else:
                 raise InputValueError(f"Proveedor {account.provider} no soportado.")
 
@@ -481,6 +486,29 @@ def setup_linkedin_account(client_id):
     return 1
 
 
+def setup_instagram_account(client_id):
+    """
+    - Input:
+        - client_id (str): The Instagram application's client ID, used to
+        identify the application during the authentication process.
+    - Output:
+        - int: A status code indicating the result of the operation.
+    - Description:
+        - Initiates the authentication process for Instagram by opening the
+        authorization URL in the user's web browser.
+    """
+
+    auth_url = get_instagram_auth_url(client_id)
+
+    if not webbrowser.open(auth_url, new=1, autoraise=True):
+        subprocess.run(
+            f'start "" "{auth_url}"',
+            shell=True
+        )
+
+    return 1
+
+
 def setup_linkedin_account_auth(username, client_id, client_secret, code):
     """
     - Input:
@@ -519,4 +547,154 @@ def setup_linkedin_account_auth(username, client_id, client_secret, code):
         tokens.append(new_token)
 
     save(tokens)
+
+
+def setup_instagram_account_auth(username, client_id, client_secret, code, selected_page_id=None):
+    """
+    - Input:
+        - username (str): Display name for the Instagram account.
+        - client_id (str): Instagram application client ID.
+        - client_secret (str): Instagram application client secret.
+        - code (str): Authorization code returned by Instagram.
+    - Description:
+        - Exchanges the authorization code for tokens, enriches the account
+        info, and stores it in the local token store.
+    """
+
+    tokens = load()
+
+    new_token = create_instagram_token(
+        client_id,
+        client_secret,
+        code,
+        selected_page_id
+    )
+    if username:
+        new_token.account_label = username
+
+    existing = None
+    for token in tokens:
+        if token.provider != "Instagram":
+            continue
+        if token.provider_user_id and token.provider_user_id == new_token.provider_user_id:
+            existing = token
+            break
+        if token.instagram_user_id and token.instagram_user_id == new_token.instagram_user_id:
+            existing = token
+            break
+
+    if existing:
+        existing.access_token = new_token.access_token
+        existing.token_type = new_token.token_type
+        existing.scope = new_token.scope
+        existing.issued_at = new_token.issued_at
+        existing.access_expires_at = new_token.access_expires_at
+        existing.client_id = new_token.client_id
+        existing.client_secret = new_token.client_secret
+        existing.facebook_page_id = new_token.facebook_page_id
+        existing.instagram_user_id = new_token.instagram_user_id
+        existing.username = new_token.username
+        existing.account_label = new_token.account_label
+        existing.provider_user_id = new_token.provider_user_id
+        existing.email = new_token.email
+    else:
+        tokens.append(new_token)
+
+    save(tokens)
+
+
+def setup_instagram_account_from_token(
+    username,
+    client_id,
+    client_secret,
+    access_token,
+    expires_in=None,
+    selected_page_id=None
+):
+    """
+    - Input:
+        - username (str): Display name for the Instagram account.
+        - client_id (str): Instagram application client ID.
+        - client_secret (str): Instagram application client secret.
+        - access_token (str): Long-lived access token.
+        - expires_in (int | str | None): Token lifetime in seconds.
+        - selected_page_id (str | None): Facebook Page ID to link.
+    - Description:
+        - Creates or updates an Instagram account from an existing long-lived token.
+    """
+
+    tokens = load()
+
+    new_token = build_instagram_account(
+        access_token,
+        client_id=client_id,
+        client_secret=client_secret,
+        expires_in=expires_in,
+        selected_page_id=selected_page_id
+    )
+
+    if username:
+        new_token.account_label = username
+
+    existing = None
+    for token in tokens:
+        if token.provider != "Instagram":
+            continue
+        if token.provider_user_id and token.provider_user_id == new_token.provider_user_id:
+            existing = token
+            break
+        if token.instagram_user_id and token.instagram_user_id == new_token.instagram_user_id:
+            existing = token
+            break
+
+    if existing:
+        existing.access_token = new_token.access_token
+        existing.token_type = new_token.token_type
+        existing.scope = new_token.scope
+        existing.issued_at = new_token.issued_at
+        existing.access_expires_at = new_token.access_expires_at
+        existing.client_id = new_token.client_id
+        existing.client_secret = new_token.client_secret
+        existing.facebook_page_id = new_token.facebook_page_id
+        existing.instagram_user_id = new_token.instagram_user_id
+        existing.username = new_token.username
+        existing.account_label = new_token.account_label
+        existing.provider_user_id = new_token.provider_user_id
+        existing.email = new_token.email
+    else:
+        tokens.append(new_token)
+
+    save(tokens)
+
+
+def list_instagram_pages(client_id, client_secret, code):
+    """
+    - Input:
+        - client_id (str): Instagram application client ID.
+        - client_secret (str): Instagram application client secret.
+        - code (str): Authorization code returned by Instagram.
+    - Output:
+        - list of available Instagram accounts with page metadata.
+    - Description:
+        - Exchanges the authorization code for a long-lived token and
+        returns the available Instagram accounts for selection.
+    """
+
+    token_data = request_instagram_long_lived_token(
+        client_id,
+        client_secret,
+        code
+    )
+
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise InputValueError("No access token received.")
+
+    accounts = get_instagram_accounts(access_token)
+    token_payload = {
+        "access_token": access_token,
+        "expires_in": token_data.get("expires_in")
+    }
+
+    return accounts, token_payload
 
