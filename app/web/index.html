@@ -174,7 +174,8 @@
                         <div id="wordpress-status" class="link-status"></div>
                     </div>
                 </div>
-                        <!-- WordPress Self-Hosted Section -->
+                
+                <!-- WordPress Self-Hosted Section -->
                 <div class="link-section">
                     <button id="toggle-wordpress-rest-form" class="link-provider-btn">
                         <span>WordPress (Self‑Hosted)</span>
@@ -207,7 +208,7 @@
                     <div id="bluesky-form" class="link-form hidden-form">
                         <div class="form-group">
                             <label>Username</label>
-                            <input type="text" id="bk-username" placeholder="e.g., @user.bsky.social">
+                            <input type="text" id="bk-username" placeholder="e.g., user.bsky.social">
                         </div>
                         <div class="form-group">
                             <label>App Password</label>
@@ -217,8 +218,7 @@
                         <div id="bluesky-status" class="link-status"></div>
                     </div>
                 </div>
-
-                        
+     
                 <!-- Reddit Section -->
                 <!-- <div class="link-section">
                     <button id="toggle-reddit-form" class="link-provider-btn">
@@ -344,16 +344,24 @@
                         <input
                             type="text"
                             id="calendar-post-header"
-                            placeholder="Post title"
+                            placeholder="What's the title?"
+                            maxlength="100"
                         >
+                        <div class="char-counter">
+                            <span id="calendar-header-count">0</span>/100
+                        </div>
                     </div>
 
                     <div class="calendar-form-group">
                         <label>Body</label>
                         <textarea
                             id="calendar-post-body"
-                            placeholder="Write your post..."
+                            placeholder="Write your post content here..."
+                            maxlength="500"
                         ></textarea>
+                        <div class="char-counter">
+                            <span id="calendar-body-count">0</span>/500
+                        </div>
                     </div>
 
                     <div class="calendar-row">
@@ -378,24 +386,14 @@
 
                     <div class="calendar-form-group">
                         <label>Image</label>
-                        <input
-                            type="file"
-                            id="calendar-image-input"
-                            hidden
-                        >
-                        <button
-                            class="calendar-file-button"
-                            onclick="document.getElementById('calendar-image-input').click()"
-                        >
-                            Select Image
+                        <input type="file" id="calendar-image-input" accept=".png,.jpeg" hidden >
+                        <button class="calendar-file-button" onclick="document.getElementById('calendar-image-input').click()">
+                            Select Image 
                         </button>
-
-                        <span id="calendar-file-name">
-                            No file selected
-                        </span>
+                        <span id="calendar-file-name"> No file selected </span>
                     </div>
 
-                    <button class="calendar-post-button">
+                    <button type="button" class="calendar-post-button" onclick="schedulePost()">
                         Schedule Post
                     </button>
 
@@ -414,12 +412,12 @@
                             </span>
                         </div>
 
-                        <button
+                        <!-- <button
                             id="calendar-open-status-details"
                             class="status-info-btn"
                         >
                             ⓘ
-                        </button>
+                        </button> -->
                     </div>
 
                 </div>
@@ -616,8 +614,7 @@
     
     </div>
 
-    <script src="app.js"></script>
-
 </div>
+<script src="app.js"></script>
 </body>
 </html>

@@ -23,6 +23,12 @@ POSTS_DIR = POSTS_FOLDER
 IMAGES_DIR = IMAGES_FOLDER
 
 
+def _iter_post_files(posts_dir: Path) -> list[Path]:
+    if not posts_dir.exists():
+        return []
+    return sorted(posts_dir.glob("*.post"), key=lambda item: item.name)
+
+
 
 def _normalize_text(value: str | None) -> str:
     if value is None:
@@ -79,6 +85,50 @@ def _normalize_image(image) -> str | None:
     return image.strip()
 
 
+def load_post(post_path: Path):
+    if not post_path.exists() or not post_path.is_file():
+        raise InputValueError("Post file does not exist or is not a file.")
+
+    try:
+        content = post_path.read_text(encoding="utf-8")
+        data = json.loads(content)
+    except Exception as error:
+        raise InputValueError("Failed to load post data.") from error
+
+    post = Post(
+        title=data.get("title", ""),
+        content=data.get("content", ""),
+        selected_accounts=data.get("selected_accounts", []),
+        scheduled_time=data.get("scheduled_time", ""),
+        image=data.get("image")
+    )
+    post.id = data.get("id")
+    return post
+
+
+def load_post_by_id(post_id):
+    try:
+        post_id_value = int(post_id)
+    except (TypeError, ValueError) as error:
+        raise InputValueError("Post id is invalid.") from error
+
+    post_path = POSTS_DIR / f"{post_id_value}.post"
+    return load_post(post_path)
+
+
+def load_posts() -> list["Post"]:
+    posts_dir = POSTS_DIR
+    posts = []
+
+    for post_path in _iter_post_files(posts_dir):
+        try:
+            posts.append(load_post(post_path))
+        except InputValueError:
+            continue
+
+    return posts
+
+
 class Post:
     def __init__(self, title, content, selected_accounts, scheduled_time, image=None):
         if not selected_accounts:
@@ -90,6 +140,7 @@ class Post:
         self.selected_accounts = _normalize_accounts(selected_accounts)
         self.scheduled_time = _normalize_time(scheduled_time)
         self.image = _normalize_image(image)
+        self.published = "False"
 
         if not self.title and not self.content:
             raise InputValueError("Post title or content is required.")
@@ -112,11 +163,14 @@ class Post:
             "image": self.image
         }
 
-    def save(self, base_dir: Path | str | None = None) -> Path:
+    def save_by_id(self, id: int, base_dir: Path | str | None = None) -> Path:
         posts_dir = Path(base_dir) if base_dir is not None else POSTS_DIR
         posts_dir.mkdir(parents=True, exist_ok=True)
 
-        self.id = get_next_post_id()
+        if (id):
+            self.id = id
+        else:
+            self.id = get_next_post_id()
 
         if self.image:
             image_path = Path(self.image)
@@ -139,4 +193,38 @@ class Post:
 
         return post_path
 
-    
+    @staticmethod
+    def delete_post_by_id(post_id):
+        try:
+            post_id_value = int(post_id)
+        except (TypeError, ValueError) as error:
+            raise InputValueError("Post id is invalid.") from error
+
+        post_path = POSTS_DIR / f"{post_id_value}.post"
+
+        if not post_path.exists():
+            raise InputValueError("Post file does not exist.")
+
+        # Load post to get image path
+        post = load_post(post_path)
+
+        # Delete image if exists
+        if post.image:
+            image_path = Path(post.image)
+
+            if image_path.exists() and image_path.is_file():
+                try:
+                    image_path.unlink()
+                except OSError as error:
+                    raise InputValueError("Failed to delete image file.") from error
+
+        # Delete .post file
+        try:
+            post_path.unlink()
+        except OSError as error:
+            raise InputValueError("Failed to delete post file.") from error
+
+        return True
+
+    def set_published(self):
+        self.published = "True" 

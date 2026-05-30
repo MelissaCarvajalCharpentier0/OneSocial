@@ -5,11 +5,16 @@
     box-sizing: border-box;
 }
 
+:root {
+    --app-padding: 20px;
+    --app-panel-height: calc(100vh - (var(--app-padding) * 4));
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background: #1a1a1a;
     color: #e0e0e0;
-    padding: 20px;
+    padding: var(--app-padding);
 }
 
 
@@ -25,8 +30,8 @@ body {
     align-items: stretch;
     gap: 20px;
     width: 100%;
-    min-height: 100vh;
-    padding: 20px;
+    min-height: var(--app-panel-height);
+    padding: var(--app-padding);
     box-sizing: border-box;
     flex-wrap: wrap;
 }
@@ -39,7 +44,9 @@ body {
 
 .nav-sidebar {
     width: 190px;
-    min-height: calc(108vh - 40px);
+    min-height: var(--app-panel-height);
+    max-height: var(--app-panel-height);
+    overflow-y: auto;
     background: #1b1a1a;
     border-radius: 16px;
     padding: 20px 14px;
@@ -47,6 +54,19 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+}
+
+.nav-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.nav-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.nav-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .nav-btn {
@@ -183,8 +203,12 @@ body {
     display: flex;
     gap: 20px;
     width: 100%;
-    align-items: flex-start;
-    flex-wrap: wrap;
+    align-items: stretch;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    min-height: var(--app-panel-height);
+    height: var(--app-panel-height);
+    overflow: hidden;
 }
 
 #settings-view{
@@ -209,13 +233,15 @@ body {
 
 .calendar-sidebar {
     width: 340px;
-    height: calc(100vh - 80px);
+    height: var(--app-panel-height);
+    max-height: var(--app-panel-height);
     background: #2d2d2d;
     border-radius: 16px;
     padding: 20px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    overflow-y: auto;
 }
 
 .calendar-sidebar-title {
@@ -261,12 +287,30 @@ body {
 
 .calendar-container {
     flex: 1;
-    min-height: calc(108vh - 40px);
+    min-height: var(--app-panel-height);
+    max-height: var(--app-panel-height);
+    overflow-y: auto;
     background: #2d2d2d;
     border-radius: 16px;
     padding: 32px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
+
+.calendar-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.calendar-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.calendar-container:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+
+
 
 /* ============================= */
 /* Calendar Header */
@@ -408,6 +452,7 @@ body {
     align-items: center;
     gap: 20px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    flex: 0 0 auto;
 }
 
 .calendar-topbar-left h1 {
@@ -460,7 +505,10 @@ body {
 .scheduled-section {
     width: 100%;
     background: #2d2d2d;
-    min-height: 90vh;
+    flex: 1 1 auto;
+    min-height: 0;
+    max-height: none;
+    overflow-y: auto;
     border-radius: 16px;
     padding: 28px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
@@ -529,25 +577,14 @@ body {
 
 .scheduled-card-top {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: left;
     gap: 12px;
 }
 
 .scheduled-card-date {
     color: #6c9eff;
     font-size: 0.82rem;
-    font-weight: 600;
-}
-
-.scheduled-platforms {
-    background: rgba(108, 158, 255, 0.12);
-    color: #8eb4ff;
-
-    padding: 4px 10px;
-    border-radius: 999px;
-
-    font-size: 0.72rem;
     font-weight: 600;
 }
 
@@ -573,6 +610,43 @@ body {
     -webkit-box-orient: vertical;
 
     overflow: hidden;
+}
+
+.scheduled-card-title,
+.scheduled-card-body {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.scheduled-platforms {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    background: none;
+    border-radius: 14px;
+    width: fit-content;
+}
+
+.scheduled-platform-icon {
+    width: 28px;
+    height: 28px;
+
+    border: 2px solid;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    background: #1f1f1f;
+}
+
+.scheduled-platform-icon img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
 }
 
 
@@ -601,6 +675,9 @@ body {
 
     cursor: pointer;
     transition: all 0.2s ease;
+
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 
@@ -665,6 +742,43 @@ body {
     width: 100%;
     align-items: flex-start;
     flex-wrap: wrap;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+@media (min-width: 1181px) {
+    #schedule-editor-section .calendar-container,
+    #schedule-editor-section .account-sidebar,
+    #schedule-editor-section .preview-sidebar {
+        min-height: 0;
+        height: 100%;
+        max-height: 100%;
+    }
+}
+
+@media (max-width: 1180px) {
+    #calendar-view {
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
+    .schedule-editor-section {
+        overflow: visible;
+    }
+
+    #schedule-editor-section .calendar-container,
+    #schedule-editor-section .account-sidebar,
+    #schedule-editor-section .preview-sidebar {
+        height: auto;
+        min-height: 0;
+        max-height: none;
+    }
+
+    .scheduled-section {
+        max-height: none;
+    }
 }
 
 
@@ -676,7 +790,8 @@ body {
 
 .settings-container {
     flex: 1;
-    max-height: 90vh;
+    max-height: var(--app-panel-height);
+    overflow-y: auto;
     margin: 0;
     min-width: 0; 
     align-self: stretch;
@@ -794,12 +909,27 @@ body {
 .container {
     flex: 1;
     width: 100%;
-    min-height: calc(108vh - 40px);
+    min-height: var(--app-panel-height);
+    max-height: var(--app-panel-height);
+    overflow-y: auto;
     margin: 0;
     background: #2d2d2d;
     border-radius: 16px;
     padding: 32px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.container:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 h1 {
@@ -1011,7 +1141,7 @@ textarea {
     
     width: 380px;
     max-width: 90%;
-    min-height: calc(100vh - 40px);
+    max-height: var(--app-panel-height);
 
     background: #2d2d2d;
     border-radius: 16px;
@@ -1240,7 +1370,8 @@ textarea {
     flex: 1;
     min-width: 320px;
     max-width: 700px;
-    min-height: calc(108vh - 40px);
+    min-height: var(--app-panel-height);
+    max-height: var(--app-panel-height);
     background: #2d2d2d;
     border-radius: 16px;
     padding: 18px;
@@ -1321,7 +1452,8 @@ textarea {
     flex: 0 0 320px;
     min-width: 200px;
     max-width: 280px;
-    min-height: calc(108vh - 40px);
+    min-height: var(--app-panel-height);
+    max-height: var(--app-panel-height);
     background: #2d2d2d;
     border-radius: 16px;
     padding: 18px;
@@ -1557,6 +1689,8 @@ textarea {
     font-size: 1rem;  
     line-height: 1.5;    
     margin-bottom: 20px;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .modal-body input {

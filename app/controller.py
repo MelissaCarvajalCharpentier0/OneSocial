@@ -83,7 +83,16 @@ def load():
     if file.is_file():
         token_data = decrypt_process_file(FILE_DIRECTORY, MASTER_KEY)
         tokens = read_json(token_data)
-
+    else:
+        encrypt_process_file(
+            {
+                "tokens": [],
+                "post_counter": 0
+            },
+            FILE_DIRECTORY,
+            MASTER_KEY
+        )
+        
     return tokens
 
 
