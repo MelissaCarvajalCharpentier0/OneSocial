@@ -2,9 +2,11 @@ import os
 import shutil
 import sys
 import tempfile
-import time
+import subprocess
 import tkinter as tk
 from tkinter import messagebox
+
+TASK_NAME = "OneSocial_Scheduler"
 
 def clean_app_data():
     """Deletes the .onesocial directory in the user's home folder."""
@@ -27,6 +29,34 @@ def clean_app_exe():
             print(f"Successfully removed file: {exe_path}")
         except Exception as e:
             print(f"Error removing {exe_path}: {e}")
+
+def clean_scheduler_exe():
+    """Deletes the main OneSocialScheduler.exe file."""
+    # Get the parent directory of the uninstaller (assuming it's in the same folder as OneSocialScheduler.exe)
+    app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    exe_path = os.path.join(app_dir, "OneSocialScheduler.exe")
+    if os.path.exists(exe_path):
+        try:
+            os.remove(exe_path)
+            print(f"Successfully removed file: {exe_path}")
+        except Exception as e:
+            print(f"Error removing {exe_path}: {e}")
+
+def run_hidden(args: list[str]) -> subprocess.CompletedProcess:
+    creationflags = 0
+    if os.name == "nt":
+        creationflags = subprocess.CREATE_NO_WINDOW
+
+    return subprocess.run(
+        args,
+        capture_output=True,
+        text=True,
+        creationflags=creationflags,
+    )
+
+def remove_scheduler_task_if_exists() -> None:
+    run_hidden(["schtasks", "/End", "/TN", TASK_NAME])
+    run_hidden(["schtasks", "/Delete", "/TN", TASK_NAME, "/F"])
 
 def self_destruct():
     """Creates a temporary batch script to delete the uninstaller itself."""
@@ -56,7 +86,9 @@ def main():
     msg = "This will remove OneSocial and all your saved account data. Are you sure you want to proceed?"
     if messagebox.askyesno("Uninstall OneSocial", msg, icon='warning'):
         clean_app_data()
+        clean_scheduler_exe()
         clean_app_exe()
+        remove_scheduler_task_if_exists()
         self_destruct()
     else:
         print("Uninstallation cancelled by user.")
