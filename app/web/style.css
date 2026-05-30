@@ -675,6 +675,9 @@ body {
 
     cursor: pointer;
     transition: all 0.2s ease;
+
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 
@@ -1686,6 +1689,8 @@ textarea {
     font-size: 1rem;  
     line-height: 1.5;    
     margin-bottom: 20px;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .modal-body input {

@@ -563,6 +563,31 @@ def save_post(header, body, selected_accounts, scheduled_time, image_data=None, 
             'message': f'Error: {str(e)}'
         }
 
+@eel.expose
+def delete_post(post_id):
+    """
+    Deletes a scheduled post by ID.
+    """
+
+    try:
+        Post.delete_post_by_id(post_id)
+
+        return {
+            "success": True,
+            "message": f"Post {post_id} eliminado correctamente."
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            "success": False,
+            "error_type": ErrorCategory.UNKNOWN.value,
+            "message": f"Error: {str(e)}"
+        }
 
 @eel.expose
 def get_scheduled_posts():
@@ -626,6 +651,20 @@ def get_scheduled_post(post_id):
         post = load_post_by_id(post_id)
         date_value, time_value = _split_schedule_time(post.scheduled_time)
 
+        image_preview = None
+
+        if post.image:
+            image_path = Path(post.image)
+
+            if image_path.exists():
+                encoded = base64.b64encode(
+                    image_path.read_bytes()
+                ).decode("utf-8")
+
+                suffix = image_path.suffix.lower().replace('.', '')
+
+                image_preview = f"data:image/{suffix};base64,{encoded}"
+
         return {
             'success': True,
             'post': {
@@ -637,6 +676,7 @@ def get_scheduled_post(post_id):
                 'scheduled_time': post.scheduled_time,
                 'selected_accounts': post.selected_accounts,
                 'image': post.image,
+                "image_preview": image_preview,
             }
         }
 

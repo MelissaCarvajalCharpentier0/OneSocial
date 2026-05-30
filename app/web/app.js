@@ -4,6 +4,7 @@ const fileNameCreate = document.getElementById('file-name');
 const fileNameSchedule = document.getElementById('calendar-file-name');
 const overlay = document.getElementById('overlay');
 let currentImage = null;
+let currentEditingImage = null;
 let publishResults = [];
 let editingPostId = null;
 
@@ -344,6 +345,8 @@ document.addEventListener('click', async (e) => {
 
         const card = deleteBtn.closest('.scheduled-card');
         const title = card.querySelector('.scheduled-card-title').textContent;
+        const postId = parseInt(card.dataset.postId); 
+        editingPostId = postId;
 
         const confirmed = await openModal({
             title: 'Delete scheduled post',
@@ -359,10 +362,16 @@ document.addEventListener('click', async (e) => {
 
         if (!confirmed) return;
 
-        // delete logic here
+        const result = await eel.delete_post(postId)();
+        if (!result.success) {
+            showStatus('Could not delete scheduled post', 'error');
+            return;
+        }
+
         card.remove();
 
         showStatus('Scheduled post deleted', 'success');
+        editingPostId = null;
     }
 
 
@@ -383,7 +392,18 @@ document.addEventListener('click', async (e) => {
         }
 
         const post = result.post;
+        console.log('Loaded post for editing:', post);
         accountState.selected.clear();
+
+        currentImage = post.image_preview || null;
+        const fileNameLabel = document.getElementById('calendar-file-name');
+
+        if (currentImage) {
+            fileNameLabel.textContent =
+                currentImage.split(/[\\/]/).pop();
+        } else {
+            fileNameLabel.textContent = 'No file selected';
+        }
 
         (post.selected_accounts || []).forEach(account => {
 
