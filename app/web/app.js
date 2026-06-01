@@ -1450,24 +1450,34 @@ function renderBluesky(label, username, header, body, image) {
     `;
 }
 function renderDiscord(label, username, header, body, image) {
-    const fullContent = [header, body].filter(Boolean).join('\n');
+    // Set defaults
+    const badgeText = 'APP';
+    const displayName = username || 'Webhook';
     const titleText = header ? header : '';
     const bodyText = body ? body : '';
+    
     return `
-        <div class="discord-preview">
-            <div class="discord-preview-header">
-                <span class="discord-label">${label || 'Webhook'}</span>
-                <span class="discord-bot-tag">BOT</span>
-                ${titleText ? `<span class="discord-title">${titleText}</span>` : ''}
+        <div class="discord-preview" style="display: flex; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #313338; font-size: 15px; padding: 5px 10px; line-height: 1.4;">
+            
+            <div class="discord-preview-content" style="display: flex; flex-direction: column;">
+                
+                <!-- Line 1: Tag, Username, and Title (Header) inline -->
+                <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                    <span class="discord-label" style="background-color: #5865F2; color: white; font-size: 10px; font-weight: bold; border-radius: 3px; padding: 2px 4px; margin-right: 6px; line-height: 1;">${badgeText}</span>
+                    <span class="discord-username" style="font-weight: 600; color: white; margin-right: 6px;">${displayName}</span>
+                    ${titleText ? `<span class="discord-title" style="color: #dbdee1;">${titleText}</span>` : ''}
+                </div>
+                
+                <!-- Line 2: Body text on its own line -->
+                ${bodyText ? `<div class="discord-body" style="color: #dbdee1; margin-top: 2px; margin-left: 2px;">${bodyText}</div>` : ''}
+                
+                <!-- Optional Image -->
+                ${image ? `<img src="${image}" class="discord-preview-image" style="max-width: 100%; margin-top: 8px; border-radius: 4px;"/>` : ''}
             </div>
-            <div class="discord-preview-content">
-                ${bodyText ? bodyText : (titleText ? '' : 'Empty message')}
-                ${image ? `<img src="${image}" class="discord-preview-image"/>` : ''}
-            </div>
+            
         </div>
     `;
 }
-
 
 function updatePreview(containerId = 'preview-container', headerId = 'post-header', bodyId = 'post-body') {
     const header = escapeHTML(document.getElementById(headerId).value);
