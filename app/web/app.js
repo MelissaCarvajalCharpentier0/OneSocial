@@ -2099,6 +2099,90 @@ async function schedulePost() {
         showCalendarStatus('Error saving post: ' + err, 'error');
     }
 }
+// ------------------------------------------------------------------
+// Exportar / Importar
+// ------------------------------------------------------------------
+// Esperar a que el DOM esté cargado
+document.addEventListener('DOMContentLoaded', () => {
+    // Botón Exportar
+    const exportBtn = document.getElementById('export-data-btn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportAllData);
+    }
+    
+    // Botón Importar
+    const importBtn = document.getElementById('import-data-btn');
+    if (importBtn) {
+        importBtn.addEventListener('click', importAllData);
+    }
+});
+
+// ------------------------------------------------------------------
+// Exportar
+// ------------------------------------------------------------------
+async function exportAllData() {
+    try {
+        const allData = await eel.export_all_data()();
+        const dataStr = JSON.stringify(allData, null, 2);
+        const blob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `onesocial_backup_${new Date().toISOString().slice(0,19)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showNotification("Exportación completada", "success");
+    } catch (err) {
+        console.error(err);
+        showNotification("Error al exportar", "error");
+    }
+}
+
+// ------------------------------------------------------------------
+// Importar (abre selector de archivos)
+// ------------------------------------------------------------------
+function importAllData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'application/json';
+    input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const importedJson = JSON.parse(e.target.result);
+                const response = await eel.import_all_data(importedJson)();
+                if (response.status === 'ok') {
+                    showNotification("Importación exitosa. Recargando...", "success");
+                    // Recargar la interfaz (listado de cuentas, publicaciones, etc.)
+                    if (typeof loadAccounts === 'function') await loadAccounts();
+                    if (typeof loadScheduledPosts === 'function') await loadScheduledPosts();
+                    if (typeof applyTheme === 'function') applyTheme(); // si aplica tema
+                } else {
+                    showNotification("Error en la importación", "error");
+                }
+            } catch (err) {
+                console.error(err);
+                showNotification("Archivo inválido o error al importar", "error");
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+// Pequeña ayuda para notificaciones (ajústala si ya existe)
+function showNotification(msg, type) {
+    // Ejemplo simple con alert, pero puedes usar un toast
+    alert(`${type.toUpperCase()}: ${msg}`);
+}
+
+// Exponer funciones al ámbito global si las necesitas desde botones HTML
+window.exportAllData = exportAllData;
+window.importAllData = importAllData;
 
 function initializeEventListeners() {
     ['ig-client-id', 'ig-client-secret', 'ig-code'].forEach((id) => {
