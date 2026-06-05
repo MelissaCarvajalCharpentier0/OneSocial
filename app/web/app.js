@@ -6,6 +6,7 @@ const overlay = document.getElementById('overlay');
 let currentImage = null;
 let currentEditingImage = null;
 let publishResults = [];
+let instagramTokenPayload = null;
 let editingPostId = null;
 
 const accountState = {
@@ -468,6 +469,7 @@ const blueskyToggle = document.getElementById('toggle-bluesky-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const discordToggle = document.getElementById('toggle-discord-form');
+const instagramToggle = document.getElementById('toggle-instagram-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
@@ -475,6 +477,8 @@ const blueskyForm = document.getElementById('bluesky-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
 const discordForm = document.getElementById('discord-form');
+const instagramForm = document.getElementById('instagram-form');
+
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
     const icon = mastodonToggle.querySelector('.expand-icon');
@@ -504,11 +508,18 @@ linkedinToggle.addEventListener('click', () => {
     icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
+instagramToggle.addEventListener('click', () => {
+    instagramForm.classList.toggle('hidden-form');
+    const icon = instagramToggle.querySelector('.expand-icon');
+    icon.textContent = instagramForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
 /* redditToggle.addEventListener('click', () => {
     redditForm.classList.toggle('hidden-form');
     const icon = redditToggle.querySelector('.expand-icon');
     icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
 }); */
+
 discordToggle.addEventListener('click', () => {
     discordForm.classList.toggle('hidden-form');
     const icon = discordToggle.querySelector('.expand-icon');
@@ -717,6 +728,141 @@ document.getElementById('link-linkedin-btn').addEventListener('click', async () 
 });
 
 
+// Instagram: Abrir OAuth URL y conectar
+document.getElementById('get-instagram-url-btn').addEventListener('click', async () => {
+
+    const clientId = document.getElementById('ig-client-id').value.trim();
+
+    if (!clientId) {
+        showLinkStatus('instagram-status', 'Client ID required', 'error');
+        return;
+    }
+
+    try {
+        const response = await eel.connect_instagram(clientId)();
+
+        if (response.success) {
+            showLinkStatus('instagram-status', response.message, 'success');
+        } else {
+            showLinkStatus('instagram-status', response.message, 'error');
+        }
+
+    } catch (err) {
+        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Instagram: Load available pages/accounts
+document.getElementById('load-instagram-pages-btn').addEventListener('click', async () => {
+    const clientId = document.getElementById('ig-client-id').value.trim();
+    const clientSecret = document.getElementById('ig-client-secret').value.trim();
+    const code = document.getElementById('ig-code').value.trim();
+    const select = document.getElementById('ig-page-select');
+
+    if (!clientId || !clientSecret || !code) {
+        showLinkStatus('instagram-status', 'Client ID, secret, and code are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('instagram-status', 'Loading Instagram pages...', 'info');
+        const result = await eel.get_instagram_pages(clientId, clientSecret, code)();
+
+        if (!result || !result.success) {
+            showLinkStatus('instagram-status', result?.message || 'Failed to load pages', 'error');
+            return;
+        }
+
+        const accounts = result.accounts || [];
+        const tokenPayload = result.token_payload || null;
+
+        if (tokenPayload && tokenPayload.access_token) {
+            instagramTokenPayload = {
+                access_token: tokenPayload.access_token,
+                expires_in: tokenPayload.expires_in,
+                code,
+                client_id: clientId
+            };
+        } else {
+            instagramTokenPayload = null;
+        }
+        select.innerHTML = '<option value="">Auto (first available)</option>';
+
+        accounts.forEach((acc) => {
+            const option = document.createElement('option');
+            option.value = acc.page_id || '';
+            option.textContent = `${acc.page_name || 'Page'} • ${acc.instagram_username || 'instagram'}`;
+            select.appendChild(option);
+        });
+
+        showLinkStatus('instagram-status', 'Pages loaded', 'success');
+    } catch (err) {
+        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Instagram: Link account with Auth Code
+document.getElementById('link-instagram-btn').addEventListener('click', async () => {
+    const username = document.getElementById('ig-username').value.trim();
+    const clientId = document.getElementById('ig-client-id').value.trim();
+    const clientSecret = document.getElementById('ig-client-secret').value.trim();
+    const code = document.getElementById('ig-code').value.trim();
+    const selectedPageId = document.getElementById('ig-page-select').value.trim();
+
+    if (!clientId || !clientSecret || !code) {
+        showLinkStatus('instagram-status', 'Client ID, secret, and code are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('instagram-status', 'Linking Instagram account...', 'info');
+        let result = null;
+
+        if (
+            instagramTokenPayload
+            && instagramTokenPayload.access_token
+            && instagramTokenPayload.code === code
+            && instagramTokenPayload.client_id === clientId
+        ) {
+            result = await eel.auth_instagram_with_token(
+                username,
+                clientId,
+                clientSecret,
+                instagramTokenPayload.access_token,
+                instagramTokenPayload.expires_in,
+                selectedPageId || null
+            )();
+        } else {
+            result = await eel.auth_instagram(
+                username,
+                clientId,
+                clientSecret,
+                code,
+                selectedPageId || null
+            )();
+        }
+
+        if (result && result.success) {
+            showLinkStatus('instagram-status', result.message || 'Instagram account linked!', 'success');
+            document.getElementById('ig-username').value = '';
+            document.getElementById('ig-client-id').value = '';
+            document.getElementById('ig-client-secret').value = '';
+            document.getElementById('ig-code').value = '';
+            document.getElementById('ig-page-select').innerHTML = '<option value="">Auto (first available)</option>';
+            instagramTokenPayload = null;
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('instagram-status', result?.message || 'Instagram link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
 // Reddit: Link account
 /* document.getElementById('link-reddit-btn').addEventListener('click', async () => {
     const username = document.getElementById('reddit-username').value.trim();
@@ -910,6 +1056,7 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
             WordPressREST: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
             Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
             LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' },
+            Instagram: { icon: 'icons/Instagram_logo.png', border: '#E1306C' },
             // Reddit: { icon: 'icons/default.png', border: '#ff4500' }
             Discord: { icon: 'icons/Discord_logo.png', border: '#5865F2' } 
         };
@@ -1366,6 +1513,123 @@ function renderLinkedIn(label, username, header, body, image) {
     `;
 }
 
+function renderInstagram(label, username, header, body, image) {
+    const captionText = [header, body].filter(Boolean).join('\n').trim();
+    const cleanUsername = username ? username.replace(/^@/, '') : '';
+    const displayUsername = cleanUsername || label || 'instagram-user';
+    const avatarLetter = displayUsername.charAt(0).toUpperCase();
+    const displayCaption = captionText || 'Add a caption...';
+    const shouldClamp = displayCaption.length > 120;
+    const timeLabel = '1w';
+
+    return `
+        <article class="instagram-post">
+            <header class="instagram-header">
+                <div class="instagram-avatar" aria-hidden="true">
+                    <span>${avatarLetter}</span>
+                </div>
+
+                <div class="instagram-header-info">
+                    <div class="instagram-username-row">
+                        <span class="instagram-username">${displayUsername}</span>
+                        <span class="instagram-dot">•</span>
+                        <span class="instagram-time">${timeLabel}</span>
+                    </div>
+                </div>
+
+                <button class="instagram-menu" aria-label="More options">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="5" cy="12" r="2"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                        <circle cx="19" cy="12" r="2"></circle>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="instagram-media">
+                <div class="instagram-carousel">
+                    <div class="instagram-media-frame">
+                        ${
+                            image
+                                ? `<img src="${image}" class="instagram-image" />`
+                                : `<div class="instagram-image-placeholder">Image required</div>`
+                        }
+                    </div>
+
+                    <button
+                        class="instagram-carousel-btn instagram-carousel-prev"
+                        aria-label="Previous"
+                        disabled
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M15 6 9 12l6 6"></path>
+                        </svg>
+                    </button>
+
+                    <button
+                        class="instagram-carousel-btn instagram-carousel-next"
+                        aria-label="Next"
+                        disabled
+                    >
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m9 6 6 6-6 6"></path>
+                        </svg>
+                    </button>
+
+                    <div class="instagram-carousel-dots" aria-hidden="true">
+                        <span class="instagram-dot-item is-active"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="instagram-actions">
+                <div class="instagram-actions-left">
+                    <button class="instagram-action-btn" aria-label="Like">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z"></path>
+                        </svg>
+                    </button>
+
+                    <button class="instagram-action-btn" aria-label="Comment">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z"></path>
+                        </svg>
+                    </button>
+
+                    <button class="instagram-action-btn" aria-label="Share">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M13.973 20.046 21.77 6.928C22.8 5.195 21.55 3 19.535 3H4.466C2.138 3 .984 5.825 2.646 7.456l4.842 4.752 1.723 7.121c.548 2.266 3.571 2.721 4.762.717Z"></path>
+                            <path d="M7.488 12.208 15.515 7.641"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <button class="instagram-action-btn instagram-action-save" aria-label="Save">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 21 12 13.44 4 21V3h16Z"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="instagram-stats">
+                <span class="instagram-stat"><strong>135.6K</strong> likes</span>
+                <span class="instagram-stat"><strong>396</strong> comments</span>
+                <span class="instagram-stat"><strong>3.5K</strong> reposts</span>
+            </div>
+
+            <div class="instagram-caption${shouldClamp ? '' : ' is-expanded'}">
+                <span class="instagram-caption-name">${displayUsername}</span>
+                <span class="instagram-caption-text">${displayCaption}</span>
+                ${
+                    shouldClamp
+                        ? '<button class="instagram-caption-more" type="button">more</button>'
+                        : ''
+                }
+            </div>
+        </article>
+    `;
+}
+
 function renderBluesky(label, username, header, body, image) {
     const content = [header, body].filter(Boolean).join('\n');
     const avatarLetter = label ? label.charAt(0).toUpperCase() : 'B';
@@ -1509,6 +1773,8 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
             contentHTML = renderLinkedIn(label, username, header, body, image);
         } else if (provider === 'Discord') {
             contentHTML = renderDiscord(label, username, header, body, image);
+        } else if (provider === 'Instagram') {
+            contentHTML = renderInstagram(label, username, header, body, image);
         } else {
             contentHTML = `
                 <div class="generic-preview">
@@ -1534,14 +1800,29 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
         }
 
         const card = document.createElement('div');
-        card.className = 'preview-card-social';
-        card.innerHTML = `
-            <div class="preview-platform">${provider} • ${label}</div>
-            ${contentHTML}
-        `;
+        const isInstagram = provider === 'Instagram';
+
+        card.className = `preview-card-social${isInstagram ? ' preview-card-instagram' : ''}`;
+        card.innerHTML = isInstagram
+            ? contentHTML
+            : `
+                <div class="preview-platform">${provider} • ${label}</div>
+                ${contentHTML}
+            `;
         container.appendChild(card);
     });
 }
+
+document.addEventListener('click', (event) => {
+    const moreButton = event.target.closest('.instagram-caption-more');
+    if (!moreButton) return;
+
+    const caption = moreButton.closest('.instagram-caption');
+    if (!caption) return;
+
+    caption.classList.add('is-expanded');
+    moreButton.remove();
+});
 
 
 function showPublishResults(results) {
@@ -1570,7 +1851,8 @@ function showPublishResults(results) {
         WordPressREST: 'icons/WordPress_logo.png',
         Bluesky: 'icons/Bluesky_logo.png',
         LinkedIn: 'icons/LinkedIn_logo.png',
-        Discord: 'icons/Discord_logo.png'
+        Discord: 'icons/Discord_logo.png',
+        Instagram: 'icons/Instagram_logo.png'
     };
 
     const sorted = [
@@ -1614,6 +1896,18 @@ async function createPost() {
 
     if (selectedAccounts.length === 0) {
         showStatus('Select at least one account before publishing', 'error');
+        return;
+    }
+
+    const hasInstagram = selectedAccounts.some((account) => {
+        const provider = account.provider ?? account[0];
+        return provider === 'Instagram';
+    });
+
+    const imageInputCheck = document.getElementById('image-input');
+
+    if (hasInstagram && (!imageInputCheck || imageInputCheck.files.length === 0)) {
+        showStatus('Instagram requires an image to publish', 'error');
         return;
     }
 
@@ -1807,6 +2101,18 @@ async function schedulePost() {
 }
 
 function initializeEventListeners() {
+    ['ig-client-id', 'ig-client-secret', 'ig-code'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        input.addEventListener('input', () => {
+            instagramTokenPayload = null;
+            const select = document.getElementById('ig-page-select');
+            if (select) {
+                select.innerHTML = '<option value="">Auto (first available)</option>';
+            }
+        });
+    });
+
     document.getElementById('post-header').addEventListener('input', () => {
         updateCounters();
         updateAllPreviews();

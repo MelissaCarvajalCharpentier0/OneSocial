@@ -277,6 +277,7 @@
                         <div id="linkedin-status" class="link-status"></div>
                     </div>
                 </div>
+                
                 <!-- Discord Section -->
                 <div class="link-section">
                     <button id="toggle-discord-form" class="link-provider-btn">
@@ -294,6 +295,46 @@
                         </div>
                         <button id="link-discord-btn" class="link-action-btn">Link Discord Webhook</button>
                         <div id="discord-status" class="link-status"></div>
+                    </div>
+                </div>
+
+                <!-- Instagram Section -->
+                <div class="link-section">
+                    <button id="toggle-instagram-form" class="link-provider-btn">
+                        <span>Instagram</span>
+                        <span class="expand-icon">▼</span>
+                    </button>
+                    <div id="instagram-form" class="link-form hidden-form">
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" id="ig-username" placeholder="Display name for this account">
+                        </div>
+                        <div class="form-group">
+                            <label>Client ID</label>
+                            <input type="text" id="ig-client-id" placeholder="Instagram Client ID">
+                        </div>
+                        <div class="form-group">
+                            <label>Client Secret</label>
+                            <input type="text" id="ig-client-secret" placeholder="Instagram Client Secret">
+                        </div>
+                        <button id="get-instagram-url-btn" class="secondary-btn">Connect & Get URL</button>
+
+                        <div class="form-group">
+                            <label>Auth Code (If Prompted)</label>
+                            <input type="text" id="ig-code" placeholder="Paste the code from OAuth">
+                        </div>
+
+                        <button id="load-instagram-pages-btn" class="secondary-btn">Load Pages</button>
+
+                        <div class="form-group">
+                            <label>Instagram Page</label>
+                            <select id="ig-page-select">
+                                <option value="">Auto (first available)</option>
+                            </select>
+                        </div>
+
+                        <button id="link-instagram-btn" class="link-action-btn">Link with Auth Code</button>
+                        <div id="instagram-status" class="link-status"></div>
                     </div>
                 </div>
             </aside>

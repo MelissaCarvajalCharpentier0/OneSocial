@@ -348,6 +348,33 @@ def connect_linkedin(client_id):
 
 
 @eel.expose
+def connect_instagram(client_id):
+    """
+    - Input: client_id (str)
+    - Output: dict with success and message
+    - Description: Initiates Instagram OAuth flow by opening the browser for authentication.
+    """
+    try:
+        setup_instagram_account(client_id)
+        return {
+            'success': True,
+            'message': 'Browser opened for Instagram authentication'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
 def auth_linkedin(username, client_id, client_secret, code):
     """
     - Input:
@@ -376,6 +403,129 @@ def auth_linkedin(username, client_id, client_secret, code):
         print("ERROR:", str(e))
         return {
             'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def auth_instagram(username, client_id, client_secret, code, selected_page_id=None):
+    """
+    - Input:
+        - username: str - Display name for the Instagram account.
+        - client_id: str - Instagram application client ID.
+        - client_secret: str - Instagram application client secret.
+        - code: str - Authorization code received from Instagram.
+    - Output:
+        - A dictionary containing the success status and a message.
+    - Description:
+        - Handles the authentication of an Instagram account using the provided
+        credentials and authorization code.
+    """
+    try:
+        setup_instagram_account_auth(username, client_id, client_secret, code, selected_page_id)
+
+        return {
+            'success': True,
+            'message': 'Instagram account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def auth_instagram_with_token(
+    username,
+    client_id,
+    client_secret,
+    access_token,
+    expires_in=None,
+    selected_page_id=None
+):
+    """
+    - Input:
+        - username: str - Display name for the Instagram account.
+        - client_id: str - Instagram application client ID.
+        - client_secret: str - Instagram application client secret.
+        - access_token: str - Long-lived access token.
+        - expires_in: int | str | None - Token lifetime in seconds.
+        - selected_page_id: str | None - Facebook Page ID to link.
+    - Output:
+        - A dictionary containing the success status and a message.
+    - Description:
+        - Handles the authentication of an Instagram account using an existing
+        long-lived access token.
+    """
+    try:
+        setup_instagram_account_from_token(
+            username,
+            client_id,
+            client_secret,
+            access_token,
+            expires_in,
+            selected_page_id
+        )
+
+        return {
+            'success': True,
+            'message': 'Instagram account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def get_instagram_pages(client_id, client_secret, code):
+    """
+    - Input:
+        - client_id: str - Instagram application client ID.
+        - client_secret: str - Instagram application client secret.
+        - code: str - Authorization code received from Instagram.
+    - Output:
+        - Dictionary containing success status and available accounts.
+    - Description:
+        - Returns available Instagram Business/Creator accounts linked to
+        the authenticated Meta user for page selection.
+    """
+    try:
+        accounts, token_payload = list_instagram_pages(client_id, client_secret, code)
+        return {
+            'success': True,
+            'accounts': accounts,
+            'token_payload': token_payload
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        payload = serialize_error(e)
+        payload['accounts'] = []
+        return payload
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'accounts': [],
             'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
         }
