@@ -163,7 +163,7 @@ class Post:
             "image": self.image
         }
 
-    def save(self, base_dir: Path | str | None = None, post_id = None):
+    def save_by_id(self, id: int, base_dir: Path | str | None = None) -> Path:
         posts_dir = Path(base_dir) if base_dir is not None else POSTS_DIR
         posts_dir.mkdir(parents=True, exist_ok=True)
 
@@ -192,6 +192,39 @@ class Post:
         )
 
         return post_path
+
+    @staticmethod
+    def delete_post_by_id(post_id):
+        try:
+            post_id_value = int(post_id)
+        except (TypeError, ValueError) as error:
+            raise InputValueError("Post id is invalid.") from error
+
+        post_path = POSTS_DIR / f"{post_id_value}.post"
+
+        if not post_path.exists():
+            raise InputValueError("Post file does not exist.")
+
+        # Load post to get image path
+        post = load_post(post_path)
+
+        # Delete image if exists
+        if post.image:
+            image_path = Path(post.image)
+
+            if image_path.exists() and image_path.is_file():
+                try:
+                    image_path.unlink()
+                except OSError as error:
+                    raise InputValueError("Failed to delete image file.") from error
+
+        # Delete .post file
+        try:
+            post_path.unlink()
+        except OSError as error:
+            raise InputValueError("Failed to delete post file.") from error
+
+        return True
 
     def set_published(self):
         self.published = "True" 

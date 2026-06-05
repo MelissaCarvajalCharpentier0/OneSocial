@@ -634,9 +634,10 @@ def create_post(header, body, image_data=None, image_name=None, selected_account
 
 
 @eel.expose
-def save_post(header, body, selected_accounts, scheduled_time, image_data=None, image_name=None):
+def save_post(header, body, selected_accounts, scheduled_time, image_data=None, image_name=None, id=None):
     """
     input:
+        id - String containing the post ID
         header - String containing the post title
         body - String containing the post content
         selected_accounts - List of selected accounts in [provider, username] format
@@ -712,6 +713,31 @@ def save_post(header, body, selected_accounts, scheduled_time, image_data=None, 
             'message': f'Error: {str(e)}'
         }
 
+@eel.expose
+def delete_post(post_id):
+    """
+    Deletes a scheduled post by ID.
+    """
+
+    try:
+        Post.delete_post_by_id(post_id)
+
+        return {
+            "success": True,
+            "message": f"Post {post_id} eliminado correctamente."
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            "success": False,
+            "error_type": ErrorCategory.UNKNOWN.value,
+            "message": f"Error: {str(e)}"
+        }
 
 @eel.expose
 def get_scheduled_posts():
@@ -775,6 +801,20 @@ def get_scheduled_post(post_id):
         post = load_post_by_id(post_id)
         date_value, time_value = _split_schedule_time(post.scheduled_time)
 
+        image_preview = None
+
+        if post.image:
+            image_path = Path(post.image)
+
+            if image_path.exists():
+                encoded = base64.b64encode(
+                    image_path.read_bytes()
+                ).decode("utf-8")
+
+                suffix = image_path.suffix.lower().replace('.', '')
+
+                image_preview = f"data:image/{suffix};base64,{encoded}"
+
         return {
             'success': True,
             'post': {
@@ -786,6 +826,7 @@ def get_scheduled_post(post_id):
                 'scheduled_time': post.scheduled_time,
                 'selected_accounts': post.selected_accounts,
                 'image': post.image,
+                "image_preview": image_preview,
             }
         }
 
@@ -864,6 +905,22 @@ def update_display_name(provider, username, new_label):
     except Exception as e:
         print("ERROR:", str(e))
         return {'success': False, 'error_type': ErrorCategory.UNKNOWN.value, 'message': str(e)}
+
+@eel.expose
+def connect_discord(label, webhook_url):
+    """Called from the UI to link a Discord webhook."""
+    try:
+        from controller import save_discord_account
+        save_discord_account(label.strip(), webhook_url.strip())
+        return {'success': True, 'message': 'Discord webhook linked'}
+    except Exception as e:
+        return {'success': False, 'message': str(e)}
+
+@eel.expose
+def get_discord_accounts():
+    """Return list of Discord accounts for the UI (optional)"""
+    from controller import get_discord_accounts
+    return get_discord_accounts()
 
 
 # Start the application

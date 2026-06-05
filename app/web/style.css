@@ -56,6 +56,19 @@ body {
     gap: 10px;
 }
 
+.nav-sidebar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.nav-sidebar::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.nav-sidebar:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+}
+
 .nav-btn {
     width: 100%;
     display: flex;
@@ -282,6 +295,22 @@ body {
     padding: 32px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
 }
+
+.calendar-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.calendar-container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.calendar-container:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+
+
 
 /* ============================= */
 /* Calendar Header */
@@ -548,25 +577,14 @@ body {
 
 .scheduled-card-top {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: left;
     gap: 12px;
 }
 
 .scheduled-card-date {
     color: #6c9eff;
     font-size: 0.82rem;
-    font-weight: 600;
-}
-
-.scheduled-platforms {
-    background: rgba(108, 158, 255, 0.12);
-    color: #8eb4ff;
-
-    padding: 4px 10px;
-    border-radius: 999px;
-
-    font-size: 0.72rem;
     font-weight: 600;
 }
 
@@ -592,6 +610,43 @@ body {
     -webkit-box-orient: vertical;
 
     overflow: hidden;
+}
+
+.scheduled-card-title,
+.scheduled-card-body {
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.scheduled-platforms {
+    display: flex;
+    justify-content: flex-start;
+    gap: 8px;
+    background: none;
+    border-radius: 14px;
+    width: fit-content;
+}
+
+.scheduled-platform-icon {
+    width: 28px;
+    height: 28px;
+
+    border: 2px solid;
+    border-radius: 50%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    background: #1f1f1f;
+}
+
+.scheduled-platform-icon img {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
 }
 
 
@@ -620,6 +675,9 @@ body {
 
     cursor: pointer;
     transition: all 0.2s ease;
+
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 
@@ -859,6 +917,19 @@ body {
     border-radius: 16px;
     padding: 32px;
     box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.container::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+}
+
+.container:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 h1 {
@@ -1619,6 +1690,8 @@ textarea {
     font-size: 1rem;  
     line-height: 1.5;    
     margin-bottom: 20px;
+    word-break: break-word;
+    overflow-wrap: break-word;
 }
 
 .modal-body input {
@@ -2748,3 +2821,56 @@ textarea {
     height: 18px;
     fill: currentColor;
 }
+
+/* Discord Preview Card */
+/* .discord-preview {
+    background: #2b2d31;
+    border-radius: 8px;
+    padding: 12px;
+    border-left: 4px solid #5865f2;
+    color: #dbdee1;
+    font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+.discord-preview-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.discord-label {
+    font-weight: 600;
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+.discord-bot-tag {
+    background: #5865f2;
+    color: white;
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.discord-preview-content {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.discord-preview-image {
+    max-width: 100%;
+    margin-top: 10px;
+    border-radius: 8px;
+    border: 1px solid #404249;
+}
+
+.discord-title {
+    color: #dbdee1;
+    font-size: 0.9rem;
+    margin-left: 8px;
+    font-weight: 500;
+} */
