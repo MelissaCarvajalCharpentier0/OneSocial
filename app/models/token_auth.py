@@ -86,6 +86,6 @@ class Token:
             "server": self.server,
             "subreddit": self.subreddit,
             "facebook_page_id": self.facebook_page_id,
-            "instagram_user_id": self.instagram_user_id
+            "instagram_user_id": self.instagram_user_id,
             "webhook_url": self.webhook_url
         }
