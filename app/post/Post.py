@@ -162,6 +162,7 @@ class Post:
             "selected_accounts": self.selected_accounts,
             "scheduled_time": self.scheduled_time,
             "image": self.image,
+            "published": self.published,
             "errors": self.errors
         }
 

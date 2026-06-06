@@ -138,12 +138,16 @@ def filter_tokens(tokens, selected_accounts) -> list:
     ]
 
 
-def rewrite_post_with_failed_accounts(post, failed_accounts: list[dict], posts_dir: Path) -> None:
+def rewrite_post_with_failed_accounts(post, name, failed_accounts: list[dict], failed_results, posts_dir: Path) -> None:
     """
     Prevent multiple schedulers simultaneously
     If a post fails on an account then the .post is kept for retry. If succesful for every account it is deleted.
     """
     post.selected_accounts = failed_accounts
+    post.errors = failed_results
+    post.published = name
+
+    write_log(f"Errors received: {post.errors}- published(state): {post.published}- DICT FULL:{post.to_dict()}")
 
     payload = post.to_dict()
     post_path = posts_dir / f"{post.id}.post"
@@ -184,6 +188,7 @@ def publish_one_post(post, load_tokens, general_upload_post, delete_post_by_id, 
     )
 
     failed_accounts = []
+    failed_results = []
     success_count = 0
 
     for token in selected_tokens:
@@ -192,6 +197,7 @@ def publish_one_post(post, load_tokens, general_upload_post, delete_post_by_id, 
 
         try:
             results = general_upload_post([token], text, title, image_path)
+            #has_errors = any(not r['success'] for r in results)
             result = results[0] if results else {
                 "provider": provider,
                 "success": False,
@@ -202,6 +208,7 @@ def publish_one_post(post, load_tokens, general_upload_post, delete_post_by_id, 
                 success_count += 1
                 write_log(f"Post {post.id}: OK {provider}/{username}: {result.get('message')}")
             else:
+                failed_results.append(result)
                 failed_accounts.append(selected_account_payload(token))
                 write_log(f"Post {post.id}: FAIL {provider}/{username}: {result.get('message')}")
 
@@ -216,12 +223,13 @@ def publish_one_post(post, load_tokens, general_upload_post, delete_post_by_id, 
         return True
 
     if success_count > 0:
-        rewrite_post_with_failed_accounts(post, failed_accounts, posts_dir)
+        rewrite_post_with_failed_accounts(post, "Error", failed_accounts, failed_results, posts_dir)
         write_log(
             f"Post {post.id}: partially published. "
             f"{len(failed_accounts)} accounts left on .post."
         )
     else:
+        rewrite_post_with_failed_accounts(post, "Error", failed_accounts, failed_results, posts_dir)
         write_log(f"Post {post.id}: failed in every account. Kept for retry.")
 
     return False
