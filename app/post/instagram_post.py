@@ -24,6 +24,9 @@ GRAPH_BASE = "https://graph.facebook.com/v23.0"
 
 
 def _get_page_access_token(account) -> str:
+    if account.facebook_page_token:
+        return account.facebook_page_token
+
     if not account.facebook_page_id:
         raise InputValueError("No Facebook Page linked for Instagram.")
 

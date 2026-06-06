@@ -375,6 +375,33 @@ def connect_instagram(client_id):
 
 
 @eel.expose
+def connect_facebook(client_id):
+    """
+    - Input: client_id (str)
+    - Output: dict with success and message
+    - Description: Initiates Facebook OAuth flow by opening the browser for authentication.
+    """
+    try:
+        setup_facebook_account(client_id)
+        return {
+            'success': True,
+            'message': 'Browser opened for Facebook authentication'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
 def auth_linkedin(username, client_id, client_secret, code):
     """
     - Input:
@@ -444,6 +471,34 @@ def auth_instagram(username, client_id, client_secret, code, selected_page_id=No
 
 
 @eel.expose
+def auth_facebook(username, client_id, client_secret, code, selected_page_id=None):
+    """
+    - Input: Facebook account data and authorization code.
+    - Output: dict with success and message.
+    - Description: Completes Facebook account linking using a Meta OAuth code.
+    """
+    try:
+        setup_facebook_account_auth(username, client_id, client_secret, code, selected_page_id)
+
+        return {
+            'success': True,
+            'message': 'Facebook account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
 def auth_instagram_with_token(
     username,
     client_id,
@@ -495,6 +550,48 @@ def auth_instagram_with_token(
 
 
 @eel.expose
+def auth_facebook_with_token(
+    username,
+    client_id,
+    client_secret,
+    access_token,
+    expires_in=None,
+    selected_page_id=None
+):
+    """
+    - Input: Facebook account details and a long-lived access token.
+    - Output: dict with success and message.
+    - Description: Stores or updates a Facebook account from a pre-exchanged Meta token.
+    """
+    try:
+        setup_facebook_account_from_token(
+            username,
+            client_id,
+            client_secret,
+            access_token,
+            expires_in,
+            selected_page_id
+        )
+
+        return {
+            'success': True,
+            'message': 'Facebook account connected successfully'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
 def get_instagram_pages(client_id, client_secret, code):
     """
     - Input:
@@ -509,6 +606,37 @@ def get_instagram_pages(client_id, client_secret, code):
     """
     try:
         accounts, token_payload = list_instagram_pages(client_id, client_secret, code)
+        return {
+            'success': True,
+            'accounts': accounts,
+            'token_payload': token_payload
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        payload = serialize_error(e)
+        payload['accounts'] = []
+        return payload
+
+    except Exception as e:
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'accounts': [],
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def get_facebook_pages(client_id, client_secret, code):
+    """
+    - Input: Meta OAuth client credentials and code.
+    - Output: Dictionary containing success status and available pages.
+    - Description: Returns Facebook Pages linked to the authenticated Meta user for page selection.
+    """
+    try:
+        accounts, token_payload = list_facebook_pages(client_id, client_secret, code)
         return {
             'success': True,
             'accounts': accounts,

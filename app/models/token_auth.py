@@ -47,6 +47,7 @@ class Token:
     webhook_url: Optional[str] = None   # for Discord
 
     facebook_page_id: Optional[str] = None
+    facebook_page_token: Optional[str] = None
     instagram_user_id: Optional[str] = None
 
 
@@ -86,6 +87,7 @@ class Token:
             "server": self.server,
             "subreddit": self.subreddit,
             "facebook_page_id": self.facebook_page_id,
+            "facebook_page_token": self.facebook_page_token,
             "instagram_user_id": self.instagram_user_id,
             "webhook_url": self.webhook_url
         }
