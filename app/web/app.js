@@ -454,9 +454,6 @@ function toggleLinkSidebar(show) {
     }
 }
 
-overlay.addEventListener('click', () => {
-    toggleLinkSidebar(false);
-});
 
 showLinkBtn.addEventListener('click', () => toggleLinkSidebar(true));
 closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
@@ -894,6 +891,7 @@ document.getElementById('link-instagram-btn').addEventListener('click', async ()
         showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
 }); */
+
 //discord: Link account
 document.getElementById('link-discord-btn').addEventListener('click', async () => {
     const label = document.getElementById('discord-label').value.trim();
@@ -1195,11 +1193,6 @@ function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
         confirmBtn.onclick = () => {
             close();
             resolve(true); 
-        };
-
-        modalOverlay.onclick = () => {
-            close();
-            resolve(null);
         };
     });
 }
@@ -1713,6 +1706,7 @@ function renderBluesky(label, username, header, body, image) {
         </div>
     `;
 }
+
 function renderDiscord(label, username, header, body, image) {
     // Set defaults
     const badgeText = 'APP';
@@ -1721,16 +1715,17 @@ function renderDiscord(label, username, header, body, image) {
     const bodyText = body ? body : '';
     
     return `
-        <div class="discord-preview" style="display: flex; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #313338; font-size: 15px; padding: 5px 10px; line-height: 1.4;">
+        <div class="discord-preview" style="display: flex; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #313338; font-size: 15px; padding: 5px 10px; line-height: 1.4; border-radius: 10px;">
             
-            <div class="discord-preview-content" style="display: flex; flex-direction: column;">
+            <div class="discord-preview-content" style="display: flex; flex-direction: column; padding: 8px;">
                 
                 <!-- Line 1: Tag, Username, and Title (Header) inline -->
-                <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                    <span class="discord-label" style="background-color: #5865F2; color: white; font-size: 10px; font-weight: bold; border-radius: 3px; padding: 2px 4px; margin-right: 6px; line-height: 1;">${badgeText}</span>
-                    <span class="discord-username" style="font-weight: 600; color: white; margin-right: 6px;">${displayName}</span>
-                    ${titleText ? `<span class="discord-title" style="color: #dbdee1;">${titleText}</span>` : ''}
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="discord-username" style="font-weight:600;color:white;">${displayName}</span>
+                    <span class="discord-label" style="background:#5865F2;color:white;font-size:10px;font-weight:bold;border-radius:3px;padding:2px 4px;line-height:1;">${badgeText}</span>
+                    <span style="color:#949ba4;font-size:12px;">${new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span>
                 </div>
+                ${titleText ? `<div class="discord-title" style="color:#dbdee1;font-weight:500;">${titleText}</div>` : ''}
                 
                 <!-- Line 2: Body text on its own line -->
                 ${bodyText ? `<div class="discord-body" style="color: #dbdee1; margin-top: 2px; margin-left: 2px;">${bodyText}</div>` : ''}
@@ -2203,6 +2198,16 @@ function initializeEventListeners() {
     });
     
     document.getElementById('post-body').addEventListener('input', () => {
+        updateCounters();
+        updateAllPreviews();
+    });
+
+    document.getElementById('calendar-post-header').addEventListener('input', () => {
+        updateCounters();
+        updateAllPreviews();
+    });
+    
+    document.getElementById('calendar-post-body').addEventListener('input', () => {
         updateCounters();
         updateAllPreviews();
     });
