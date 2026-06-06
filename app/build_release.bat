@@ -23,7 +23,7 @@ set "INSTALLER_NAME=OneSocialInstaller"
 set "PAYLOAD_ZIP=OneSocialApp.zip"
 set "RELEASE_DIR=release"
 set "DIST_DIR=dist"
-set "LOG_DIR=%DIST_DIR%"
+set "LOG_DIR=%DIST_DIR%\logs"
 
 REM PyInstaller
 REM Niveles utiles: WARN, ERROR, FATAL
