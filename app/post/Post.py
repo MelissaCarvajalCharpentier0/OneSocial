@@ -130,7 +130,7 @@ def load_posts() -> list["Post"]:
 
 
 class Post:
-    def __init__(self, title, content, selected_accounts, scheduled_time, image=None):
+    def __init__(self, title, content, selected_accounts, scheduled_time, errors=None, image=None):
         if not selected_accounts:
             raise InputValueError("At least one account must be selected for posting.")
         
@@ -141,6 +141,7 @@ class Post:
         self.scheduled_time = _normalize_time(scheduled_time)
         self.image = _normalize_image(image)
         self.published = "False"
+        self.errors = errors
 
         if not self.title and not self.content:
             raise InputValueError("Post title or content is required.")
@@ -160,7 +161,8 @@ class Post:
             "content": self.content,
             "selected_accounts": self.selected_accounts,
             "scheduled_time": self.scheduled_time,
-            "image": self.image
+            "image": self.image,
+            "errors": self.errors
         }
 
     def save_by_id(self, id: int, base_dir: Path | str | None = None) -> Path:

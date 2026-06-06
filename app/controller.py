@@ -41,9 +41,9 @@ from post.reddit_post import publish_post_reddit_text
 from post.instagram_post import publish_post_instagram
 
 
-####################### -<<[]>>-- #######################
-#################### GLOBAL VARIABLES ###################
-####################### -<<[]>>-- #######################
+###################### --<<[]>>-- ######################
+################### GLOBAL VARIABLES ###################
+###################### --<<[]>>-- ######################
 
 
 MASTER_KEY = "#OneSocial_Abrazo"
@@ -52,8 +52,7 @@ DATA_DIR = os.path.join(os.path.expanduser("~"), ".onesocial")
 os.makedirs(DATA_DIR, exist_ok=True)
 FILE_DIRECTORY = os.path.join(DATA_DIR, "data.dat")
 
-
-#########################################################
+########################################################
 
 
 def save(tokens: list[Token]):
