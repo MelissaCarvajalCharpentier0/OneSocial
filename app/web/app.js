@@ -110,6 +110,12 @@ navButtons.forEach(button => {
     button.addEventListener("click", () => {
         loadScheduledPosts();
         const targetView = button.dataset.view;
+
+        if (targetView === 'create-post-view') {
+            const list = document.getElementById('publish-details-list');
+            list.innerHTML = '';
+        }
+
         navButtons.forEach(btn => {
             btn.classList.remove("active");
         });
@@ -333,6 +339,21 @@ async function loadScheduledPosts() {
     }
 }
 
+function openPublishModal() {
+    const publishOverlay = document.getElementById('publish-details-overlay');
+    const publishModal = document.getElementById('publish-details-modal');
+
+    publishOverlay.classList.add('active');
+    publishOverlay.classList.remove('hidden');
+    publishModal.classList.add('active');
+}
+
+['open-status-details', 'calendar-open-status-details'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (btn) {
+        btn.addEventListener('click', openPublishModal);
+    }
+});
 
 
 // ==================== SCHEDULED POSTS: Edit/Delete ====================
@@ -429,7 +450,34 @@ document.addEventListener('click', async (e) => {
         const scheduleBtn = document.querySelector('.calendar-post-button');
         scheduleBtn.textContent = 'Save Changes';
 
-        updateAllPreviews();
+        //console.log(post.errors)
+        if (post && post.errors && post.errors.length > 0) {
+            showPublishResults(post.errors, 'calendar-publish-status-bar', 'calendar-publish-status-text');
+            /*const hasErrors = post.errors.some(r => !r.success);
+            showStatus( hasErrors ? 'Some posts failed' : 'Post published successfully',   hasErrors ? 'error' : 'success' );*/
+
+        } else if (post.published === "Error") {
+            publishResults = [{
+                provider: 'System',
+                success: false,
+                message: post?.message || 'Unknown publish error'
+            }];
+
+            showPublishResults(publishResults, 'calendar-publish-status-bar', 'calendar-publish-status-text');
+
+            /*showStatus('Failed to publish post', 'error');*/
+
+        } else {
+            publishResults = [];
+            
+            const detailsList = document.getElementById('publish-details-list');
+            if (detailsList) {
+                detailsList.innerHTML = '';
+            }
+
+            resetPublishStatusCalendar();
+        }
+        updateAllPreviews();        
     }
 
 });
@@ -1825,10 +1873,10 @@ document.addEventListener('click', (event) => {
 });
 
 
-function showPublishResults(results) {
+function showPublishResults(results, statusBarId = 'publish-status-bar', statusTextId = 'publish-status-text') {
     publishResults = results || [];
-    const statusBar = document.getElementById('publish-status-bar');
-    const statusText = document.getElementById('publish-status-text');
+    const statusBar = document.getElementById(statusBarId);
+    const statusText = document.getElementById(statusTextId);
 
     const hasErrors = publishResults.some(r => !r.success);
 

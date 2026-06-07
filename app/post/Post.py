@@ -230,6 +230,3 @@ class Post:
             raise InputValueError("Failed to delete post file.") from error
 
         return True
-
-    def set_published(self):
-        self.published = "True" 
