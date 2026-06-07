@@ -1,11 +1,10 @@
-# app/models/import_export.py
-
-import os
-import json
-import base64
-import shutil
+from pathlib import Path
 from datetime import datetime
-import eel
+import base64
+import json
+import shutil
+import os
+
 
 # ========== CONFIGURACIÓN DE RUTAS ==========
 ONESOCIAL_DIR = os.path.expanduser("~/.onesocial")
@@ -13,105 +12,237 @@ DATA_FILE = os.path.join(ONESOCIAL_DIR, "data.dat")
 POSTS_DIR = os.path.join(ONESOCIAL_DIR, "posts")
 IMAGES_DIR = os.path.join(ONESOCIAL_DIR, "images")
 
+
+def guess_image_mime(image_path: Path) -> str:
+    suffix = image_path.suffix.lower()
+
+    if suffix == ".png":
+        return "image/png"
+
+    if suffix in [".jpg", ".jpeg"]:
+        return "image/jpeg"
+
+    return "application/octet-stream"
+
+
+def encode_image_for_backup(image_path_value, warnings: list[str]):
+    """
+    Converts a scheduled post image into base64 so the backup is portable.
+    """
+    if not image_path_value:
+        return None
+
+    image_path = Path(image_path_value)
+
+    if not image_path.exists() or not image_path.is_file():
+        warnings.append(f"Image not found during export: {image_path_value}")
+        return None
+
+    try:
+        return {
+            "file_name": image_path.name,
+            "suffix": image_path.suffix.lower(),
+            "mime_type": guess_image_mime(image_path),
+            "data_base64": base64.b64encode(
+                image_path.read_bytes()
+            ).decode("utf-8")
+        }
+
+    except OSError as error:
+        warnings.append(
+            f"Could not read image during export: {image_path_value} ({error})"
+        )
+        return None
+
+
 def ensure_dirs():
+    os.makedirs(ONESOCIAL_DIR, exist_ok=True)
     os.makedirs(POSTS_DIR, exist_ok=True)
     os.makedirs(IMAGES_DIR, exist_ok=True)
 
-def backup_existing_data():
-    """Crea un respaldo completo antes de importar."""
-    backup_dir = os.path.join(ONESOCIAL_DIR, "backups", datetime.now().strftime("%Y%m%d_%H%M%S"))
-    os.makedirs(backup_dir, exist_ok=True)
-    if os.path.exists(DATA_FILE):
-        shutil.copy(DATA_FILE, os.path.join(backup_dir, "data.dat"))
-    if os.path.exists(POSTS_DIR):
-        shutil.copytree(POSTS_DIR, os.path.join(backup_dir, "posts"))
-    if os.path.exists(IMAGES_DIR):
-        shutil.copytree(IMAGES_DIR, os.path.join(backup_dir, "images"))
 
-@eel.expose
-def export_all_data():
-    """Exporta data.dat y todos los posts (con imágenes embebidas)."""
-    ensure_dirs()
-    
-    # Leer data.dat
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, 'r', encoding='utf-8') as f:
-            data_content = json.load(f)
-    else:
-        data_content = {"salt": "", "data": {"tokens": [], "post_counter": 0}}
-    
-    # Leer posts
-    posts_list = []
-    if os.path.exists(POSTS_DIR):
-        for filename in os.listdir(POSTS_DIR):
-            if filename.endswith('.post'):
-                filepath = os.path.join(POSTS_DIR, filename)
-                with open(filepath, 'r', encoding='utf-8') as f:
-                    post = json.load(f)
-                
-                image_filename = None
-                image_base64 = None
-                if post.get('image') and os.path.exists(post['image']):
-                    image_filename = os.path.basename(post['image'])
-                    with open(post['image'], 'rb') as img_f:
-                        image_base64 = base64.b64encode(img_f.read()).decode('utf-8')
-                
-                portable_post = {
-                    "id": post.get('id'),
-                    "title": post.get('title'),
-                    "content": post.get('content'),
-                    "selected_accounts": post.get('selected_accounts', []),
-                    "scheduled_time": post.get('scheduled_time'),
-                    "image_filename": image_filename,
-                    "image_base64": image_base64
-                }
-                posts_list.append(portable_post)
-    
-    return {
-        "exportVersion": "1.0",
-        "exportDate": datetime.utcnow().isoformat() + "Z",
-        "dataFile": data_content,
-        "posts": posts_list
-    }
+def clear_directory(directory):
+    if os.path.exists(directory):
+        shutil.rmtree(directory)
 
-@eel.expose
-def import_all_data(imported_data):
-    """Restaura data.dat, posts e imágenes desde un archivo de exportación."""
-    if 'exportVersion' not in imported_data or 'dataFile' not in imported_data or 'posts' not in imported_data:
-        raise ValueError("Formato de importación inválido")
-    
-    backup_existing_data()
-    
-    # Restaurar data.dat
-    with open(DATA_FILE, 'w', encoding='utf-8') as f:
-        json.dump(imported_data['dataFile'], f, indent=2)
-    
-    # Limpiar y recrear carpetas
-    if os.path.exists(POSTS_DIR):
-        shutil.rmtree(POSTS_DIR)
-    if os.path.exists(IMAGES_DIR):
-        shutil.rmtree(IMAGES_DIR)
+    os.makedirs(directory, exist_ok=True)
+
+
+def get_existing_post_ids():
+    """
+    Reads existing .post filenames from ~/.onesocial/posts.
+    Returns a set of IDs as strings.
+    """
     ensure_dirs()
-    
-    # Restaurar cada post
-    for portable_post in imported_data['posts']:
-        image_path = None
-        if portable_post.get('image_filename') and portable_post.get('image_base64'):
-            image_filename = portable_post['image_filename']
-            image_path = os.path.join(IMAGES_DIR, image_filename)
-            with open(image_path, 'wb') as img_f:
-                img_f.write(base64.b64decode(portable_post['image_base64']))
-        
+
+    existing_ids = set()
+
+    for post_file in Path(POSTS_DIR).glob("*.post"):
+        existing_ids.add(post_file.stem)
+
+    return existing_ids
+
+
+def get_next_available_post_id(existing_ids):
+    """
+    Finds the next numeric post ID that does not exist yet.
+    """
+    numeric_ids = []
+
+    for post_id in existing_ids:
+        try:
+            numeric_ids.append(int(post_id))
+        except ValueError:
+            pass
+
+    next_id = max(numeric_ids, default=0) + 1
+
+    while str(next_id) in existing_ids:
+        next_id += 1
+
+    return next_id
+
+
+def resolve_imported_post_id(imported_post_id, existing_ids):
+    """
+    Keeps the imported post ID if available.
+    If it already exists, assigns a new free numeric ID.
+    """
+    if imported_post_id is not None:
+        imported_id_text = str(imported_post_id)
+
+        if imported_id_text not in existing_ids:
+            existing_ids.add(imported_id_text)
+            return imported_post_id
+
+    new_id = get_next_available_post_id(existing_ids)
+    existing_ids.add(str(new_id))
+
+    return new_id
+
+
+def get_unique_image_path(file_name):
+    """
+    Returns a path inside ~/.onesocial/images without overwriting existing files.
+    """
+    ensure_dirs()
+
+    safe_name = Path(file_name).name
+
+    if not safe_name:
+        safe_name = "imported_image.jpg"
+
+    image_path = Path(IMAGES_DIR) / safe_name
+
+    if not image_path.exists():
+        return image_path
+
+    stem = image_path.stem
+    suffix = image_path.suffix or ".jpg"
+
+    counter = 1
+
+    while True:
+        candidate = Path(IMAGES_DIR) / f"{stem}_imported_{counter}{suffix}"
+
+        if not candidate.exists():
+            return candidate
+
+        counter += 1
+
+
+def restore_image_from_backup(image_backup, warnings: list[str], post_id=None):
+    """
+    Restores a base64 image into ~/.onesocial/images
+    without overwriting existing images.
+    """
+    if not image_backup:
+        return None
+
+    if not isinstance(image_backup, dict):
+        warnings.append(f"Invalid image backup for post {post_id}.")
+        return None
+
+    encoded = image_backup.get("data_base64")
+
+    if not encoded:
+        warnings.append(f"Image backup for post {post_id} has no data.")
+        return None
+
+    suffix = image_backup.get("suffix") or ".jpg"
+    file_name = image_backup.get("file_name") or f"image_post_{post_id}{suffix}"
+
+    image_path = get_unique_image_path(file_name)
+
+    try:
+        image_bytes = base64.b64decode(encoded)
+
+        with open(image_path, "wb") as image_file:
+            image_file.write(image_bytes)
+
+        return str(image_path)
+
+    except Exception as error:
+        warnings.append(f"Could not restore image for post {post_id}: {error}")
+        return None
+
+
+def restore_scheduled_posts_from_backup(scheduled_posts):
+    """
+    Imports scheduled posts into ~/.onesocial/posts
+    and images into ~/.onesocial/images.
+
+    Existing scheduled posts are preserved.
+    Imported posts are added.
+    If an imported post ID already exists, a new ID is assigned.
+    """
+    ensure_dirs()
+
+    warnings = []
+
+    if not isinstance(scheduled_posts, list):
+        raise ValueError("scheduled_posts must be a list.")
+
+    existing_ids = get_existing_post_ids()
+    restored_count = 0
+
+    for post_data in scheduled_posts:
+        if not isinstance(post_data, dict):
+            warnings.append("Skipped invalid post entry.")
+            continue
+
+        imported_post_id = post_data.get("id")
+
+        final_post_id = resolve_imported_post_id(
+            imported_post_id,
+            existing_ids
+        )
+
+        image_path = restore_image_from_backup(
+            post_data.get("image_backup"),
+            warnings,
+            final_post_id
+        )
+
         restored_post = {
-            "id": portable_post['id'],
-            "title": portable_post['title'],
-            "content": portable_post['content'],
-            "selected_accounts": portable_post['selected_accounts'],
-            "scheduled_time": portable_post['scheduled_time'],
-            "image": image_path
+            "id": final_post_id,
+            "title": post_data.get("title", ""),
+            "content": post_data.get("content", ""),
+            "selected_accounts": post_data.get("selected_accounts", []),
+            "scheduled_time": post_data.get("scheduled_time", ""),
+            "image": image_path,
+            "published": post_data.get("published", "False"),
+            "errors": post_data.get("errors", None)
         }
-        post_filename = f"{restored_post['id']}.post"
-        with open(os.path.join(POSTS_DIR, post_filename), 'w', encoding='utf-8') as f:
-            json.dump(restored_post, f, indent=2)
-    
-    return {"status": "ok", "message": f"Importados {len(imported_data['posts'])} posts."}
+
+        post_path = os.path.join(POSTS_DIR, f"{final_post_id}.post")
+
+        with open(post_path, "w", encoding="utf-8") as post_file:
+            json.dump(restored_post, post_file, indent=2, ensure_ascii=True)
+
+        restored_count += 1
+
+    return {
+        "restored_posts": restored_count,
+        "warnings": warnings
+    }

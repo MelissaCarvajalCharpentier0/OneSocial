@@ -2193,21 +2193,89 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------------
 async function exportAllData() {
     try {
-        const allData = await eel.export_all_data()();
-        const dataStr = JSON.stringify(allData, null, 2);
-        const blob = new Blob([dataStr], {type: "application/json"});
+        const response = await eel.export_all_data()();
+
+        if (!response || !response.success) {
+            showNotification(
+                response?.message || "OneSocial could not export your backup file.",
+                "error",
+                `
+                    <p>
+                        Please try again from Settings.
+                    </p>
+                `
+            );
+            return;
+        }
+
+        const backup = response.backup;
+        const dataStr = JSON.stringify(backup, null, 2);
+
+        const blob = new Blob(
+            [dataStr],
+            { type: "application/json" }
+        );
+
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
+
+        const timestamp = new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replaceAll(":", "-");
+
         a.href = url;
-        a.download = `onesocial_backup_${new Date().toISOString().slice(0,19)}.json`;
+        a.download = `onesocial_backup_${timestamp}.json`;
+
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+
         URL.revokeObjectURL(url);
-        showNotification("Exportación completada", "success");
+
+        const accountCount = backup.counts?.accounts ?? 0;
+        const postCount = backup.counts?.scheduled_posts ?? 0;
+        const warningCount = backup.counts?.warnings ?? 0;
+
+        showNotification(
+            "Your OneSocial backup file was downloaded from Settings.",
+            "success",
+            `
+                <p>
+                    This backup includes:
+                </p>
+
+                <p>
+                    <b>${accountCount}</b> linked account(s)<br>
+                    <b>${postCount}</b> scheduled post(s)
+                    ${warningCount > 0 ? `<br><b>${warningCount}</b> warning(s)` : ''}
+                </p>
+
+                ${
+                    warningCount > 0
+                        ? `<p>Some files could not be included, but the backup was still created.</p>`
+                        : ''
+                }
+
+                <p>
+                    Keep this file private because it may contain account tokens.
+                </p>
+            `
+        );
+
     } catch (err) {
         console.error(err);
-        showNotification("Error al exportar", "error");
+
+        showNotification(
+            "OneSocial could not export your backup file.",
+            "error",
+            `
+                <p>
+                    Please try again from Settings. If the problem continues,
+                    check the console for technical details.
+                </p>
+            `
+        );
     }
 }
 
@@ -2216,39 +2284,267 @@ async function exportAllData() {
 // ------------------------------------------------------------------
 function importAllData() {
     const input = document.createElement('input');
+
     input.type = 'file';
     input.accept = 'application/json';
+
     input.onchange = async (event) => {
         const file = event.target.files[0];
+
         if (!file) return;
+
         const reader = new FileReader();
+
         reader.onload = async (e) => {
             try {
                 const importedJson = JSON.parse(e.target.result);
-                const response = await eel.import_all_data(importedJson)();
-                if (response.status === 'ok') {
-                    showNotification("Importación exitosa. Recargando...", "success");
-                    // Recargar la interfaz (listado de cuentas, publicaciones, etc.)
-                    if (typeof loadAccounts === 'function') await loadAccounts();
-                    if (typeof loadScheduledPosts === 'function') await loadScheduledPosts();
-                    if (typeof applyTheme === 'function') applyTheme(); // si aplica tema
-                } else {
-                    showNotification("Error en la importación", "error");
+                const confirmed = await showImportWarning();
+
+                if (!confirmed) {
+                    return;
                 }
+
+                const response = await eel.import_all_data(importedJson)();
+
+                if (!response || !response.success) {
+                    showNotification(
+                        response?.message || 'OneSocial could not import this backup file.',
+                        'error',
+                        `
+                            <p>
+                                Make sure the selected file is a valid OneSocial backup.
+                            </p>
+                        `,
+                        'import'
+                    );
+
+                    return;
+                }
+
+                accountState.selected.clear();
+                accountState.hasLoaded = false;
+
+                if (typeof loadAccounts === 'function') {
+                    await loadAccounts();
+                }
+
+                if (typeof loadScheduledPosts === 'function') {
+                    await loadScheduledPosts();
+                }
+
+                updateAllPreviews();
+
+                const counts = response.counts || {};
+                const accountCount = counts.accounts ?? 0;
+                const postCount = counts.scheduled_posts ?? 0;
+                const warningCount = counts.warnings ?? 0;
+
+                showNotification(
+                    'The selected OneSocial backup was restored.',
+                    'success',
+                    `
+                        <p>
+                            Imported data:
+                        </p>
+
+                        <p>
+                            <b>${accountCount}</b> linked account(s)<br>
+                            <b>${postCount}</b> scheduled post(s)
+                            ${warningCount > 0 ? `<br><b>${warningCount}</b> warning(s)` : ''}
+                        </p>
+
+                        ${
+                            warningCount > 0
+                                ? `<p>Some files could not be fully restored, but the import completed.</p>`
+                                : ''
+                        }
+
+                        <p>
+                            Existing local data was replaced with the selected backup.
+                        </p>
+                    `,
+                    'import'
+                );
+
             } catch (err) {
                 console.error(err);
-                showNotification("Archivo inválido o error al importar", "error");
+
+                showNotification(
+                    'The selected file could not be read as a valid backup.',
+                    'error',
+                    `
+                        <p>
+                            Please select a valid OneSocial JSON backup file.
+                        </p>
+                    `,
+                    'import'
+                );
             }
         };
+
         reader.readAsText(file);
     };
+
     input.click();
 }
 
-// Pequeña ayuda para notificaciones (ajústala si ya existe)
-function showNotification(msg, type) {
-    // Ejemplo simple con alert, pero puedes usar un toast
-    alert(`${type.toUpperCase()}: ${msg}`);
+
+function showImportWarning() {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('settings-notification-overlay');
+        const modal = document.getElementById('settings-notification-modal');
+        const icon = document.getElementById('settings-notification-icon');
+        const title = document.getElementById('settings-notification-title');
+        const subtitle = document.getElementById('settings-notification-subtitle');
+        const body = document.getElementById('settings-notification-body');
+        const confirmBtn = document.getElementById('settings-notification-close-btn');
+        const cancelBtn = document.getElementById('settings-notification-cancel-btn');
+
+        if (!overlay || !modal || !icon || !title || !subtitle || !body || !confirmBtn || !cancelBtn) {
+            const confirmed = confirm(
+                'Importing this backup will replace linked accounts and add the backup scheduled posts to your current scheduled posts. Continue?'
+            );
+
+            resolve(confirmed);
+            return;
+        }
+
+        icon.textContent = '⚠';
+        icon.className = 'settings-notification-icon error';
+
+        title.textContent = 'Import backup?';
+        subtitle.textContent = 'This action will change your local OneSocial data.';
+
+        body.innerHTML = `
+            <p>
+                Importing this backup will:
+            </p>
+
+            <p>
+                <b>Replace your linked accounts</b><br>
+                Your current account list will be replaced by the accounts from the backup.
+            </p>
+
+            <p>
+                <b>Add scheduled posts</b><br>
+                Scheduled posts from the backup will be added to your current scheduled posts.
+                Existing scheduled posts will be kept.
+            </p>
+        `;
+
+        confirmBtn.textContent = 'Import backup';
+        cancelBtn.textContent = 'Cancel';
+
+        cancelBtn.classList.remove('hidden');
+
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+
+        const close = (result) => {
+            overlay.classList.add('hidden');
+            modal.classList.add('hidden');
+            cancelBtn.classList.add('hidden');
+            confirmBtn.textContent = 'OK';
+
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+            overlay.onclick = null;
+
+            resolve(result);
+        };
+
+        confirmBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+        overlay.onclick = () => close(false);
+    });
+}
+
+
+function showNotification(message, type = 'info', detailsHTML = '', action = 'export') {
+    const overlay = document.getElementById('settings-notification-overlay');
+    const modal = document.getElementById('settings-notification-modal');
+    const icon = document.getElementById('settings-notification-icon');
+    const title = document.getElementById('settings-notification-title');
+    const subtitle = document.getElementById('settings-notification-subtitle');
+    const body = document.getElementById('settings-notification-body');
+    const closeBtn = document.getElementById('settings-notification-close-btn');
+
+    if (!overlay || !modal || !icon || !title || !subtitle || !body || !closeBtn) {
+        alert(`${type.toUpperCase()}: ${message}`);
+        return;
+    }
+
+    const config = {
+        export: {
+            success: {
+                icon: '⬇',
+                title: 'Backup exported',
+                subtitle: 'Your OneSocial data backup was created successfully.'
+            },
+            error: {
+                icon: '⚠',
+                title: 'Export failed',
+                subtitle: 'OneSocial could not export your backup.'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Export status',
+                subtitle: 'OneSocial is preparing your backup.'
+            }
+        },
+
+        import: {
+            success: {
+                icon: '⬆',
+                title: 'Backup imported',
+                subtitle: 'Your OneSocial data was restored successfully.'
+            },
+            error: {
+                icon: '⚠',
+                title: 'Import failed',
+                subtitle: 'OneSocial could not restore this backup.'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Import status',
+                subtitle: 'OneSocial is restoring your backup.'
+            }
+        }
+    };
+
+    const selected =
+        config[action]?.[type]
+        || config.export[type]
+        || config.export.info;
+
+    icon.textContent = selected.icon;
+    icon.className = `settings-notification-icon ${type}`;
+
+    title.textContent = selected.title;
+    subtitle.textContent = selected.subtitle;
+
+    body.innerHTML = `
+        <p>${escapeHTML(message)}</p>
+        ${detailsHTML || ''}
+    `;
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+
+    const close = () => {
+        overlay.classList.add('hidden');
+        modal.classList.add('hidden');
+    };
+
+    closeBtn.onclick = close;
+    overlay.onclick = close;
+
+    document.addEventListener('keydown', function handleEscape(event) {
+        if (event.key === 'Escape') {
+            close();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    });
 }
 
 // Exponer funciones al ámbito global si las necesitas desde botones HTML

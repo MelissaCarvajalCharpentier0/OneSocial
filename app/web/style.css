@@ -920,6 +920,178 @@ body {
 
 
 
+/* ============================= */
+/* Settings Notification Modal   */
+/* ============================= */
+
+.settings-notification-overlay {
+    position: fixed;
+    inset: 0;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+
+    z-index: 1300;
+}
+
+.settings-notification-modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+
+    width: 460px;
+    max-width: calc(100vw - 40px);
+
+    transform: translate(-50%, -50%);
+    background: #2d2d2d;
+
+    border: 1px solid #3a3a3a;
+    border-radius: 16px;
+
+    padding: 24px;
+
+    z-index: 1400;
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+}
+
+.settings-notification-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    margin-bottom: 20px;
+}
+
+.settings-notification-icon {
+    width: 52px;
+    height: 52px;
+
+    border-radius: 14px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 1.5rem;
+
+    background: #3a3a3a;
+    color: #ffffff;
+
+    flex-shrink: 0;
+}
+
+.settings-notification-icon.success {
+    background: #1e3a2f;
+    color: #6fbf73;
+}
+
+.settings-notification-icon.error {
+    background: #3a1e2a;
+    color: #ff7b72;
+}
+
+.settings-notification-icon.info {
+    background: #1e2a3a;
+    color: #6c9eff;
+}
+
+.settings-notification-header h2 {
+    color: #ffffff;
+    font-size: 1.25rem;
+    margin: 0 0 4px 0;
+}
+
+.settings-notification-header p {
+    color: #9e9e9e;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.settings-notification-body {
+    background: #252525;
+    border: 1px solid #333;
+    border-radius: 12px;
+
+    padding: 16px;
+
+    color: #cfcfcf;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+
+.settings-notification-body p {
+    margin-bottom: 12px;
+}
+
+.settings-notification-body p:last-child {
+    margin-bottom: 0;
+}
+
+.settings-notification-body b {
+    color: #ffffff;
+}
+
+.settings-notification-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 20px;
+    gap: 12px;
+}
+
+.settings-notification-close-btn {
+    border: none;
+    border-radius: 10px;
+
+    padding: 10px 18px;
+
+    background: #4c8dff;
+    color: #ffffff;
+
+    font-weight: 600;
+    font-family: inherit;
+
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-notification-close-btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+}
+
+.settings-notification-close-btn:active {
+    transform: scale(0.97);
+}
+
+.settings-notification-cancel-btn {
+    border: none;
+    border-radius: 10px;
+
+    padding: 10px 18px;
+
+    background: #3a3a3a;
+    color: #ffffff;
+
+    font-weight: 600;
+    font-family: inherit;
+
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.settings-notification-cancel-btn:hover {
+    transform: translateY(-1px);
+    opacity: 0.95;
+}
+
+.settings-notification-cancel-btn:active {
+    transform: scale(0.97);
+}
+
+
 
 
 /* ============================= */
