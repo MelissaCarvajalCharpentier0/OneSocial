@@ -150,7 +150,7 @@ closeEditorBtn.addEventListener('click', () => {
     scheduledSection.classList.remove('hidden');
 
     resetPublishStatusCalendar();
-    const scheduleBtn = document.querySelector('.calendar-post-button');
+    const scheduleBtn = document.getElementById('calendar-schedule-btn');
     scheduleBtn.textContent = 'Schedule Post';
 
     loadScheduledPosts();
@@ -393,15 +393,15 @@ document.addEventListener('click', async (e) => {
         }
 
         const post = result.post;
-        console.log('Loaded post for editing:', post);
         accountState.selected.clear();
 
         currentImage = post.image_preview || null;
+        nameImage = post.image || null;
         const fileNameLabel = document.getElementById('calendar-file-name');
 
         if (currentImage) {
             fileNameLabel.textContent =
-                currentImage.split(/[\\/]/).pop();
+                nameImage.split(/[\\/]/).pop();
         } else {
             fileNameLabel.textContent = 'No file selected';
         }
@@ -426,7 +426,7 @@ document.addEventListener('click', async (e) => {
         document.getElementById('calendar-date').value = post.date || '';
         document.getElementById('calendar-time').value = post.time || '';
 
-        const scheduleBtn = document.querySelector('.calendar-post-button');
+        const scheduleBtn = document.getElementById('calendar-schedule-btn');
         scheduleBtn.textContent = 'Save Changes';
 
         updateAllPreviews();
@@ -453,6 +453,26 @@ function toggleLinkSidebar(show) {
         overlay.classList.remove('active');
     }
 }
+
+
+
+
+// ==================== SCHEDULE POST CHECKBOX ====================
+const scheduleCheckbox = document.getElementById('schedule-post-checkbox');
+const scheduleFields = document.getElementById('create-schedule-fields');
+const scheduleCreateButton = document.getElementById('schedule-create-btn');
+const publishButton = document.getElementById('publish-post-btn');
+
+scheduleCheckbox.addEventListener('change', () => {
+    const scheduled = scheduleCheckbox.checked;
+
+    scheduleFields.classList.toggle('hidden', !scheduled);
+    scheduleCreateButton.classList.toggle('hidden', !scheduled);
+    publishButton.classList.toggle('hidden', scheduled);
+});
+
+
+
 
 
 showLinkBtn.addEventListener('click', () => toggleLinkSidebar(true));
@@ -892,6 +912,7 @@ document.getElementById('link-instagram-btn').addEventListener('click', async ()
     }
 }); */
 
+
 //discord: Link account
 document.getElementById('link-discord-btn').addEventListener('click', async () => {
     const label = document.getElementById('discord-label').value.trim();
@@ -939,8 +960,8 @@ function showStatus(message, type) {
     if (!statusBar || !statusText) return;
     statusText.textContent = message;
     statusBar.classList.remove('hidden');
-    statusBar.classList.remove('success', 'error', 'info');
-    statusBar.classList.add(type);
+    statusText.classList.remove('success', 'error', 'info');
+    statusText.classList.add(type);
 
     setTimeout(() => {
         statusBar.classList.add('hidden');
@@ -957,12 +978,7 @@ function showCalendarStatus(message, type) {
 
     statusText.textContent = message;
     statusBar.classList.remove('hidden');
-    statusText.classList.remove(
-        'success',
-        'error',
-        'info'
-    );
-
+    statusText.classList.remove('success', 'error', 'info');
     statusText.classList.add(type);
 
     setTimeout(() => {
@@ -1294,7 +1310,23 @@ eel.expose(clearForm);
 function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
-    document.getElementById('post-time').value = '';
+    fileNameCreate.textContent = "No file selected";
+    currentImage = null;
+    updateAllPreviews();
+    updateCounters();
+    syncSidebarHeight();
+}
+
+eel.expose(clearForm);
+function clearCreateScheduleForm() {
+    document.getElementById('post-header').value = '';
+    document.getElementById('post-body').value = '';
+    document.getElementById('create-schedule-time').value = '';
+    document.getElementById('create-schedule-date').value = '';
+    document.getElementById('schedule-post-checkbox').checked = false;
+    document.getElementById('create-schedule-fields').classList.add('hidden');
+    document.getElementById('schedule-create-btn').classList.add('hidden');
+    document.getElementById('publish-post-btn').classList.remove('hidden');
     fileNameCreate.textContent = "No file selected";
     currentImage = null;
     updateAllPreviews();
@@ -2034,33 +2066,45 @@ async function savePost() {
 }
 
 
-async function schedulePost() {
+async function schedulePost(headerP = 'calendar-post-header', bodyP = 'calendar-post-body', dateP = 'calendar-date', timeP = 'calendar-time', imageInputIdP = 'calendar-image-input', place = 1) {
     loadScheduledPosts();
 
-    const header = document.getElementById('calendar-post-header').value;
-    const body = document.getElementById('calendar-post-body').value;
-    const date = document.getElementById('calendar-date').value;
-    const time = document.getElementById('calendar-time').value;
+    const header = document.getElementById(headerP).value;
+    const body = document.getElementById(bodyP).value;
+    const date = document.getElementById(dateP).value;
+    const time = document.getElementById(timeP).value;
 
     const scheduled_time = `${date}T${time}`;
     const selectedAccounts = getSelectedAccountsPayload();
 
     if (!header && !body) {
-        showCalendarStatus('Please add a header or body to your post', 'error');
+        if (place === 1) {
+            showCalendarStatus('Please add a header or body to your post', 'error');
+        } else {
+            showStatus('Please add a header or body to your post', 'error');
+        }
         return;
     }
 
     if (selectedAccounts.length === 0) {
-        showCalendarStatus('Select at least one account before saving', 'error');
+        if (place === 1) {
+            showCalendarStatus('Select at least one account before saving', 'error');
+        } else {             
+            showStatus('Select at least one account before saving', 'error');
+        }
         return;
     }
 
     if (!date || !time) {
-        showCalendarStatus('Select a scheduled time before saving', 'error');
+        if (place === 1) {
+            showCalendarStatus('Select a scheduled date and time before saving', 'error');
+        } else {
+            showStatus('Select a scheduled date and time before saving', 'error');
+        }
         return;
     }
 
-    const fileInput = document.getElementById('calendar-image-input');
+    const fileInput = document.getElementById(imageInputIdP);
     let imageData = null;
     let imageName = null;
 
@@ -2075,28 +2119,60 @@ async function schedulePost() {
                 resolve();
             };
         });
+    } 
+    
+    if (editingPostId && fileInput.files.length === 0) {
+        const result = await eel.get_scheduled_post(editingPostId)();
+        const post = result.post;
+        imageData = post.image_preview || null;
+        imageName = post.image || null;
     }
 
-    showCalendarStatus('Saving post...', 'info');
+    if (place === 1) {
+        showCalendarStatus('Saving post...', 'info');
+    } else {
+        showStatus('Saving post...', 'info');
+    }
+
     try {
         const result = await eel.save_post(header, body, selectedAccounts, scheduled_time, imageData, imageName, editingPostId)();
 
         if (result && result.success) {
             const successMessage = result.message || 'Post saved successfully';
-            showCalendarStatus(successMessage, 'success');
-            clearCalendarForm();
+
+            if (place === 1) {
+                showCalendarStatus(successMessage, 'success');
+                clearCalendarForm();
+            } else {
+                showStatus(successMessage, 'success');
+                clearCreateScheduleForm();
+            }
+
             selectAllAccounts();
             editingPostId = null;
             return;
         }
-        showCalendarStatus((result && result.message) || 'Error saving post', 'error');
+
+        if (place === 1) {
+            showCalendarStatus((result && result.message) || 'Error saving post', 'error');
+        } else {
+            showStatus((result && result.message) || 'Error saving post', 'error');
+        }
+
     } catch (err) {
-        showCalendarStatus('Error saving post: ' + err, 'error');
+        if (place === 1) {
+            showCalendarStatus('Error saving post: ' + err, 'error');
+        } else {
+            showStatus('Error saving post: ' + err, 'error');
+        }
     }
 }
+
+
 // ------------------------------------------------------------------
 // Exportar / Importar
 // ------------------------------------------------------------------
+
 // Esperar a que el DOM esté cargado
 document.addEventListener('DOMContentLoaded', () => {
     // Botón Exportar

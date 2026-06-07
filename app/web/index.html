@@ -80,7 +80,39 @@
                     <span id="file-name">No file selected</span>
                 </div>
 
-                <button class="post-button" onclick="createPost()">
+                <div class="form-divider"></div>
+
+                <div class="schedule-toggle">
+                    <label class="schedule-checkbox">
+                        <input type="checkbox" id="schedule-post-checkbox">
+                        <span class="schedule-slider"></span>
+                        <span class="schedule-text">Schedule this post</span>
+                    </label>
+                </div>
+
+                <div id="create-schedule-fields" class="hidden">
+
+                    <div class="calendar-row">
+
+                        <div class="calendar-form-group">
+                            <label>Date</label>
+                            <input type="date" id="create-schedule-date">
+                        </div>
+
+                        <div class="calendar-form-group">
+                            <label>Time</label>
+                            <input type="time" id="create-schedule-time">
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <button id="schedule-create-btn" type="button" class="calendar-post-button hidden" onclick="schedulePost('post-header', 'post-body', 'create-schedule-date', 'create-schedule-time', 'image-input', 2)">
+                    Schedule Post
+                </button>
+
+                <button id="publish-post-btn" class="post-button" onclick="createPost()">
                     Publish Post
                 </button>
                 
@@ -439,7 +471,7 @@
                         <span id="calendar-file-name"> No file selected </span>
                     </div>
 
-                    <button type="button" class="calendar-post-button" onclick="schedulePost()">
+                    <button type="button" id="calendar-schedule-btn" class="calendar-post-button" onclick="schedulePost()">
                         Schedule Post
                     </button>
 
