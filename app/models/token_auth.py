@@ -44,7 +44,11 @@ class Token:
     site_id: Optional[str] = None
     server: Optional[str] = None
     subreddit: Optional[str] = None
+    webhook_url: Optional[str] = None   # for Discord
 
+    facebook_page_id: Optional[str] = None
+    facebook_page_token: Optional[str] = None
+    instagram_user_id: Optional[str] = None
 
 
     def to_dict(self):
@@ -81,5 +85,9 @@ class Token:
             "client_secret": self.client_secret,
             "site_id": self.site_id,
             "server": self.server,
-            "subreddit": self.subreddit
+            "subreddit": self.subreddit,
+            "facebook_page_id": self.facebook_page_id,
+            "facebook_page_token": self.facebook_page_token,
+            "instagram_user_id": self.instagram_user_id,
+            "webhook_url": self.webhook_url
         }
