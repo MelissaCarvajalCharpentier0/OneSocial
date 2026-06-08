@@ -298,6 +298,46 @@
                     </div>
                 </div>
 
+                <!-- Facebook Section -->
+                <div class="link-section">
+                    <button id="toggle-facebook-form" class="link-provider-btn">
+                        <span>Facebook</span>
+                        <span class="expand-icon">▼</span>
+                    </button>
+                    <div id="facebook-form" class="link-form hidden-form">
+                        <div class="form-group">
+                            <label>Display Name</label>
+                            <input type="text" id="fb-username" placeholder="Display name for this account">
+                        </div>
+                        <div class="form-group">
+                            <label>Client ID</label>
+                            <input type="text" id="fb-client-id" placeholder="Facebook Client ID">
+                        </div>
+                        <div class="form-group">
+                            <label>Client Secret</label>
+                            <input type="text" id="fb-client-secret" placeholder="Facebook Client Secret">
+                        </div>
+                        <button id="get-facebook-url-btn" class="secondary-btn">Connect & Get URL</button>
+
+                        <div class="form-group">
+                            <label>Auth Code (If Prompted)</label>
+                            <input type="text" id="fb-code" placeholder="Paste the code from OAuth">
+                        </div>
+
+                        <button id="load-facebook-pages-btn" class="secondary-btn">Load Pages</button>
+
+                        <div class="form-group">
+                            <label>Facebook Page</label>
+                            <select id="fb-page-select">
+                                <option value="">Auto (first available)</option>
+                            </select>
+                        </div>
+
+                        <button id="link-facebook-btn" class="link-action-btn">Link with Auth Code</button>
+                        <div id="facebook-status" class="link-status"></div>
+                    </div>
+                </div>
+
                 <!-- Instagram Section -->
                 <div class="link-section">
                     <button id="toggle-instagram-form" class="link-provider-btn">
