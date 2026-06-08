@@ -1,0 +1,693 @@
+"""
+
+=============================================================================================
+
+Name: post_on_socials.py
+Description: Module for handling the creation of posts and their publication on social media platforms.
+Author: Pamela Fernández, Josue Soto
+Date: March 2026
+Version: 1.1
+
+=============================================================================================
+
+"""
+
+import mimetypes
+
+from mastodon import Mastodon
+from pathlib import Path
+
+import requests
+
+from atproto import Client
+from atproto_client.exceptions import UnauthorizedError, BadRequestError, NetworkError, RequestException, InvokeTimeoutError, LoginRequiredError
+
+from models.app_errors import ApiError, InputValueError, PublishError
+from auth.reddit_auth import ensure_reddit_token
+
+from requests.auth import HTTPBasicAuth
+
+
+####################### -<<[]>>-- #######################
+#################### GLOBAL VARIABLES ###################
+####################### -<<[]>>-- #######################
+
+
+#REDDIT_SUBMIT_URL = "https://oauth.reddit.com/api/submit"
+#REDDIT_USER_AGENT = "OneSocial/1.0 (by /u/onesocial)"
+
+LINKEDIN_POST_URL = ("https://api.linkedin.com/v2/ugcPosts")
+
+
+
+
+####################### MASTONDON #######################
+
+
+def upload_post_mastodon(text: str, image_path: Path, account):
+    """
+    - Input: 
+        - text: str - The text content of the post.
+        - image_path: Path - The file path to the image to be uploaded.
+        - account: Token - The account object containing authentication details.
+    - Description: 
+        - Uploads a post to Mastodon with the given text and image. It first ensures that the account 
+        has a valid access token, then it uploads the image and creates a new status with the text and the media ID of the uploaded image.
+    """
+
+    try:
+        mastodon = Mastodon(
+            access_token=account.access_token,
+            api_base_url=f"https://{account.server}"
+        )
+
+        media = mastodon.media_post(image_path)
+        mastodon.status_post(text, media_ids=[media])
+    except Exception as error:
+        raise PublishError("No se pudo publicar en Mastodon.") from error
+
+
+def upload_post_mastodon_text(text: str, account):
+    """
+    - Input: 
+        - text: str - The text content of the post.
+        - account: Token - The account object containing authentication details.
+    - Description: 
+        - Uploads a text-only post to Mastodon. It ensures that the account has a valid access token and then creates a new status with the provided text.
+    """
+    if not account.access_token:
+        raise InputValueError("No hay access_token. Debes autenticar primero.")
+    
+    try:
+        mastodon = Mastodon(
+            access_token=account.access_token,
+            api_base_url=f"https://{account.server}"
+        )
+
+        mastodon.status_post(text)
+    except Exception as error:
+        raise PublishError("No se pudo publicar el texto en Mastodon.") from error
+
+
+####################### WORDPRESS #######################
+
+
+def publish_post_wordpress(account, title, content):
+    """
+    - Input: 
+        - account: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.
+        - content: str - The content of the post to be published.
+    - Output: 
+        - response.json(): dict - The JSON response from the WordPress API after attempting to publish the post, 
+        containing details of the created post if successful.
+    - Description: 
+        - Publishes a post to WordPress using the provided account, title, and content. It constructs the appropriate 
+        API endpoint URL using the site ID obtained from the account's access token, sets the necessary headers for 
+        authentication, and sends a POST request with the post data. If the request is successful, it returns the JSON 
+        response containing details of the created post; otherwise, it prints an error message and returns None.
+    """
+
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{int(account.site_id)}/posts/new"
+
+    headers = {
+        "Authorization": f"Bearer {account.access_token}"
+    }
+
+    data = {
+        "title": title,
+        "content": content,
+        "status": "publish"
+    }
+
+    try:
+        response = requests.post(url, headers=headers, data=data, timeout=30)
+    except requests.RequestException as error:
+        raise ApiError("No se pudo publicar el post en WordPress.") from error
+
+    if response.status_code != 200:
+        raise PublishError(f"Error publicando en WordPress: {response.text}")
+
+    return response.json()
+
+
+def upload_image_wp(token, site, image_path):
+    """
+    - Input: 
+        - token: str - The access token for authenticating with the WordPress API.
+        - site: str - The ID of the WordPress site where the image will be uploaded
+        - image_path: Path - The file path to the image to be uploaded.
+    - Output: 
+        - response.json(): dict - The JSON response from the WordPress API after attempting to upload the image, 
+        containing details of the uploaded media if successful.
+    - Description: 
+        - Uploads an image to WordPress using the provided access token, site ID, and image file path. It constructs the appropriate 
+        API endpoint URL for media upload, sets the necessary headers for authentication, and sends a POST request with the image file. 
+        The function determines the MIME type of the image based on its file extension and includes it in the request. If the request is successful, 
+        it returns the JSON response containing details of the uploaded media; otherwise, it prints an error message and returns None.
+    """
+
+    url = f"https://public-api.wordpress.com/rest/v1.1/sites/{site}/media/new"
+
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+
+    mime_type, _ = mimetypes.guess_type(image_path)
+
+    try:
+        with open(image_path, "rb") as img:
+            response = requests.post(
+                url,
+                headers=headers,
+                files={
+                    'media[]': (image_path.name, img, mime_type)
+                },
+                timeout=30,
+            )
+    except OSError as error:
+        raise PublishError(f"No se pudo leer la imagen para WordPress: {image_path}") from error
+    except requests.RequestException as error:
+        raise ApiError("No se pudo subir la imagen a WordPress.") from error
+
+    if response.status_code != 200:
+        raise PublishError(f"Error subiendo imagen a WordPress: {response.text}")
+
+    return response.json()
+
+
+def publish_post_wordpress_with_image(account, title, content, image_path):
+    """
+    - Input: 
+        - account: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+        - image_path: Path - The file path to the image to be included in the post
+    - Output: 
+        - response.json(): dict - The JSON response from the WordPress API after attempting to publish the post with the image, 
+        containing details of the created post if successful.
+    - Description: 
+        - Publishes a post to WordPress with an image using the provided account, title, content, and image file path. 
+        The function first uploads the image to WordPress and retrieves its URL. It then constructs the post content by 
+        embedding the image URL in an HTML <img> tag followed by the original content. Finally, it calls the publish_post_wordpress
+        function to create the post with the combined content. If any step fails, it prints an error message and returns None.
+    """
+
+    try:
+        media = upload_image_wp(account.access_token, int(account.site_id), image_path)
+        image_url = media["media"][0]["URL"]
+        content_with_image = f'<img src="{image_url}" /><br>{content}'
+        return publish_post_wordpress(account, title, content_with_image)
+    except PublishError:
+        raise
+    except (KeyError, IndexError, TypeError, AttributeError) as error:
+        raise PublishError("La API de WordPress devolvió una respuesta inesperada al subir la imagen.") from error
+
+
+def publish_post_wordpress_with_featured_image(account, title, content, image_path):
+    """
+    - Input: 
+        - account: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+        - image_path: Path - The file path to the image to be set as the featured image of the post
+    - Output: 
+        - response.json(): dict - The JSON response from the WordPress API after attempting to publish 
+        the post with the featured image, containing details of the created post if successful.
+    - Description: 
+        - Publishes a post to WordPress with a featured image using the provided account, title, content, 
+        and image file path. The function first uploads the image to WordPress and retrieves its media ID. 
+        It then constructs the post data to include the title, content, and the media ID as the featured image. 
+        Finally, it sends a POST request to create the post with the specified details.
+    """
+
+    try:
+        media = upload_image_wp(account.access_token, int(account.site_id), image_path)
+        media_id = media["media"][0]["ID"]
+        url = f"https://public-api.wordpress.com/rest/v1.1/sites/{int(account.site_id)}/posts/new"
+
+        headers = {
+            "Authorization": f"Bearer {account.access_token}"
+        }
+
+        data = {
+            "title": title,
+            "content": content,
+            "status": "publish",
+            "featured_image": media_id
+        }
+
+        response = requests.post(url, headers=headers, data=data, timeout=30)
+    except PublishError:
+        raise
+    except requests.RequestException as error:
+        raise ApiError("No se pudo publicar el post con imagen destacada en WordPress.") from error
+    except (KeyError, IndexError, TypeError, AttributeError) as error:
+        raise PublishError("La API de WordPress devolvió una respuesta inesperada al subir la imagen destacada.") from error
+
+    if response.status_code != 200:
+        raise PublishError(f"Error publicando en WordPress: {response.text}")
+    return response.json()
+
+
+####################### REDDIT #######################
+
+
+def publish_post_reddit_text(title: str, text: str, account):
+    """
+    - Input:
+        - title: str - The title of the Reddit post.
+        - text: str - The body content of the Reddit post.
+        - account: Account - The account object containing authentication details.
+    - Description:
+        - Publishes a text-only post to the configured subreddit for the account.
+    """
+
+    if not account.subreddit:
+        raise InputValueError("Falta el subreddit para Reddit.")
+
+    if not title:
+        raise InputValueError("Reddit requiere un titulo.")
+
+    access_token = ensure_reddit_token(account)
+
+    data = {
+        "sr": account.subreddit,
+        "kind": "self",
+        "title": title,
+        "text": text or "",
+    }
+
+    try:
+        response = requests.post(
+            REDDIT_SUBMIT_URL,
+            headers={
+                "Authorization": f"bearer {access_token}",
+                "User-Agent": REDDIT_USER_AGENT,
+            },
+            data=data,
+            timeout=30,
+        )
+    except requests.RequestException as error:
+        raise ApiError("No se pudo publicar en Reddit.") from error
+
+    if response.status_code != 200:
+        raise PublishError(f"Error publicando en Reddit: {response.text}")
+
+    payload = response.json()
+    errors = payload.get("json", {}).get("errors", [])
+    if errors:
+        raise PublishError(f"Error publicando en Reddit: {errors}")
+
+    return payload
+
+
+####################### WORDPRESSREST #######################
+
+
+def verify_wordpress_rest(account):
+    """
+    Verify the REST API credentials by fetching the current user.
+    Raises an exception on failure.
+    """
+    url = f"{account.base_url}/wp-json/wp/v2/users/me"
+
+    headers = {
+        "User-Agent": "OneSocial/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    # Disable the Expect header (causes 417/412 on some servers)
+    session = requests.Session()
+    session.trust_env = False  # avoid system proxy issues
+
+    resp = session.get(
+        url,
+        auth=HTTPBasicAuth(account.username, account.password),
+        headers=headers,
+        timeout=15
+    )
+
+    if resp.status_code != 200:
+        # Add a bit more diagnostic info
+        detail = resp.text[:200] if resp.text else "No response body"
+        raise Exception(
+            f"Verification failed: HTTP {resp.status_code}. "
+            f"Reason: {resp.reason}. Detail: {detail}"
+        )
+
+    return True
+
+
+def publish_post_wordpress_rest(account, title, content, image_path=None):
+    wp_url = f"{account.base_url}/wp-json/wp/v2"
+    headers = {
+        "User-Agent": "OneSocial/1.0",
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    session = requests.Session()
+    session.trust_env = False
+
+    # 1. Create the post
+    post_data = {
+        "title": title,
+        "content": content,
+        "status": "publish"
+    }
+    r = session.post(
+        f"{wp_url}/posts",
+        json=post_data,
+        auth=HTTPBasicAuth(account.username, account.password),
+        headers=headers,
+        timeout=30
+    )
+    if r.status_code not in (200, 201):
+        raise Exception(f"Post creation failed: {r.status_code} {r.text}")
+
+    post_id = r.json()["id"]
+
+    # 2. Upload image if provided
+    if image_path:
+        image_path = Path(image_path)
+        if image_path.is_file():
+            media_url = f"{wp_url}/media"
+            with open(image_path, 'rb') as img:
+                mime = f"image/{image_path.suffix[1:]}"
+                files = {'file': (image_path.name, img, mime)}
+                r_media = session.post(
+                    media_url,
+                    files=files,
+                    auth=HTTPBasicAuth(account.username, account.password),
+                    headers={"User-Agent": "OneSocial/1.0"},  # no Content-Type here (multipart sets it)
+                    timeout=30
+                )
+            if r_media.status_code not in (200, 201):
+                raise Exception(f"Image upload failed: {r_media.status_code} {r_media.text}")
+
+            media_id = r_media.json()["id"]
+
+            # Set featured image
+            featured_data = {"featured_media": media_id}
+            session.post(
+                f"{wp_url}/posts/{post_id}",
+                json=featured_data,
+                auth=HTTPBasicAuth(account.username, account.password),
+                headers=headers
+            )
+
+
+######################## BLUESKY ########################
+
+
+def publish_post_bluesky(token, title, content, image_path):
+    """
+    - Input: 
+        - token: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+        - image_path: Path - The file path to the image to be set as the featured image of the post
+    - Description: 
+        - Publishes a post to Bluesky with an image using the provided account, title, content, 
+        and image file path.
+    """
+
+    if title: # Title not None
+        text = f"{title}\n{content}"
+    else:
+        text = f"{content}"
+
+    try:
+        with open(image_path, 'rb') as file:
+            data = file.read()
+
+    except Exception as error:
+        raise InputValueError("Error loading image.")
+
+
+    try:
+        client = Client()
+        client.login(token.username, token.password)
+        client.send_image(text=text, image=data, image_alt='')
+    
+    except UnauthorizedError:
+        raise InputValueError("Access denied.")
+    except BadRequestError:
+        raise ApiError("Invalid request for bluesky. Check post length or content.")
+    except InvokeTimeoutError:
+        raise ApiError("No response from Bluesky API.")
+    except (NetworkError, RequestException):
+        raise ApiError("Could not reach Bluesky/ATProto server.")
+    except LoginRequiredError:
+        raise ApiError("Bluesky login failed or session was not created.")
+    except Exception as error:
+        raise ApiError("Unexpected error while posting to Bluesky.") from error
+
+
+def publish_post_bluesky_text(token, title, content):
+    """
+    - Input: 
+        - token: Token - The account object containing authentication details.
+        - title: str - The title of the post to be published.   
+        - content: str - The content of the post to be published.
+    - Description: 
+        - Publishes an only text post to Bluesky using the provided account, title and content.
+    """
+
+    if title: # Title not None
+        text = f"{title}\n{content}"
+    else:
+        text = f"{content}"
+
+    try:
+        client = Client()
+        client.login(token.username, token.password)
+        client.send_post(text)
+    
+    except UnauthorizedError:
+        raise InputValueError("Access denied.")
+    except BadRequestError:
+        raise ApiError("Invalid request for bluesky. Check post length or content.")
+    except InvokeTimeoutError:
+        raise ApiError("No response from Bluesky API.")
+    except (NetworkError, RequestException):
+        raise ApiError("Could not reach Bluesky/ATProto server.")
+    except LoginRequiredError:
+        raise ApiError("Bluesky login failed or session was not created.")
+    except Exception as error:
+        raise ApiError("Unexpected error while posting to Bluesky.") from error
+
+
+####################### LinkedIn #######################
+
+
+def publish_post_linkedin_text(account, text):
+    """
+    - Input:
+        - account: Token - The account object containing authentication details.
+        - text: str - The text content of the post to be published.
+    - Output:
+        - dict: A dictionary containing the success status, message, and post ID if the post was published successfully.
+    - Description:
+        - Publishes a text-only post to LinkedIn using the provided account and text. 
+    """
+
+    headers = {
+        "Authorization":
+            f"Bearer {account.access_token}",
+
+        "X-Restli-Protocol-Version":
+            "2.0.0",
+
+        "Content-Type":
+            "application/json"
+    }
+
+    payload = {
+        "author":
+            f"urn:li:person:{account.provider_user_id}",
+
+        "lifecycleState":
+            "PUBLISHED",
+
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {
+                    "text": text
+                },
+                "shareMediaCategory":
+                    "NONE"
+            }
+        },
+
+        "visibility": {
+
+            "com.linkedin.ugc.MemberNetworkVisibility":
+                "PUBLIC"
+        }
+    }
+
+    response = requests.post(
+        LINKEDIN_POST_URL,
+        headers=headers,
+        json=payload
+    )
+
+    if response.status_code != 201:
+        raise PublishError(
+            "Failed to publish LinkedIn post:\n"
+            f"{response.text}"
+        )
+
+    return {
+        "success": True,
+        "message": "LinkedIn post published",
+        "post_id":
+            response.headers.get(
+                "x-restli-id"
+            )
+    }
+
+
+def publish_post_linkedin_with_image(account, text, image_path):
+    """
+    - Input:
+        - account: Token - The account object containing authentication details.
+        - text: str - The text content of the post to be published.
+        - image_path: Path - The file path to the image to be included in the post.
+    - Output:
+        - dict: A dictionary containing the success status and post ID if the post was published successfully.
+    - Description:
+        - Publishes a post with an image to LinkedIn using the provided account, text, and image file path. 
+    """
+
+    headers = {
+        "Authorization":
+            f"Bearer {account.access_token}",
+
+        "X-Restli-Protocol-Version":
+            "2.0.0",
+
+        "Content-Type":
+            "application/json"
+    }
+
+    register_payload = {
+        "registerUploadRequest": {
+            "recipes": [
+                "urn:li:digitalmediaRecipe:feedshare-image"
+            ],
+            "owner":
+                f"urn:li:person:{account.provider_user_id}",
+            "serviceRelationships": [
+                {
+                    "relationshipType":
+                        "OWNER",
+
+                    "identifier":
+                        "urn:li:userGeneratedContent"
+                }
+            ]
+        }
+    }
+
+    register_response = requests.post(
+        "https://api.linkedin.com/v2/assets?action=registerUpload",
+        headers=headers,
+        json=register_payload
+    )
+
+    if register_response.status_code != 200:
+        raise PublishError(
+            "Failed to register "
+            "LinkedIn image upload:\n"
+            f"{register_response.text}"
+        )
+
+    register_data = register_response.json()
+
+    upload_info = (
+        register_data["value"]
+        ["uploadMechanism"]
+        ["com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest"]
+    )
+
+    upload_url = upload_info["uploadUrl"]
+    asset = register_data["value"]["asset"]
+
+    with open(image_path, "rb") as image_file:
+        upload_response = requests.put(
+            upload_url,
+            data=image_file,
+            headers={
+                "Authorization":
+                    f"Bearer {account.access_token}"
+            }
+        )
+
+    if upload_response.status_code not in [200, 201]:
+        raise PublishError(
+            "Failed to upload "
+            "LinkedIn image:\n"
+            f"{upload_response.text}"
+        )
+
+    post_payload = {
+        "author":
+            f"urn:li:person:{account.provider_user_id}",
+
+        "lifecycleState":
+            "PUBLISHED",
+
+        "specificContent": {
+            "com.linkedin.ugc.ShareContent": {
+                "shareCommentary": {
+                    "text": text
+                },
+                "shareMediaCategory":
+                    "IMAGE",
+                "media": [
+                    {
+                        "status":
+                            "READY",
+                        "description": {
+                            "text": text
+                        },
+                        "media":
+                            asset,
+                        "title": {
+                            "text": "OneSocial"
+                        }
+                    }
+                ]
+            }
+        },
+
+        "visibility": {
+            "com.linkedin.ugc.MemberNetworkVisibility":
+                "PUBLIC"
+        }
+    }
+
+    post_response = requests.post(
+        LINKEDIN_POST_URL,
+        headers=headers,
+        json=post_payload
+    )
+
+    if post_response.status_code != 201:
+        raise PublishError(
+            "Failed to publish "
+            "LinkedIn image post:\n"
+            f"{post_response.text}"
+        )
+
+    return {
+        "success": True,
+        "post_id":
+            post_response.headers.get(
+                "x-restli-id"
+            )
+    }

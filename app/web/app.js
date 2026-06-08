@@ -1,14 +1,7 @@
-const fileInputCreate = document.getElementById('image-input');
-const fileInputSchedule = document.getElementById('calendar-image-input');
-const fileNameCreate = document.getElementById('file-name');
-const fileNameSchedule = document.getElementById('calendar-file-name');
+const fileInput = document.getElementById('image-input');
+const fileName = document.getElementById('file-name');
 const overlay = document.getElementById('overlay');
 let currentImage = null;
-let currentEditingImage = null;
-let publishResults = [];
-let instagramTokenPayload = null;
-let facebookTokenPayload = null;
-let editingPostId = null;
 
 const accountState = {
     accountsByProvider: {},
@@ -27,416 +20,27 @@ function escapeHTML(value) {
         .replaceAll("'", '&#39;');
 }
 
-fileInputCreate.addEventListener('change', () => {
-    if (fileInputCreate.files.length > 0) {
-        const file = fileInputCreate.files[0];
-        fileNameCreate.textContent = file.name;
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        fileName.textContent = file.name;
 
         const reader = new FileReader();
         reader.onload = function (e) {
             currentImage = e.target.result;
-            updateAllPreviews();
+            updatePreview(); 
         };
 
         reader.readAsDataURL(file);
 
     } else {
-        fileNameCreate.textContent = "No file selected";
+        fileName.textContent = "No file selected";
         currentImage = null;
-        updateAllPreviews();
+        updatePreview();
     }
 
     syncSidebarHeight();
 });
-
-fileInputSchedule.addEventListener('change', () => {
-    if (fileInputSchedule.files.length > 0) {
-        const file = fileInputSchedule.files[0];
-        fileNameSchedule.textContent = file.name;
-
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            currentImage = e.target.result;
-            updateAllPreviews();
-        };
-
-        reader.readAsDataURL(file);
-
-    } else {
-        fileNameSchedule.textContent = "No file selected";
-        currentImage = null;
-        updateAllPreviews();
-    }
-
-    syncSidebarHeight();
-});
-
-
-function selectAllAccounts() {
-    accountState.selected.clear();
-
-    getAllAccountObjects().forEach(({ provider, username }) => {
-
-        accountState.selected.add(
-            accountKey(provider, username)
-        );
-    });
-
-    renderAccounts();
-    renderCalendarAccounts();
-    renderSummary();
-    renderSummary('calendar-account-summary');
-    updateAllPreviews();
-}
-
-function resetPublishStatusCalendar() {
-    const statusBar = document.getElementById('calendar-publish-status-bar');
-    const statusText = document.getElementById('calendar-publish-status-text');
-    statusText.textContent = 'Ready';
-
-    statusText.classList.remove(
-        'success',
-        'error',
-        'info'
-    );
-
-    statusBar.classList.add('hidden');
-}
-
-// ==================== NAVBAR ====================
-const navButtons = document.querySelectorAll(".nav-btn");
-const views = document.querySelectorAll(".view");
-
-navButtons.forEach(button => {
-    button.addEventListener("click", () => {
-        loadScheduledPosts();
-        const targetView = button.dataset.view;
-        navButtons.forEach(btn => {
-            btn.classList.remove("active");
-        });
-
-        button.classList.add("active");
-
-        views.forEach(view => {
-            view.classList.add("hidden-view");
-        });
-
-        document
-            .getElementById(targetView)
-            .classList.remove("hidden-view");
-
-    });
-
-});
-
-
-// ==================== SCHEDULE EDITOR ====================
-
-const openScheduleEditorBtn = document.getElementById('open-schedule-editor-btn');
-const closeEditorBtn = document.getElementById('close-editor-btn');
-const scheduleEditorSection = document.getElementById('schedule-editor-section');
-const calendarTopbar = document.querySelector('.calendar-topbar');
-const scheduledSection = document.querySelector('.scheduled-section');
-
-openScheduleEditorBtn.addEventListener('click', () => {
-    scheduleEditorSection.classList.remove('hidden');
-    calendarTopbar.classList.add('hidden');
-    scheduledSection.classList.add('hidden');
-
-});
-
-closeEditorBtn.addEventListener('click', () => {
-    scheduleEditorSection.classList.add('hidden');
-    calendarTopbar.classList.remove('hidden');
-    scheduledSection.classList.remove('hidden');
-
-    resetPublishStatusCalendar();
-    const scheduleBtn = document.querySelector('.calendar-post-button');
-    scheduleBtn.textContent = 'Schedule Post';
-
-    loadScheduledPosts();
-    clearCalendarForm();
-    selectAllAccounts();
-});
-
-
-// ==================== LOADING SCHEDULED POSTS ====================
-
-function formatScheduledDate(date, time) {
-    const fullDate = new Date(`${date}T${time}`);
-
-    return fullDate.toLocaleString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        hour: 'numeric',
-        minute: '2-digit'
-    }).replace(',', ' •');
-}
-
-async function loadScheduledPosts() {
-    const container = document.getElementById('scheduled-post-list');
-
-    // Clean container before loading new posts
-    container.innerHTML = '';
-
-    try {
-        const response = await eel.get_scheduled_posts()();
-        
-        if (!response.success) {
-            container.innerHTML = `
-                <div class="scheduled-empty">
-                    Failed to load scheduled posts
-                </div>
-            `;
-            return;
-        }
-
-        const posts = response.posts;
-
-        // No scheduled posts
-        if (posts.length === 0) {
-            container.innerHTML = `
-                <div class="scheduled-empty">
-                    No scheduled posts
-                </div>
-            `;
-            return;
-        }
-
-        posts.forEach(post => {
-
-            // Map provider names to abbreviations
-            const providerStyles = {
-                Mastodon: {
-                    icon: 'icons/Mastodon_logo.png',
-                    border: '#6364FF',
-                    group: 'mastodon'
-                },
-
-                WordPress: {
-                    icon: 'icons/WordPress_logo.png',
-                    border: '#21759B',
-                    group: 'wordpress'
-                },
-
-                WordPressREST: {
-                    icon: 'icons/WordPress_logo.png',
-                    border: '#21759B',
-                    group: 'wordpress'
-                },
-
-                Bluesky: {
-                    icon: 'icons/Bluesky_logo.png',
-                    border: '#1184FE',
-                    group: 'bluesky'
-                },
-
-                LinkedIn: {
-                    icon: 'icons/LinkedIn_logo.png',
-                    border: '#0077B5',
-                    group: 'linkedin'
-                },
-
-                Instagram: {
-                    icon: 'icons/Instagram_logo.png',
-                    border: '#E4405F',
-                    group: 'instagram'
-                },
-
-                Facebook: {
-                    icon: 'icons/Facebook_logo.png',
-                    border: '#1877F2',
-                    group: 'facebook'
-                },
-
-                Discord: {
-                    icon: 'icons/Discord_logo.png',
-                    border: '#5865F2',
-                    group: 'discord'
-                }
-            };
-
-            const uniqueGroups = [
-                ...new Set(
-                    (post.selected_accounts || [])
-                        .map(account => providerStyles[account.provider]?.group)
-                        .filter(Boolean)
-                )
-            ];
-
-            const platformIcons = uniqueGroups
-                .map(group => {
-
-                    const style = Object.values(providerStyles)
-                        .find(item => item.group === group);
-
-                    if (!style) return '';
-
-                    return `
-                        <div 
-                            class="scheduled-platform-icon"
-                            style="border-color: ${style.border};"
-                        >
-                            <img src="${style.icon}" alt="${group}">
-                        </div>
-                    `;
-                })
-                .join('');
-
-            //  Date formatting
-            const formattedDate = formatScheduledDate(post.date, post.time);
-
-            const card = document.createElement('div');
-            card.className = 'scheduled-card';
-            card.dataset.postId = post.id;
-
-            card.innerHTML = `
-                <div class="scheduled-card-top">
-                    <div class="scheduled-card-date">
-                        ${formattedDate}
-                    </div>
-
-                    <div class="scheduled-platforms">
-                        ${platformIcons}
-                    </div>
-                </div>
-
-                <div class="scheduled-card-title">
-                    ${post.header}
-                </div>
-
-                <div class="scheduled-card-body">
-                    ${post.body}
-                </div>
-
-                <div class="scheduled-card-actions">
-                    <button class="scheduled-edit-btn" data-id="${post.id}">
-                        Edit
-                    </button>
-
-                    <button class="scheduled-delete-btn" data-id="${post.id}">
-                        Delete
-                    </button>
-                </div>
-            `;
-
-            container.appendChild(card);
-        });
-
-    } catch (error) {
-        console.error(error);
-
-        container.innerHTML = `
-            <div class="scheduled-empty">
-                Unexpected error
-            </div>
-        `;
-    }
-}
-
-
-
-// ==================== SCHEDULED POSTS: Edit/Delete ====================
-
-document.addEventListener('click', async (e) => {
-
-    // DELETE
-    const deleteBtn = e.target.closest('.scheduled-delete-btn');
-
-    if (deleteBtn) {
-
-        const card = deleteBtn.closest('.scheduled-card');
-        const title = card.querySelector('.scheduled-card-title').textContent;
-        const postId = parseInt(card.dataset.postId); 
-        editingPostId = postId;
-
-        const confirmed = await openModal({
-            title: 'Delete scheduled post',
-            bodyHTML: `
-                <p>
-                    Are you sure you want to delete
-                    <b>${title}</b>?
-                </p>
-            `,
-            confirmText: 'Delete',
-            danger: true
-        });
-
-        if (!confirmed) return;
-
-        const result = await eel.delete_post(postId)();
-        if (!result.success) {
-            showStatus('Could not delete scheduled post', 'error');
-            return;
-        }
-
-        card.remove();
-
-        showStatus('Scheduled post deleted', 'success');
-        editingPostId = null;
-    }
-
-
-    // EDIT
-    const editBtn = e.target.closest('.scheduled-edit-btn');
-
-    if (editBtn) {
-        const card = editBtn.closest('.scheduled-card');
-        const postId = parseInt(card.dataset.postId);
-        editingPostId = postId;
-        const result = await eel.get_scheduled_post(postId)();
-
-        resetPublishStatusCalendar();
-
-        if (!result.success) {
-            showStatus('Could not load scheduled post', 'error');
-            return;
-        }
-
-        const post = result.post;
-        console.log('Loaded post for editing:', post);
-        accountState.selected.clear();
-
-        currentImage = post.image_preview || null;
-        const fileNameLabel = document.getElementById('calendar-file-name');
-
-        if (currentImage) {
-            fileNameLabel.textContent =
-                currentImage.split(/[\\/]/).pop();
-        } else {
-            fileNameLabel.textContent = 'No file selected';
-        }
-
-        (post.selected_accounts || []).forEach(account => {
-
-            accountState.selected.add(
-                accountKey(account.provider, account.username)
-            );
-        });
-
-        renderCalendarAccounts();
-        renderSummary('calendar-account-summary');
-
-        scheduleEditorSection.classList.remove('hidden');
-
-        calendarTopbar.classList.add('hidden');
-        scheduledSection.classList.add('hidden');
-
-        document.getElementById('calendar-post-header').value = post.header || '';
-        document.getElementById('calendar-post-body').value = post.body || '';
-        document.getElementById('calendar-date').value = post.date || '';
-        document.getElementById('calendar-time').value = post.time || '';
-
-        const scheduleBtn = document.querySelector('.calendar-post-button');
-        scheduleBtn.textContent = 'Save Changes';
-
-        updateAllPreviews();
-    }
-
-});
-
-
-
 
 // ==================== LINK ACCOUNTS SIDEBAR ====================
 const linkSidebar = document.getElementById('link-sidebar');
@@ -469,18 +73,12 @@ const blueskyToggle = document.getElementById('toggle-bluesky-form');
 // const redditToggle = document.getElementById('toggle-reddit-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
-const discordToggle = document.getElementById('toggle-discord-form');
-const facebookToggle = document.getElementById('toggle-facebook-form');
-const instagramToggle = document.getElementById('toggle-instagram-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
 const blueskyForm = document.getElementById('bluesky-form');
 // const redditForm = document.getElementById('reddit-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
-const discordForm = document.getElementById('discord-form');
-const facebookForm = document.getElementById('facebook-form');
-const instagramForm = document.getElementById('instagram-form');
 
 mastodonToggle.addEventListener('click', () => {
     mastodonForm.classList.toggle('hidden-form');
@@ -511,29 +109,11 @@ linkedinToggle.addEventListener('click', () => {
     icon.textContent = linkedinForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
-instagramToggle.addEventListener('click', () => {
-    instagramForm.classList.toggle('hidden-form');
-    const icon = instagramToggle.querySelector('.expand-icon');
-    icon.textContent = instagramForm.classList.contains('hidden-form') ? '▼' : '▲';
-});
-
 /* redditToggle.addEventListener('click', () => {
     redditForm.classList.toggle('hidden-form');
     const icon = redditToggle.querySelector('.expand-icon');
     icon.textContent = redditForm.classList.contains('hidden-form') ? '▼' : '▲';
 }); */
-
-discordToggle.addEventListener('click', () => {
-    discordForm.classList.toggle('hidden-form');
-    const icon = discordToggle.querySelector('.expand-icon');
-    icon.textContent = discordForm.classList.contains('hidden-form') ? '▼' : '▲';
-});
-
-facebookToggle.addEventListener('click', () => {
-    facebookForm.classList.toggle('hidden-form');
-    const icon = facebookToggle.querySelector('.expand-icon');
-    icon.textContent = facebookForm.classList.contains('hidden-form') ? '▼' : '▲';
-});
 
 // Mastodon: Get Auth URL & Connect
 document.getElementById('get-mastodon-url-btn').addEventListener('click', async () => {
@@ -737,284 +317,6 @@ document.getElementById('link-linkedin-btn').addEventListener('click', async () 
 });
 
 
-// Instagram: Abrir OAuth URL y conectar
-document.getElementById('get-instagram-url-btn').addEventListener('click', async () => {
-
-    const clientId = document.getElementById('ig-client-id').value.trim();
-
-    if (!clientId) {
-        showLinkStatus('instagram-status', 'Client ID required', 'error');
-        return;
-    }
-
-    try {
-        const response = await eel.connect_instagram(clientId)();
-
-        if (response.success) {
-            showLinkStatus('instagram-status', response.message, 'success');
-        } else {
-            showLinkStatus('instagram-status', response.message, 'error');
-        }
-
-    } catch (err) {
-        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
-    }
-});
-
-
-// Facebook: Abrir OAuth URL y conectar
-document.getElementById('get-facebook-url-btn').addEventListener('click', async () => {
-
-    const clientId = document.getElementById('fb-client-id').value.trim();
-
-    if (!clientId) {
-        showLinkStatus('facebook-status', 'Client ID required', 'error');
-        return;
-    }
-
-    try {
-        const response = await eel.connect_facebook(clientId)();
-
-        if (response.success) {
-            showLinkStatus('facebook-status', response.message, 'success');
-        } else {
-            showLinkStatus('facebook-status', response.message, 'error');
-        }
-
-    } catch (err) {
-        showLinkStatus('facebook-status', 'Error: ' + err, 'error');
-    }
-});
-
-
-// Facebook: Load available pages/accounts
-document.getElementById('load-facebook-pages-btn').addEventListener('click', async () => {
-    const clientId = document.getElementById('fb-client-id').value.trim();
-    const clientSecret = document.getElementById('fb-client-secret').value.trim();
-    const code = document.getElementById('fb-code').value.trim();
-    const select = document.getElementById('fb-page-select');
-
-    if (!clientId || !clientSecret || !code) {
-        showLinkStatus('facebook-status', 'Client ID, secret, and code are required', 'error');
-        return;
-    }
-
-    try {
-        showLinkStatus('facebook-status', 'Loading Facebook pages...', 'info');
-        const result = await eel.get_facebook_pages(clientId, clientSecret, code)();
-
-        if (!result || !result.success) {
-            showLinkStatus('facebook-status', result?.message || 'Failed to load pages', 'error');
-            return;
-        }
-
-        const accounts = result.accounts || [];
-        const tokenPayload = result.token_payload || null;
-
-        if (!accounts.length) {
-            facebookTokenPayload = null;
-            select.innerHTML = '<option value="">Auto (first available)</option>';
-            showLinkStatus('facebook-status', 'No Facebook Pages found for this account', 'error');
-            return;
-        }
-
-        if (tokenPayload && tokenPayload.access_token) {
-            facebookTokenPayload = {
-                access_token: tokenPayload.access_token,
-                expires_in: tokenPayload.expires_in,
-                code,
-                client_id: clientId
-            };
-        } else {
-            facebookTokenPayload = null;
-        }
-
-        select.innerHTML = '<option value="">Auto (first available)</option>';
-
-        accounts.forEach((acc) => {
-            const option = document.createElement('option');
-            option.value = acc.page_id || '';
-            option.textContent = acc.page_name || 'Facebook Page';
-            select.appendChild(option);
-        });
-
-        showLinkStatus('facebook-status', 'Pages loaded', 'success');
-    } catch (err) {
-        showLinkStatus('facebook-status', 'Error: ' + err, 'error');
-    }
-});
-
-
-// Facebook: Link account with Auth Code
-document.getElementById('link-facebook-btn').addEventListener('click', async () => {
-    const username = document.getElementById('fb-username').value.trim();
-    const clientId = document.getElementById('fb-client-id').value.trim();
-    const clientSecret = document.getElementById('fb-client-secret').value.trim();
-    const code = document.getElementById('fb-code').value.trim();
-    const selectedPageId = document.getElementById('fb-page-select').value.trim();
-
-    if (!clientId || !clientSecret || !code) {
-        showLinkStatus('facebook-status', 'Client ID, secret, and code are required', 'error');
-        return;
-    }
-
-    try {
-        showLinkStatus('facebook-status', 'Linking Facebook account...', 'info');
-        let result = null;
-
-        if (
-            facebookTokenPayload
-            && facebookTokenPayload.access_token
-            && facebookTokenPayload.code === code
-            && facebookTokenPayload.client_id === clientId
-        ) {
-            result = await eel.auth_facebook_with_token(
-                username,
-                clientId,
-                clientSecret,
-                facebookTokenPayload.access_token,
-                facebookTokenPayload.expires_in,
-                selectedPageId || null
-            )();
-        } else {
-            result = await eel.auth_facebook(
-                username,
-                clientId,
-                clientSecret,
-                code,
-                selectedPageId || null
-            )();
-        }
-
-        if (result && result.success) {
-            showLinkStatus('facebook-status', result.message || 'Facebook account linked!', 'success');
-            document.getElementById('fb-username').value = '';
-            document.getElementById('fb-client-id').value = '';
-            document.getElementById('fb-client-secret').value = '';
-            document.getElementById('fb-code').value = '';
-            document.getElementById('fb-page-select').innerHTML = '<option value="">Auto (first available)</option>';
-            facebookTokenPayload = null;
-            await loadAccounts();
-            setTimeout(() => toggleLinkSidebar(false), 1500);
-        } else {
-            showLinkStatus('facebook-status', result?.message || 'Facebook link failed', 'error');
-        }
-    } catch (err) {
-        showLinkStatus('facebook-status', 'Error: ' + err, 'error');
-    }
-});
-
-
-// Instagram: Load available pages/accounts
-document.getElementById('load-instagram-pages-btn').addEventListener('click', async () => {
-    const clientId = document.getElementById('ig-client-id').value.trim();
-    const clientSecret = document.getElementById('ig-client-secret').value.trim();
-    const code = document.getElementById('ig-code').value.trim();
-    const select = document.getElementById('ig-page-select');
-
-    if (!clientId || !clientSecret || !code) {
-        showLinkStatus('instagram-status', 'Client ID, secret, and code are required', 'error');
-        return;
-    }
-
-    try {
-        showLinkStatus('instagram-status', 'Loading Instagram pages...', 'info');
-        const result = await eel.get_instagram_pages(clientId, clientSecret, code)();
-
-        if (!result || !result.success) {
-            showLinkStatus('instagram-status', result?.message || 'Failed to load pages', 'error');
-            return;
-        }
-
-        const accounts = result.accounts || [];
-        const tokenPayload = result.token_payload || null;
-
-        if (tokenPayload && tokenPayload.access_token) {
-            instagramTokenPayload = {
-                access_token: tokenPayload.access_token,
-                expires_in: tokenPayload.expires_in,
-                code,
-                client_id: clientId
-            };
-        } else {
-            instagramTokenPayload = null;
-        }
-        select.innerHTML = '<option value="">Auto (first available)</option>';
-
-        accounts.forEach((acc) => {
-            const option = document.createElement('option');
-            option.value = acc.page_id || '';
-            option.textContent = `${acc.page_name || 'Page'} • ${acc.instagram_username || 'instagram'}`;
-            select.appendChild(option);
-        });
-
-        showLinkStatus('instagram-status', 'Pages loaded', 'success');
-    } catch (err) {
-        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
-    }
-});
-
-
-// Instagram: Link account with Auth Code
-document.getElementById('link-instagram-btn').addEventListener('click', async () => {
-    const username = document.getElementById('ig-username').value.trim();
-    const clientId = document.getElementById('ig-client-id').value.trim();
-    const clientSecret = document.getElementById('ig-client-secret').value.trim();
-    const code = document.getElementById('ig-code').value.trim();
-    const selectedPageId = document.getElementById('ig-page-select').value.trim();
-
-    if (!clientId || !clientSecret || !code) {
-        showLinkStatus('instagram-status', 'Client ID, secret, and code are required', 'error');
-        return;
-    }
-
-    try {
-        showLinkStatus('instagram-status', 'Linking Instagram account...', 'info');
-        let result = null;
-
-        if (
-            instagramTokenPayload
-            && instagramTokenPayload.access_token
-            && instagramTokenPayload.code === code
-            && instagramTokenPayload.client_id === clientId
-        ) {
-            result = await eel.auth_instagram_with_token(
-                username,
-                clientId,
-                clientSecret,
-                instagramTokenPayload.access_token,
-                instagramTokenPayload.expires_in,
-                selectedPageId || null
-            )();
-        } else {
-            result = await eel.auth_instagram(
-                username,
-                clientId,
-                clientSecret,
-                code,
-                selectedPageId || null
-            )();
-        }
-
-        if (result && result.success) {
-            showLinkStatus('instagram-status', result.message || 'Instagram account linked!', 'success');
-            document.getElementById('ig-username').value = '';
-            document.getElementById('ig-client-id').value = '';
-            document.getElementById('ig-client-secret').value = '';
-            document.getElementById('ig-code').value = '';
-            document.getElementById('ig-page-select').innerHTML = '<option value="">Auto (first available)</option>';
-            instagramTokenPayload = null;
-            await loadAccounts();
-            setTimeout(() => toggleLinkSidebar(false), 1500);
-        } else {
-            showLinkStatus('instagram-status', result?.message || 'Instagram link failed', 'error');
-        }
-    } catch (err) {
-        showLinkStatus('instagram-status', 'Error: ' + err, 'error');
-    }
-});
-
-
 // Reddit: Link account
 /* document.getElementById('link-reddit-btn').addEventListener('click', async () => {
     const username = document.getElementById('reddit-username').value.trim();
@@ -1046,31 +348,6 @@ document.getElementById('link-instagram-btn').addEventListener('click', async ()
         showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
 }); */
-//discord: Link account
-document.getElementById('link-discord-btn').addEventListener('click', async () => {
-    const label = document.getElementById('discord-label').value.trim();
-    const webhookUrl = document.getElementById('discord-webhook-url').value.trim();
-
-    if (!label || !webhookUrl) {
-        showLinkStatus('discord-status', 'Label and Webhook URL required', 'error');
-        return;
-    }
-    try {
-        showLinkStatus('discord-status', 'Linking Discord webhook...', 'info');
-        const result = await eel.connect_discord(label, webhookUrl)();
-        if (result && result.success) {
-            showLinkStatus('discord-status', result.message, 'success');
-            document.getElementById('discord-label').value = '';
-            document.getElementById('discord-webhook-url').value = '';
-            await loadAccounts();   // refresh the account list
-            setTimeout(() => toggleLinkSidebar(false), 1500);
-        } else {
-            showLinkStatus('discord-status', result?.message || 'Link failed', 'error');
-        }
-    } catch (err) {
-        showLinkStatus('discord-status', 'Error: ' + err, 'error');
-    }
-});
 
 function showLinkStatus(elementId, message, type) {
     const el = document.getElementById(elementId);
@@ -1087,41 +364,14 @@ function showLinkStatus(elementId, message, type) {
 // ==================== EXISTING ACCOUNT FUNCTIONS ====================
 eel.expose(showStatus);
 function showStatus(message, type) {
-    const statusBar = document.getElementById('publish-status-bar');
-    const statusText = document.getElementById('publish-status-text');
-
-    if (!statusBar || !statusText) return;
-    statusText.textContent = message;
-    statusBar.classList.remove('hidden');
-    statusBar.classList.remove('success', 'error', 'info');
-    statusBar.classList.add(type);
-
+    const statusDiv = document.getElementById('status');
+    statusDiv.textContent = message;
+    statusDiv.className = `status ${type}`;
+    statusDiv.classList.remove('hidden');
+    
     setTimeout(() => {
-        statusBar.classList.add('hidden');
+        statusDiv.classList.add('hidden');
     }, 3000);
-}
-
-
-eel.expose(showCalendarStatus);
-function showCalendarStatus(message, type) {
-    const statusBar = document.getElementById('calendar-publish-status-bar');
-    const statusText = document.getElementById('calendar-publish-status-text');
-
-    if (!statusBar || !statusText) return;
-
-    statusText.textContent = message;
-    statusBar.classList.remove('hidden');
-    statusText.classList.remove(
-        'success',
-        'error',
-        'info'
-    );
-
-    statusText.classList.add(type);
-
-    setTimeout(() => {
-        statusBar.classList.add('hidden');
-    }, 4000);
 }
 
 function accountKey(provider, username) {
@@ -1137,13 +387,7 @@ function getAllAccountObjects() {
     const all = [];
     Object.keys(accountState.accountsByProvider).forEach((provider) => {
         accountState.accountsByProvider[provider].forEach((acc) => {
-            all.push({
-                provider,
-                username: acc.username,
-                accountLabel: acc.accountLabel,
-                profilePicture: acc.profilePicture,
-                verified: acc.verified
-            });
+            all.push({ provider, username: acc.username, accountLabel: acc.accountLabel });
         });
     });
     return all;
@@ -1165,15 +409,6 @@ function getAccountLabel(provider, username) {
     return null;
 }
 
-function getAccountMeta(provider, username) {
-    const accounts = accountState.accountsByProvider[provider];
-    if (!accounts) {
-        return null;
-    }
-
-    return accounts.find(a => a.username === username) || null;
-}
-
 function updateAccountLabel(provider, username, newLabel) {
     const accounts = accountState.accountsByProvider[provider];
     if (accounts) {
@@ -1191,14 +426,14 @@ function renderTabs() {
     }
 }
 
-function renderAccountList(containerId = 'account-list', summaryId = 'account-summary') {
-    const listContainer = document.getElementById(containerId);
-    const summary = document.getElementById(summaryId);
+function renderAccountList() {
+    const listContainer = document.getElementById('account-list');
     const accounts = getAccountsForActiveTab();
+    console.log(accounts);
 
     if (accounts.length === 0) {
         listContainer.innerHTML = '<div class="empty-accounts">No linked accounts found.</div>';
-        renderSummary(summaryId);
+        renderSummary();
         return;
     }
     const grouped = {};
@@ -1223,9 +458,7 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
             WordPressREST: { icon: 'icons/WordPress_logo.png', border: '#21759B' },
             Bluesky: { icon: 'icons/Bluesky_logo.png', border: '#1184FE' },
             LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' },
-            Instagram: { icon: 'icons/Instagram_logo.png', border: '#E1306C' },
             // Reddit: { icon: 'icons/default.png', border: '#ff4500' }
-            Discord: { icon: 'icons/Discord_logo.png', border: '#5865F2' } 
         };
         const data = styles[provider] || { icon: 'icons/default.png'};
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -1285,7 +518,7 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
 
     listContainer.innerHTML = html;
 
-    listContainer.querySelectorAll('.provider-header').forEach(header => {
+    document.querySelectorAll('.provider-header').forEach(header => {
         header.addEventListener('click', () => {
             const provider = header.dataset.provider;
 
@@ -1295,34 +528,15 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
                 accountState.collapsedProviders.add(provider);
             }
 
-            rerenderAllAccounts();
+            renderAccountList();
         });
     });
 
-    listContainer.querySelectorAll('.account-item input').forEach(input => {
+    document.querySelectorAll('.account-item input').forEach(input => {
         input.addEventListener('click', e => e.stopPropagation());
     });
 
-    renderSummary(summaryId);
-}
-
-function rerenderAllAccounts() {
-    renderAccountList();
-    renderCalendarAccounts();
-}
-
-function updateAllPreviews() {
-    updatePreview(
-        'preview-container',
-        'post-header',
-        'post-body'
-    );
-
-    updatePreview(
-        'calendar-preview-container',
-        'calendar-post-header',
-        'calendar-post-body'
-    );
+    renderSummary();
 }
 
 function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
@@ -1371,28 +585,17 @@ function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
     });
 }
 
-function renderSummary(summaryId = 'account-summary') {
-    const summary = document.getElementById(summaryId);
-    if (!summary) return;
-
+function renderSummary() {
+    const summary = document.getElementById('account-summary');
     const total = getAllAccountObjects().length;
     const selectedCount = accountState.selected.size;
-
-    summary.textContent =
-        `${selectedCount} of ${total} account(s) selected`;
+    summary.textContent = `${selectedCount} of ${total} account(s) selected`;
 }
 
 function renderAccounts() {
     renderTabs();
-    rerenderAllAccounts();
+    renderAccountList();
     syncSidebarHeight();
-}
-
-function renderCalendarAccounts() {
-    renderAccountList(
-        'calendar-account-list',
-        'calendar-account-summary'
-    );
 }
 
 function syncSidebarHeight() {
@@ -1431,13 +634,11 @@ async function loadAccounts() {
             const provider = account.provider ?? account[0];
             const username = account.username ?? account[1];
             const accountLabel = account.display_name ?? account[2] ?? null; 
-            const profilePicture = account.profile_picture ?? account.avatar_url ?? account.photo_url ?? null;
-            const verified = Boolean(account.verified ?? account.is_verified ?? false);
             if (!provider || !username) return;
             if (!grouped[provider]) grouped[provider] = [];
-            grouped[provider].push({ username, accountLabel, profilePicture, verified });
+            grouped[provider].push({ username, accountLabel });
         });
-
+        console.log(grouped);
         // Sort by username or label
         Object.keys(grouped).forEach((provider) => {
             grouped[provider].sort((a, b) => a.username.localeCompare(b.username));
@@ -1453,8 +654,7 @@ async function loadAccounts() {
         }
 
         renderAccounts();
-        renderCalendarAccounts();
-        updateAllPreviews();
+        updatePreview();
 
     } catch (error) {
         console.error(error);
@@ -1470,29 +670,10 @@ eel.expose(clearForm);
 function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
-    document.getElementById('post-time').value = '';
-    fileNameCreate.textContent = "No file selected";
+    fileName.textContent = "No file selected";
     currentImage = null;
-    updateAllPreviews();
+    updatePreview();
     updateCounters();
-    syncSidebarHeight();
-}
-
-eel.expose(clearCalendarForm);
-function clearCalendarForm() {
-    document.getElementById('calendar-post-header').value = '';
-    document.getElementById('calendar-post-body').value = '';
-    document.getElementById('calendar-time').value = '';
-    document.getElementById('calendar-date').value = '';
-
-    const fileNameSchedule = document.getElementById('calendar-file-name');
-    if (fileNameSchedule) {
-        fileNameSchedule.textContent = "No file selected";
-    }
-    
-    currentImage = null;
-    updateAllPreviews();
-    updateCountersSchedule();
     syncSidebarHeight();
 }
 
@@ -1501,13 +682,6 @@ function updateCounters() {
     const body = document.getElementById('post-body').value;
     document.getElementById('header-count').textContent = header.length;
     document.getElementById('body-count').textContent = body.length;
-}
-
-function updateCountersSchedule() {
-    const header = document.getElementById('calendar-post-header').value;
-    const body = document.getElementById('calendar-post-body').value;
-    document.getElementById('calendar-header-count').textContent = header.length;
-    document.getElementById('calendar-body-count').textContent = body.length;
 }
 
 function renderMastodon(label, username, header, body, image) {
@@ -1682,218 +856,6 @@ function renderLinkedIn(label, username, header, body, image) {
     `;
 }
 
-function renderFacebook(label, username, header, body, image) {
-    const pageName = label || 'My Facebook Page';
-    const avatarLetter = pageName.charAt(0).toUpperCase();
-    const text = [header, body]
-        .filter(Boolean)
-        .join('\n')
-        .trim();
-    const meta = getAccountMeta('Facebook', username);
-    const avatarImage = meta?.profilePicture || null;
-    const isVerified = Boolean(meta?.verified);
-
-    return `
-        <article class="facebook-post">
-            <header class="facebook-header">
-                <div class="facebook-avatar" aria-hidden="true">
-                    ${avatarImage ? `<img src="${escapeHTML(avatarImage)}" alt="" />` : `<span>${avatarLetter}</span>`}
-                </div>
-
-                <div class="facebook-header-main">
-                    <div class="facebook-name-row">
-                        <span class="facebook-page-name">${pageName}</span>
-                        ${isVerified ? `
-                            <span class="facebook-verified-badge" aria-label="Verified page" title="Verified page">
-                                <svg viewBox="0 0 24 24" aria-hidden="true">
-                                    <path d="M12 2 9.2 4.9 5.3 4.7l-.4 3.9L2 12l2.9 3.4.4 3.9 3.9-.2L12 22l2.8-2.9 3.9.2.4-3.9L22 12l-2.9-3.4-.4-3.9-3.9.2L12 2Zm-1 11.6-2.2-2.2-1.4 1.4 3.6 3.6 5.3-5.3-1.4-1.4-3.9 3.9Z"/>
-                                </svg>
-                            </span>
-                        ` : ''}
-                    </div>
-
-                    <div class="facebook-meta-row">
-                        <span class="facebook-post-time">Just now</span>
-                        <span class="facebook-meta-separator">•</span>
-                        <span class="facebook-privacy" aria-label="Public">
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm6.9 9h-2.1a15.9 15.9 0 0 0-1.2-4.9A8 8 0 0 1 18.9 11ZM12 4.1A15.2 15.2 0 0 1 13.8 11h-3.6A15.2 15.2 0 0 1 12 4.1ZM4.3 13h2.1a15.9 15.9 0 0 0 1.2 4.9A8 8 0 0 1 4.3 13Zm2.1-2H4.3A8 8 0 0 1 7.6 6.1 15.9 15.9 0 0 0 6.4 11Zm7.4 8.9A15.2 15.2 0 0 1 12 13h3.6A15.2 15.2 0 0 1 13.8 19.9Zm1.7-.9A8 8 0 0 0 18.9 13h-2.1a15.9 15.9 0 0 1-1.3 6Z"/>
-                            </svg>
-                        </span>
-                    </div>
-                </div>
-
-                <button class="facebook-menu" type="button" aria-label="More options">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="5" cy="12" r="2"></circle>
-                        <circle cx="12" cy="12" r="2"></circle>
-                        <circle cx="19" cy="12" r="2"></circle>
-                    </svg>
-                </button>
-            </header>
-
-            <div class="facebook-body${text.length > 260 ? ' is-clamped' : ''}">
-                ${text || ' '}
-            </div>
-
-            ${image ? `
-                <div class="facebook-media">
-                    <img src="${image}" alt="Post image" class="facebook-image" />
-                </div>
-            ` : ''}
-
-            <footer class="facebook-footer" aria-label="Facebook social actions">
-                <div class="facebook-reactions" aria-hidden="true">
-                    <span class="facebook-reaction-dot facebook-like">👍</span>
-                    <span class="facebook-reaction-dot facebook-love">❤</span>
-                    <span class="facebook-reaction-dot facebook-care">😊</span>
-                    <span class="facebook-reaction-count">0</span>
-                </div>
-
-                <div class="facebook-actions">
-                    <button class="facebook-action-btn" type="button" aria-label="Like">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M9.7 10.8V6.9c0-1.8 1.3-3.3 3-3.3.6 0 1.1.3 1.4.8.2.3.3.7.3 1.1v2.9h4.1c1.2 0 2.1 1 2.1 2.2 0 .2 0 .5-.1.7l-1.2 5.9c-.2 1.1-1.2 1.9-2.4 1.9H9.7M3.5 10.8h4.2v8.3H3.5z"/>
-                        </svg>
-                        <span>Like</span>
-                    </button>
-
-                    <button class="facebook-action-btn" type="button" aria-label="Comment">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M12 4C6.5 4 2.1 7.5 2.1 12c0 2.1.9 4.1 2.4 5.6L4 21l3.8-1.7c1.3.4 2.7.6 4.2.6 5.5 0 9.9-3.5 9.9-7.9S17.5 4 12 4Z"/>
-                        </svg>
-                        <span>Comment</span>
-                    </button>
-
-                    <button class="facebook-action-btn" type="button" aria-label="Share">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M14 5 21 12l-7 7v-4.2c-4.2 0-7.3 1.1-10 5.2.8-5.9 3.7-11.2 10-12.4V5Z"/>
-                        </svg>
-                        <span>Share</span>
-                    </button>
-                </div>
-            </footer>
-        </article>
-    `;
-}
-
-function renderInstagram(label, username, header, body, image) {
-    const captionText = [header, body].filter(Boolean).join('\n').trim();
-    const cleanUsername = username ? username.replace(/^@/, '') : '';
-    const displayUsername = cleanUsername || label || 'instagram-user';
-    const avatarLetter = displayUsername.charAt(0).toUpperCase();
-    const displayCaption = captionText || 'Add a caption...';
-    const shouldClamp = displayCaption.length > 120;
-    const timeLabel = '1w';
-
-    return `
-        <article class="instagram-post">
-            <header class="instagram-header">
-                <div class="instagram-avatar" aria-hidden="true">
-                    <span>${avatarLetter}</span>
-                </div>
-
-                <div class="instagram-header-info">
-                    <div class="instagram-username-row">
-                        <span class="instagram-username">${displayUsername}</span>
-                        <span class="instagram-dot">•</span>
-                        <span class="instagram-time">${timeLabel}</span>
-                    </div>
-                </div>
-
-                <button class="instagram-menu" aria-label="More options">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="5" cy="12" r="2"></circle>
-                        <circle cx="12" cy="12" r="2"></circle>
-                        <circle cx="19" cy="12" r="2"></circle>
-                    </svg>
-                </button>
-            </header>
-
-            <div class="instagram-media">
-                <div class="instagram-carousel">
-                    <div class="instagram-media-frame">
-                        ${
-                            image
-                                ? `<img src="${image}" class="instagram-image" />`
-                                : `<div class="instagram-image-placeholder">Image required</div>`
-                        }
-                    </div>
-
-                    <button
-                        class="instagram-carousel-btn instagram-carousel-prev"
-                        aria-label="Previous"
-                        disabled
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M15 6 9 12l6 6"></path>
-                        </svg>
-                    </button>
-
-                    <button
-                        class="instagram-carousel-btn instagram-carousel-next"
-                        aria-label="Next"
-                        disabled
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="m9 6 6 6-6 6"></path>
-                        </svg>
-                    </button>
-
-                    <div class="instagram-carousel-dots" aria-hidden="true">
-                        <span class="instagram-dot-item is-active"></span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="instagram-actions">
-                <div class="instagram-actions-left">
-                    <button class="instagram-action-btn" aria-label="Like">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z"></path>
-                        </svg>
-                    </button>
-
-                    <button class="instagram-action-btn" aria-label="Comment">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z"></path>
-                        </svg>
-                    </button>
-
-                    <button class="instagram-action-btn" aria-label="Share">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M13.973 20.046 21.77 6.928C22.8 5.195 21.55 3 19.535 3H4.466C2.138 3 .984 5.825 2.646 7.456l4.842 4.752 1.723 7.121c.548 2.266 3.571 2.721 4.762.717Z"></path>
-                            <path d="M7.488 12.208 15.515 7.641"></path>
-                        </svg>
-                    </button>
-                </div>
-
-                <button class="instagram-action-btn instagram-action-save" aria-label="Save">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M20 21 12 13.44 4 21V3h16Z"></path>
-                    </svg>
-                </button>
-            </div>
-
-            <div class="instagram-stats">
-                <span class="instagram-stat"><strong>135.6K</strong> likes</span>
-                <span class="instagram-stat"><strong>396</strong> comments</span>
-                <span class="instagram-stat"><strong>3.5K</strong> reposts</span>
-            </div>
-
-            <div class="instagram-caption${shouldClamp ? '' : ' is-expanded'}">
-                <span class="instagram-caption-name">${displayUsername}</span>
-                <span class="instagram-caption-text">${displayCaption}</span>
-                ${
-                    shouldClamp
-                        ? '<button class="instagram-caption-more" type="button">more</button>'
-                        : ''
-                }
-            </div>
-        </article>
-    `;
-}
-
 function renderBluesky(label, username, header, body, image) {
     const content = [header, body].filter(Boolean).join('\n');
     const avatarLetter = label ? label.charAt(0).toUpperCase() : 'B';
@@ -1977,40 +939,17 @@ function renderBluesky(label, username, header, body, image) {
         </div>
     `;
 }
-function renderDiscord(label, username, header, body, image) {
-    // Set defaults
-    const badgeText = 'APP';
-    const displayName = username || 'Webhook';
-    const titleText = header ? header : '';
-    const bodyText = body ? body : '';
-    
-    return `
-        <div class="discord-preview" style="display: flex; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #313338; font-size: 15px; padding: 5px 10px; line-height: 1.4;">
-            
-            <div class="discord-preview-content" style="display: flex; flex-direction: column;">
-                
-                <!-- Line 1: Tag, Username, and Title (Header) inline -->
-                <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                    <span class="discord-label" style="background-color: #5865F2; color: white; font-size: 10px; font-weight: bold; border-radius: 3px; padding: 2px 4px; margin-right: 6px; line-height: 1;">${badgeText}</span>
-                    <span class="discord-username" style="font-weight: 600; color: white; margin-right: 6px;">${displayName}</span>
-                    ${titleText ? `<span class="discord-title" style="color: #dbdee1;">${titleText}</span>` : ''}
-                </div>
-                
-                <!-- Line 2: Body text on its own line -->
-                ${bodyText ? `<div class="discord-body" style="color: #dbdee1; margin-top: 2px; margin-left: 2px;">${bodyText}</div>` : ''}
-                
-                <!-- Optional Image -->
-                ${image ? `<img src="${image}" class="discord-preview-image" style="max-width: 100%; margin-top: 8px; border-radius: 4px;"/>` : ''}
-            </div>
-            
-        </div>
-    `;
-}
 
-function updatePreview(containerId = 'preview-container', headerId = 'post-header', bodyId = 'post-body') {
-    const header = escapeHTML(document.getElementById(headerId).value);
-    const body = escapeHTML(document.getElementById(bodyId).value);
-    const container = document.getElementById(containerId);
+
+// Por cada red, se debe hacer una funcion con la estructura anterior 
+// funtion render/NombreRed/(account, header, body, image)
+// Y en estas se pone la estructura del HTML específico de la red y se 
+// tiene que también añadir el css correspondiente
+
+function updatePreview() {
+    const header = escapeHTML(document.getElementById('post-header').value);
+    const body = escapeHTML(document.getElementById('post-body').value);
+    const container = document.getElementById('preview-container');
     container.innerHTML = '';
 
     const selectedAccounts = getSelectedAccountsPayload();
@@ -2027,20 +966,14 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
             contentHTML = renderMastodon(label, username, header, body, image);
         } else if (provider === 'WordPress') {
             contentHTML = renderWordPress(label, username, header, body, image);
-        /*} else if (provider === 'Reddit') {
-            contentHTML = renderReddit(label, username, header, body);*/
+        } else if (provider === 'Reddit') {
+            contentHTML = renderReddit(label, username, header, body);
         } else if (provider === 'WordPressREST') {
             contentHTML = renderWordPress(label, username, header, body, image);
         } else if (provider == 'Bluesky'){
             contentHTML = renderBluesky(label, username, header, body, image);
         } else if (provider === 'LinkedIn') {
             contentHTML = renderLinkedIn(label, username, header, body, image);
-        } else if (provider === 'Discord') {
-            contentHTML = renderDiscord(label, username, header, body, image);
-        } else if (provider === 'Facebook') {
-            contentHTML = renderFacebook(label, username, header, body, image);
-        } else if (provider === 'Instagram') {
-            contentHTML = renderInstagram(label, username, header, body, image);
         } else {
             contentHTML = `
                 <div class="generic-preview">
@@ -2066,90 +999,14 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
         }
 
         const card = document.createElement('div');
-        const isInstagram = provider === 'Instagram';
-        const isFacebook = provider === 'Facebook';
-
-        card.className = `preview-card-social${isInstagram ? ' preview-card-instagram' : ''}${isFacebook ? ' preview-card-facebook' : ''}`;
-        card.innerHTML = isInstagram || isFacebook
-            ? contentHTML
-            : `
-                <div class="preview-platform">${provider} • ${label}</div>
-                ${contentHTML}
-            `;
+        card.className = 'preview-card-social';
+        card.innerHTML = `
+            <div class="preview-platform">${provider} • ${label}</div>
+            ${contentHTML}
+        `;
         container.appendChild(card);
     });
 }
-
-document.addEventListener('click', (event) => {
-    const moreButton = event.target.closest('.instagram-caption-more');
-    if (!moreButton) return;
-
-    const caption = moreButton.closest('.instagram-caption');
-    if (!caption) return;
-
-    caption.classList.add('is-expanded');
-    moreButton.remove();
-});
-
-
-function showPublishResults(results) {
-    publishResults = results || [];
-    const statusBar = document.getElementById('publish-status-bar');
-    const statusText = document.getElementById('publish-status-text');
-
-    const hasErrors = publishResults.some(r => !r.success);
-
-    statusBar.classList.remove('hidden');
-
-    statusText.textContent = hasErrors
-        ? 'Some posts failed'
-        : 'Published successfully';
-
-    statusText.className =
-        `status-text ${hasErrors ? 'error' : 'success'}`;
-
-    const list = document.getElementById('publish-details-list');
-
-    list.innerHTML = '';
-
-    const styles = {
-        Mastodon: 'icons/Mastodon_logo.png',
-        WordPress: 'icons/WordPress_logo.png',
-        WordPressREST: 'icons/WordPress_logo.png',
-        Bluesky: 'icons/Bluesky_logo.png',
-        LinkedIn: 'icons/LinkedIn_logo.png',
-        Discord: 'icons/Discord_logo.png',
-        Instagram: 'icons/Instagram_logo.png'
-    };
-
-    const sorted = [
-        ...publishResults.filter(r => !r.success),
-        ...publishResults.filter(r => r.success)
-    ];
-
-    sorted.forEach(result => {
-        const icon = styles[result.provider]
-            || 'icons/default.png';
-
-        list.innerHTML += `
-            <div class="publish-detail-item ${result.success ? 'success' : 'error'}">
-                <div class="publish-detail-icon">
-                    <img src="${icon}">
-                </div>
-
-                <div class="publish-detail-content">
-                    <div class="publish-detail-title">
-                        ${result.provider}
-                    </div>
-                    <div class="publish-detail-message">
-                        ${escapeHTML(String(result.message || '').trim())}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-}
-
 
 async function createPost() {
     const header = document.getElementById('post-header').value.trim();
@@ -2166,19 +1023,7 @@ async function createPost() {
         return;
     }
 
-    const hasInstagram = selectedAccounts.some((account) => {
-        const provider = account.provider ?? account[0];
-        return provider === 'Instagram';
-    });
-
-    const imageInputCheck = document.getElementById('image-input');
-
-    if (hasInstagram && (!imageInputCheck || imageInputCheck.files.length === 0)) {
-        showStatus('Instagram requires an image to publish', 'error');
-        return;
-    }
-
-    /*const hasReddit = selectedAccounts.some((account) => {
+    const hasReddit = selectedAccounts.some((account) => {
         const provider = account.provider ?? account[0];
         return provider === 'Reddit';
     });
@@ -2186,7 +1031,7 @@ async function createPost() {
     if (hasReddit && !header) {
         showStatus('Reddit requires a header title', 'error');
         return;
-    }*/
+    }
     
     if (header.length + body.length > 299) {
         showStatus('Header and body exceeds 299 character limit', 'error');
@@ -2209,269 +1054,27 @@ async function createPost() {
             };
         });
     }
-
-    publishResults = [];
-
-    const statusText = document.getElementById('publish-status-text');
-    const detailsList = document.getElementById('publish-details-list');
-    statusText.textContent = 'Ready';
-    statusText.className = 'status-text';
-    detailsList.innerHTML = '';
     
     showStatus('Creating post...', 'info');
     const result = await eel.create_post(header, body, imageData, imageName, selectedAccounts)();
 
-    if (result && result.results && result.results.length > 0) {
-        showPublishResults(result.results);
-        const hasErrors = result.results.some(r => !r.success);
-        showStatus(
-            hasErrors
-                ? 'Some posts failed'
-                : 'Post published successfully',
-            hasErrors ? 'error' : 'success'
-        );
-
-        if (!hasErrors) {
-            clearForm();
-        }
-
-    } else {
-        publishResults = [{
-            provider: 'System',
-            success: false,
-            message: result?.message || 'Unknown publish error'
-        }];
-
-        showPublishResults(publishResults);
-
-        showStatus(
-            'Failed to publish post',
-            'error'
-        );
-    }
-}
-
-async function savePost() {
-    const header = document.getElementById('post-header').value.trim();
-    const body = document.getElementById('post-body').value.trim();
-    const selectedAccounts = getSelectedAccountsPayload();
-    const scheduledTime = document.getElementById('post-time').value;
-
-    if (!header && !body) {
-        showStatus('Please add a header or body to your post', 'error');
+    if (result && result.success) {
+        showStatus(result.message || 'Post published successfully', 'success');
+        clearForm();
         return;
     }
-
-    if (selectedAccounts.length === 0) {
-        showStatus('Select at least one account before saving', 'error');
-        return;
-    }
-
-    if (!scheduledTime) {
-        showStatus('Select a scheduled time before saving', 'error');
-        return;
-    }
-
-    const fileInput = document.getElementById('image-input');
-    let imageData = null;
-    let imageName = null;
-
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        imageName = file.name;
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        await new Promise((resolve) => {
-            reader.onload = () => {
-                imageData = reader.result;
-                resolve();
-            };
-        });
-    }
-
-    showStatus('Saving post...', 'info');
-    try {
-        const result = await eel.save_post(header, body, selectedAccounts, scheduledTime, imageData, imageName)();
-
-        if (result && result.success) {
-            const successMessage = result.message || 'Post saved successfully';
-            showStatus(successMessage, 'success');
-            clearForm();
-            return;
-        }
-        showStatus((result && result.message) || 'Error saving post', 'error');
-    } catch (err) {
-        showStatus('Error saving post: ' + err, 'error');
-    }
+    showStatus((result && result.message) || 'Error publishing post', 'error');
 }
-
-
-async function schedulePost() {
-    loadScheduledPosts();
-
-    const header = document.getElementById('calendar-post-header').value;
-    const body = document.getElementById('calendar-post-body').value;
-    const date = document.getElementById('calendar-date').value;
-    const time = document.getElementById('calendar-time').value;
-
-    const scheduled_time = `${date}T${time}`;
-    const selectedAccounts = getSelectedAccountsPayload();
-
-    if (!header && !body) {
-        showCalendarStatus('Please add a header or body to your post', 'error');
-        return;
-    }
-
-    if (selectedAccounts.length === 0) {
-        showCalendarStatus('Select at least one account before saving', 'error');
-        return;
-    }
-
-    if (!date || !time) {
-        showCalendarStatus('Select a scheduled time before saving', 'error');
-        return;
-    }
-
-    const fileInput = document.getElementById('calendar-image-input');
-    let imageData = null;
-    let imageName = null;
-
-    if (fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        imageName = file.name;
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        await new Promise((resolve) => {
-            reader.onload = () => {
-                imageData = reader.result;
-                resolve();
-            };
-        });
-    }
-
-    showCalendarStatus('Saving post...', 'info');
-    try {
-        const result = await eel.save_post(header, body, selectedAccounts, scheduled_time, imageData, imageName, editingPostId)();
-
-        if (result && result.success) {
-            const successMessage = result.message || 'Post saved successfully';
-            showCalendarStatus(successMessage, 'success');
-            clearCalendarForm();
-            selectAllAccounts();
-            editingPostId = null;
-            return;
-        }
-        showCalendarStatus((result && result.message) || 'Error saving post', 'error');
-    } catch (err) {
-        showCalendarStatus('Error saving post: ' + err, 'error');
-    }
-}
-// ------------------------------------------------------------------
-// Exportar / Importar
-// ------------------------------------------------------------------
-// Esperar a que el DOM esté cargado
-document.addEventListener('DOMContentLoaded', () => {
-    // Botón Exportar
-    const exportBtn = document.getElementById('export-data-btn');
-    if (exportBtn) {
-        exportBtn.addEventListener('click', exportAllData);
-    }
-    
-    // Botón Importar
-    const importBtn = document.getElementById('import-data-btn');
-    if (importBtn) {
-        importBtn.addEventListener('click', importAllData);
-    }
-});
-
-// ------------------------------------------------------------------
-// Exportar
-// ------------------------------------------------------------------
-async function exportAllData() {
-    try {
-        const allData = await eel.export_all_data()();
-        const dataStr = JSON.stringify(allData, null, 2);
-        const blob = new Blob([dataStr], {type: "application/json"});
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `onesocial_backup_${new Date().toISOString().slice(0,19)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showNotification("Exportación completada", "success");
-    } catch (err) {
-        console.error(err);
-        showNotification("Error al exportar", "error");
-    }
-}
-
-// ------------------------------------------------------------------
-// Importar (abre selector de archivos)
-// ------------------------------------------------------------------
-function importAllData() {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = 'application/json';
-    input.onchange = async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const importedJson = JSON.parse(e.target.result);
-                const response = await eel.import_all_data(importedJson)();
-                if (response.status === 'ok') {
-                    showNotification("Importación exitosa. Recargando...", "success");
-                    // Recargar la interfaz (listado de cuentas, publicaciones, etc.)
-                    if (typeof loadAccounts === 'function') await loadAccounts();
-                    if (typeof loadScheduledPosts === 'function') await loadScheduledPosts();
-                    if (typeof applyTheme === 'function') applyTheme(); // si aplica tema
-                } else {
-                    showNotification("Error en la importación", "error");
-                }
-            } catch (err) {
-                console.error(err);
-                showNotification("Archivo inválido o error al importar", "error");
-            }
-        };
-        reader.readAsText(file);
-    };
-    input.click();
-}
-
-// Pequeña ayuda para notificaciones (ajústala si ya existe)
-function showNotification(msg, type) {
-    // Ejemplo simple con alert, pero puedes usar un toast
-    alert(`${type.toUpperCase()}: ${msg}`);
-}
-
-// Exponer funciones al ámbito global si las necesitas desde botones HTML
-window.exportAllData = exportAllData;
-window.importAllData = importAllData;
 
 function initializeEventListeners() {
-    ['ig-client-id', 'ig-client-secret', 'ig-code'].forEach((id) => {
-        const input = document.getElementById(id);
-        if (!input) return;
-        input.addEventListener('input', () => {
-            instagramTokenPayload = null;
-            const select = document.getElementById('ig-page-select');
-            if (select) {
-                select.innerHTML = '<option value="">Auto (first available)</option>';
-            }
-        });
-    });
-
     document.getElementById('post-header').addEventListener('input', () => {
         updateCounters();
-        updateAllPreviews();
+        updatePreview();
     });
     
     document.getElementById('post-body').addEventListener('input', () => {
         updateCounters();
-        updateAllPreviews();
+        updatePreview();
     });
 
     document.getElementById('account-list').addEventListener('change', (event) => {
@@ -2486,8 +1089,8 @@ function initializeEventListeners() {
                     accountState.selected.delete(key);
                 }
             });
-            rerenderAllAccounts();
-            updateAllPreviews();
+            renderAccountList();
+            updatePreview();
             return;
         }
         if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
@@ -2499,8 +1102,8 @@ function initializeEventListeners() {
             } else {
                 accountState.selected.delete(key);
             }
-            rerenderAllAccounts();
-            updateAllPreviews();
+            renderAccountList();
+            updatePreview();
         }
     });
 
@@ -2568,8 +1171,8 @@ function initializeEventListeners() {
 
                 if (result && result.success) {
                     updateAccountLabel(provider, username, newLabel || null);
-                    rerenderAllAccounts();
-                    updateAllPreviews();
+                    renderAccountList();
+                    updatePreview();
                     showStatus('Label updated', 'success');
                 } else {
                     showStatus(result?.message || 'Failed to update label', 'error');
@@ -2580,139 +1183,13 @@ function initializeEventListeners() {
             }
         }
     });
-
-    document.getElementById('calendar-account-list').addEventListener('change', (event) => {
-        const target = event.target;
-        if (target.id === 'toggle-visible-accounts') {
-            const accounts = getAccountsForActiveTab();
-            accounts.forEach(({ provider, username }) => {
-                const key = accountKey(provider, username);
-                if (target.checked) {
-                    accountState.selected.add(key);
-                } else {
-                    accountState.selected.delete(key);
-                }
-            });
-            rerenderAllAccounts();
-            updateAllPreviews();
-            return;
-        }
-        if (target.matches('input[type="checkbox"][data-provider][data-username]')) {
-            const provider = target.getAttribute('data-provider');
-            const username = target.getAttribute('data-username');
-            const key = accountKey(provider, username);
-            if (target.checked) {
-                accountState.selected.add(key);
-            } else {
-                accountState.selected.delete(key);
-            }
-            rerenderAllAccounts();
-            updateAllPreviews();
-        }
-    });
-
-    document.getElementById('calendar-account-list').addEventListener('click', async (e) => {
-        const deleteBtn = e.target.closest('.delete-account-btn');
-        const labelBtn = e.target.closest('.edit-label-btn');
-
-        if (deleteBtn) {
-            e.stopPropagation();
-            e.preventDefault();
-
-            const provider = deleteBtn.dataset.provider;
-            const username = deleteBtn.dataset.username;
-
-            const confirmed = await openModal({
-                title: "Delete account",
-                bodyHTML: `<p>Are you sure you want to remove <b>${username}</b>?</p>`,
-                confirmText: "Delete",
-                danger: true
-            });
-
-            if (!confirmed) return;
-
-            try {
-                const result = await eel.delete_account(provider, username)();
-
-                if (result && result.success) {
-                    const key = accountKey(provider, username);
-                    accountState.selected.delete(key);
-
-                    await loadAccounts();
-                    showStatus('Account deleted successfully', 'success');
-                } else {
-                    showStatus(result?.message || 'Error deleting account', 'error');
-                }
-
-            } catch (err) {
-                showStatus('Error: ' + err, 'error');
-            }
-        }
-
-        if (labelBtn) {
-            e.stopPropagation();
-
-            const provider = labelBtn.dataset.provider;
-            const username = labelBtn.dataset.username;
-
-            const currentLabel = getAccountLabel(provider, username);
-
-            const confirmed = await openModal({
-                title: "Edit account label",
-                bodyHTML: `<input id="edit-input" value="${currentLabel || username}">`,
-                confirmText: "Save"
-            });
-
-            if (!confirmed) return;
-
-            const input = document.getElementById('edit-input');
-            const newLabel = input.value.trim();
-
-            if (!newLabel) return;
-
-            try {
-                const result = await eel.update_display_name(provider, username, newLabel)();
-
-                if (result && result.success) {
-                    updateAccountLabel(provider, username, newLabel || null);
-                    rerenderAllAccounts();
-                    updateAllPreviews();
-                    showStatus('Label updated', 'success');
-                } else {
-                    showStatus(result?.message || 'Failed to update label', 'error');
-                }
-
-            } catch (err) {
-                showStatus('Error: ' + err, 'error');
-            }
-        }
-    });
-
-    const publishOverlay = document.getElementById('publish-details-overlay');
-    const publishModal = document.getElementById('publish-details-modal');
-
-    document.getElementById('open-status-details')
-        .addEventListener('click', () => {
-            publishOverlay.classList.add('active');
-            publishOverlay.classList.remove('hidden');
-            publishModal.classList.add('active');
-    });
-
-    function closePublishModal() {
-        publishOverlay.classList.remove('active');
-        publishOverlay.classList.add('hidden');
-        publishModal.classList.remove('active');
-    }
-
-    document.getElementById('close-publish-details').addEventListener('click', closePublishModal);
-    publishOverlay.addEventListener('click', closePublishModal);
 
     window.addEventListener('resize', syncSidebarHeight);
 }
 function initializeApplication() {
     initializeEventListeners();
     updateCounters();
-    updateAllPreviews();
+    updatePreview();
     loadAccounts();
     syncSidebarHeight();
 }
