@@ -20,6 +20,7 @@ import binascii
 import eel
 import os
 import sys
+import shutil
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -1014,6 +1015,70 @@ def import_all_data(imported_data):
             "success": False,
             "error_type": ErrorCategory.UNKNOWN.value,
             "message": f"Error importing data: {str(e)}"
+        }
+
+
+@eel.expose
+def reset_app_data():
+    """
+    Deletes all local OneSocial data from ~/.onesocial,
+    including posts, images, data.dat and provider secret files.
+    Then recreates the minimum empty structure required by the app.
+    """
+    try:
+        onesocial_dir = Path(os.path.expanduser("~/.onesocial"))
+        data_file = onesocial_dir / "data.dat"
+        posts_dir = onesocial_dir / "posts"
+        images_dir = onesocial_dir / "images"
+
+        onesocial_dir.mkdir(parents=True, exist_ok=True)
+
+        deleted_items = []
+
+        # Delete everything inside ~/.onesocial
+        for item in list(onesocial_dir.iterdir()):
+            try:
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+
+                deleted_items.append(item.name)
+
+            except OSError as error:
+                print(f"Could not delete {item}: {error}")
+
+        # Recreate required folders
+        posts_dir.mkdir(parents=True, exist_ok=True)
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        # Recreate empty encrypted account data
+        encrypt_process_file(
+            {
+                "tokens": [],
+                "post_counter": 0
+            },
+            str(data_file),
+            MASTER_KEY
+        )
+
+        return {
+            "success": True,
+            "message": "Application data was reset successfully.",
+            "deleted_items": deleted_items,
+            "counts": {
+                "accounts": 0,
+                "scheduled_posts": 0,
+                "deleted_items": len(deleted_items)
+            }
+        }
+
+    except Exception as e:
+        print("ERROR RESETTING APP DATA:", str(e))
+        return {
+            "success": False,
+            "error_type": ErrorCategory.UNKNOWN.value,
+            "message": f"Error resetting application data: {str(e)}"
         }
 
 

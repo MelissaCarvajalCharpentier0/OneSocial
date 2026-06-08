@@ -2186,6 +2186,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (importBtn) {
         importBtn.addEventListener('click', importAllData);
     }
+
+    // Botón Reset
+    const resetBtn = document.getElementById('reset-app-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetAppData);
+    }
 });
 
 // ------------------------------------------------------------------
@@ -2278,6 +2284,7 @@ async function exportAllData() {
         );
     }
 }
+
 
 // ------------------------------------------------------------------
 // Importar (abre selector de archivos)
@@ -2386,6 +2393,95 @@ function importAllData() {
     };
 
     input.click();
+}
+
+
+// ------------------------------------------------------------------
+// Resetear datos locales 
+// ------------------------------------------------------------------
+async function resetAppData() {
+    const confirmed = await showResetWarning();
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await eel.reset_app_data()();
+
+        if (!response || !response.success) {
+            showNotification(
+                response?.message || 'OneSocial could not reset local data.',
+                'error',
+                `
+                    <p>
+                        Please try again. If the problem continues,
+                        check the console for technical details.
+                    </p>
+                `,
+                'reset'
+            );
+
+            return;
+        }
+
+        accountState.accountsByProvider = {};
+        accountState.selected.clear();
+        accountState.hasLoaded = false;
+        accountState.collapsedProviders.clear();
+
+        currentImage = null;
+        editingPostId = null;
+        publishResults = [];
+
+        clearForm();
+        clearCalendarForm();
+
+        if (typeof loadAccounts === 'function') {
+            await loadAccounts();
+        }
+
+        if (typeof loadScheduledPosts === 'function') {
+            await loadScheduledPosts();
+        }
+
+        updateAllPreviews();
+
+        const deletedCount = response.counts?.deleted_items ?? 0;
+
+        showNotification(
+            'All local OneSocial data was removed.',
+            'success',
+            `
+                <p>
+                    Removed local items:
+                </p>
+
+                <p>
+                    <b>${deletedCount}</b> file(s) or folder(s) removed from .onesocial
+                </p>
+
+                <p>
+                    OneSocial recreated an empty data file and empty posts/images folders.
+                </p>
+            `,
+            'reset'
+        );
+
+    } catch (err) {
+        console.error(err);
+
+        showNotification(
+            'OneSocial could not reset local data.',
+            'error',
+            `
+                <p>
+                    Please try again from Settings.
+                </p>
+            `,
+            'reset'
+        );
+    }
 }
 
 
@@ -2509,6 +2605,24 @@ function showNotification(message, type = 'info', detailsHTML = '', action = 'ex
                 title: 'Import status',
                 subtitle: 'OneSocial is restoring your backup.'
             }
+        },
+
+        reset: {
+            success: {
+                icon: '⚠',
+                title: 'Application reset',
+                subtitle: 'Your local OneSocial data was removed successfully.'
+            },
+            error: {
+                icon: '⚠',
+                title: 'Reset failed',
+                subtitle: 'OneSocial could not remove local data.'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Reset status',
+                subtitle: 'OneSocial is resetting local data.'
+            }
         }
     };
 
@@ -2547,9 +2661,83 @@ function showNotification(message, type = 'info', detailsHTML = '', action = 'ex
     });
 }
 
+
+function showResetWarning() {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('settings-notification-overlay');
+        const modal = document.getElementById('settings-notification-modal');
+        const icon = document.getElementById('settings-notification-icon');
+        const title = document.getElementById('settings-notification-title');
+        const subtitle = document.getElementById('settings-notification-subtitle');
+        const body = document.getElementById('settings-notification-body');
+        const confirmBtn = document.getElementById('settings-notification-close-btn');
+        const cancelBtn = document.getElementById('settings-notification-cancel-btn');
+
+        if (!overlay || !modal || !icon || !title || !subtitle || !body || !confirmBtn || !cancelBtn) {
+            const confirmed = confirm(
+                'This will delete all linked accounts, scheduled posts, images, provider secrets, and local OneSocial data. Continue?'
+            );
+
+            resolve(confirmed);
+            return;
+        }
+
+        icon.textContent = '⚠';
+        icon.className = 'settings-notification-icon error';
+
+        title.textContent = 'Reset OneSocial?';
+        subtitle.textContent = 'This action will delete all local application data.';
+
+        body.innerHTML = `
+            <p>
+                Resetting OneSocial will permanently remove:
+            </p>
+
+            <p>
+                <b>All linked accounts</b><br>
+                <b>All scheduled posts</b><br>
+                <b>All saved post images</b><br>
+                <b>Provider secret files</b><br>
+                <b>All local files inside .onesocial</b>
+            </p>
+
+            <p>
+                This cannot be undone unless you exported a backup first.
+            </p>
+        `;
+
+        confirmBtn.textContent = 'Reset application';
+        cancelBtn.textContent = 'Cancel';
+
+        cancelBtn.classList.remove('hidden');
+
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+
+        const close = (result) => {
+            overlay.classList.add('hidden');
+            modal.classList.add('hidden');
+
+            cancelBtn.classList.add('hidden');
+            confirmBtn.textContent = 'OK';
+
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+            overlay.onclick = null;
+
+            resolve(result);
+        };
+
+        confirmBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+        overlay.onclick = () => close(false);
+    });
+}
+
 // Exponer funciones al ámbito global si las necesitas desde botones HTML
 window.exportAllData = exportAllData;
 window.importAllData = importAllData;
+window.resetAppData = resetAppData;
 
 function initializeEventListeners() {
     ['ig-client-id', 'ig-client-secret', 'ig-code'].forEach((id) => {
