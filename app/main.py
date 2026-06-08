@@ -957,6 +957,8 @@ def get_scheduled_post(post_id):
                 'selected_accounts': post.selected_accounts,
                 'image': post.image,
                 "image_preview": image_preview,
+                'published': post.published,
+                'errors': post.errors or None,
             }
         }
 

@@ -100,7 +100,9 @@ def load_post(post_path: Path):
         content=data.get("content", ""),
         selected_accounts=data.get("selected_accounts", []),
         scheduled_time=data.get("scheduled_time", ""),
-        image=data.get("image")
+        image=data.get("image"),
+        published=data.get("published", "False"),
+        errors=data.get("errors", None)
     )
     post.id = data.get("id")
     return post
@@ -130,7 +132,7 @@ def load_posts() -> list["Post"]:
 
 
 class Post:
-    def __init__(self, title, content, selected_accounts, scheduled_time, image=None):
+    def __init__(self, title, content, selected_accounts, scheduled_time, image=None, published="False", errors=None):
         if not selected_accounts:
             raise InputValueError("At least one account must be selected for posting.")
         
@@ -140,7 +142,8 @@ class Post:
         self.selected_accounts = _normalize_accounts(selected_accounts)
         self.scheduled_time = _normalize_time(scheduled_time)
         self.image = _normalize_image(image)
-        self.published = "False"
+        self.published = published
+        self.errors = errors
 
         if not self.title and not self.content:
             raise InputValueError("Post title or content is required.")
@@ -160,7 +163,9 @@ class Post:
             "content": self.content,
             "selected_accounts": self.selected_accounts,
             "scheduled_time": self.scheduled_time,
-            "image": self.image
+            "image": self.image,
+            "published": self.published,
+            "errors": self.errors
         }
 
     def save_by_id(self, id: int, base_dir: Path | str | None = None) -> Path:
@@ -225,6 +230,3 @@ class Post:
             raise InputValueError("Failed to delete post file.") from error
 
         return True
-
-    def set_published(self):
-        self.published = "True" 
