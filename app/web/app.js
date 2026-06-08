@@ -7,6 +7,7 @@ let currentImage = null;
 let currentEditingImage = null;
 let publishResults = [];
 let instagramTokenPayload = null;
+let facebookTokenPayload = null;
 let editingPostId = null;
 
 const accountState = {
@@ -486,6 +487,7 @@ const blueskyToggle = document.getElementById('toggle-bluesky-form');
 const wordpressRestToggle = document.getElementById('toggle-wordpress-rest-form');
 const linkedinToggle = document.getElementById('toggle-linkedin-form');
 const discordToggle = document.getElementById('toggle-discord-form');
+const facebookToggle = document.getElementById('toggle-facebook-form');
 const instagramToggle = document.getElementById('toggle-instagram-form');
 const mastodonForm = document.getElementById('mastodon-form');
 const wordpressForm = document.getElementById('wordpress-form');
@@ -494,6 +496,7 @@ const blueskyForm = document.getElementById('bluesky-form');
 const wordpressRestForm = document.getElementById('wordpress-rest-form');
 const linkedinForm = document.getElementById('linkedin-form');
 const discordForm = document.getElementById('discord-form');
+const facebookForm = document.getElementById('facebook-form');
 const instagramForm = document.getElementById('instagram-form');
 
 mastodonToggle.addEventListener('click', () => {
@@ -541,6 +544,12 @@ discordToggle.addEventListener('click', () => {
     discordForm.classList.toggle('hidden-form');
     const icon = discordToggle.querySelector('.expand-icon');
     icon.textContent = discordForm.classList.contains('hidden-form') ? '▼' : '▲';
+});
+
+facebookToggle.addEventListener('click', () => {
+    facebookForm.classList.toggle('hidden-form');
+    const icon = facebookToggle.querySelector('.expand-icon');
+    icon.textContent = facebookForm.classList.contains('hidden-form') ? '▼' : '▲';
 });
 
 // Mastodon: Get Auth URL & Connect
@@ -766,6 +775,149 @@ document.getElementById('get-instagram-url-btn').addEventListener('click', async
 
     } catch (err) {
         showLinkStatus('instagram-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Facebook: Abrir OAuth URL y conectar
+document.getElementById('get-facebook-url-btn').addEventListener('click', async () => {
+
+    const clientId = document.getElementById('fb-client-id').value.trim();
+
+    if (!clientId) {
+        showLinkStatus('facebook-status', 'Client ID required', 'error');
+        return;
+    }
+
+    try {
+        const response = await eel.connect_facebook(clientId)();
+
+        if (response.success) {
+            showLinkStatus('facebook-status', response.message, 'success');
+        } else {
+            showLinkStatus('facebook-status', response.message, 'error');
+        }
+
+    } catch (err) {
+        showLinkStatus('facebook-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Facebook: Load available pages/accounts
+document.getElementById('load-facebook-pages-btn').addEventListener('click', async () => {
+    const clientId = document.getElementById('fb-client-id').value.trim();
+    const clientSecret = document.getElementById('fb-client-secret').value.trim();
+    const code = document.getElementById('fb-code').value.trim();
+    const select = document.getElementById('fb-page-select');
+
+    if (!clientId || !clientSecret || !code) {
+        showLinkStatus('facebook-status', 'Client ID, secret, and code are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('facebook-status', 'Loading Facebook pages...', 'info');
+        const result = await eel.get_facebook_pages(clientId, clientSecret, code)();
+
+        if (!result || !result.success) {
+            showLinkStatus('facebook-status', result?.message || 'Failed to load pages', 'error');
+            return;
+        }
+
+        const accounts = result.accounts || [];
+        const tokenPayload = result.token_payload || null;
+
+        if (!accounts.length) {
+            facebookTokenPayload = null;
+            select.innerHTML = '<option value="">Auto (first available)</option>';
+            showLinkStatus('facebook-status', 'No Facebook Pages found for this account', 'error');
+            return;
+        }
+
+        if (tokenPayload && tokenPayload.access_token) {
+            facebookTokenPayload = {
+                access_token: tokenPayload.access_token,
+                expires_in: tokenPayload.expires_in,
+                code,
+                client_id: clientId
+            };
+        } else {
+            facebookTokenPayload = null;
+        }
+
+        select.innerHTML = '<option value="">Auto (first available)</option>';
+
+        accounts.forEach((acc) => {
+            const option = document.createElement('option');
+            option.value = acc.page_id || '';
+            option.textContent = acc.page_name || 'Facebook Page';
+            select.appendChild(option);
+        });
+
+        showLinkStatus('facebook-status', 'Pages loaded', 'success');
+    } catch (err) {
+        showLinkStatus('facebook-status', 'Error: ' + err, 'error');
+    }
+});
+
+
+// Facebook: Link account with Auth Code
+document.getElementById('link-facebook-btn').addEventListener('click', async () => {
+    const username = document.getElementById('fb-username').value.trim();
+    const clientId = document.getElementById('fb-client-id').value.trim();
+    const clientSecret = document.getElementById('fb-client-secret').value.trim();
+    const code = document.getElementById('fb-code').value.trim();
+    const selectedPageId = document.getElementById('fb-page-select').value.trim();
+
+    if (!clientId || !clientSecret || !code) {
+        showLinkStatus('facebook-status', 'Client ID, secret, and code are required', 'error');
+        return;
+    }
+
+    try {
+        showLinkStatus('facebook-status', 'Linking Facebook account...', 'info');
+        let result = null;
+
+        if (
+            facebookTokenPayload
+            && facebookTokenPayload.access_token
+            && facebookTokenPayload.code === code
+            && facebookTokenPayload.client_id === clientId
+        ) {
+            result = await eel.auth_facebook_with_token(
+                username,
+                clientId,
+                clientSecret,
+                facebookTokenPayload.access_token,
+                facebookTokenPayload.expires_in,
+                selectedPageId || null
+            )();
+        } else {
+            result = await eel.auth_facebook(
+                username,
+                clientId,
+                clientSecret,
+                code,
+                selectedPageId || null
+            )();
+        }
+
+        if (result && result.success) {
+            showLinkStatus('facebook-status', result.message || 'Facebook account linked!', 'success');
+            document.getElementById('fb-username').value = '';
+            document.getElementById('fb-client-id').value = '';
+            document.getElementById('fb-client-secret').value = '';
+            document.getElementById('fb-code').value = '';
+            document.getElementById('fb-page-select').innerHTML = '<option value="">Auto (first available)</option>';
+            facebookTokenPayload = null;
+            await loadAccounts();
+            setTimeout(() => toggleLinkSidebar(false), 1500);
+        } else {
+            showLinkStatus('facebook-status', result?.message || 'Facebook link failed', 'error');
+        }
+    } catch (err) {
+        showLinkStatus('facebook-status', 'Error: ' + err, 'error');
     }
 });
 
@@ -999,7 +1151,13 @@ function getAllAccountObjects() {
     const all = [];
     Object.keys(accountState.accountsByProvider).forEach((provider) => {
         accountState.accountsByProvider[provider].forEach((acc) => {
-            all.push({ provider, username: acc.username, accountLabel: acc.accountLabel });
+            all.push({
+                provider,
+                username: acc.username,
+                accountLabel: acc.accountLabel,
+                profilePicture: acc.profilePicture,
+                verified: acc.verified
+            });
         });
     });
     return all;
@@ -1019,6 +1177,15 @@ function getAccountLabel(provider, username) {
         return acc ? acc.accountLabel : null;
     }
     return null;
+}
+
+function getAccountMeta(provider, username) {
+    const accounts = accountState.accountsByProvider[provider];
+    if (!accounts) {
+        return null;
+    }
+
+    return accounts.find(a => a.username === username) || null;
 }
 
 function updateAccountLabel(provider, username, newLabel) {
@@ -1273,9 +1440,11 @@ async function loadAccounts() {
             const provider = account.provider ?? account[0];
             const username = account.username ?? account[1];
             const accountLabel = account.display_name ?? account[2] ?? null; 
+            const profilePicture = account.profile_picture ?? account.avatar_url ?? account.photo_url ?? null;
+            const verified = Boolean(account.verified ?? account.is_verified ?? false);
             if (!provider || !username) return;
             if (!grouped[provider]) grouped[provider] = [];
-            grouped[provider].push({ username, accountLabel });
+            grouped[provider].push({ username, accountLabel, profilePicture, verified });
         });
 
         // Sort by username or label
@@ -1535,6 +1704,101 @@ function renderLinkedIn(label, username, header, body, image) {
                 </button>
             </div>
         </div>
+    `;
+}
+
+function renderFacebook(label, username, header, body, image) {
+    const pageName = label || 'My Facebook Page';
+    const avatarLetter = pageName.charAt(0).toUpperCase();
+    const text = [header, body]
+        .filter(Boolean)
+        .join('\n')
+        .trim();
+    const meta = getAccountMeta('Facebook', username);
+    const avatarImage = meta?.profilePicture || null;
+    const isVerified = Boolean(meta?.verified);
+
+    return `
+        <article class="facebook-post">
+            <header class="facebook-header">
+                <div class="facebook-avatar" aria-hidden="true">
+                    ${avatarImage ? `<img src="${escapeHTML(avatarImage)}" alt="" />` : `<span>${avatarLetter}</span>`}
+                </div>
+
+                <div class="facebook-header-main">
+                    <div class="facebook-name-row">
+                        <span class="facebook-page-name">${pageName}</span>
+                        ${isVerified ? `
+                            <span class="facebook-verified-badge" aria-label="Verified page" title="Verified page">
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M12 2 9.2 4.9 5.3 4.7l-.4 3.9L2 12l2.9 3.4.4 3.9 3.9-.2L12 22l2.8-2.9 3.9.2.4-3.9L22 12l-2.9-3.4-.4-3.9-3.9.2L12 2Zm-1 11.6-2.2-2.2-1.4 1.4 3.6 3.6 5.3-5.3-1.4-1.4-3.9 3.9Z"/>
+                                </svg>
+                            </span>
+                        ` : ''}
+                    </div>
+
+                    <div class="facebook-meta-row">
+                        <span class="facebook-post-time">Just now</span>
+                        <span class="facebook-meta-separator">•</span>
+                        <span class="facebook-privacy" aria-label="Public">
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm6.9 9h-2.1a15.9 15.9 0 0 0-1.2-4.9A8 8 0 0 1 18.9 11ZM12 4.1A15.2 15.2 0 0 1 13.8 11h-3.6A15.2 15.2 0 0 1 12 4.1ZM4.3 13h2.1a15.9 15.9 0 0 0 1.2 4.9A8 8 0 0 1 4.3 13Zm2.1-2H4.3A8 8 0 0 1 7.6 6.1 15.9 15.9 0 0 0 6.4 11Zm7.4 8.9A15.2 15.2 0 0 1 12 13h3.6A15.2 15.2 0 0 1 13.8 19.9Zm1.7-.9A8 8 0 0 0 18.9 13h-2.1a15.9 15.9 0 0 1-1.3 6Z"/>
+                            </svg>
+                        </span>
+                    </div>
+                </div>
+
+                <button class="facebook-menu" type="button" aria-label="More options">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <circle cx="5" cy="12" r="2"></circle>
+                        <circle cx="12" cy="12" r="2"></circle>
+                        <circle cx="19" cy="12" r="2"></circle>
+                    </svg>
+                </button>
+            </header>
+
+            <div class="facebook-body${text.length > 260 ? ' is-clamped' : ''}">
+                ${text || ' '}
+            </div>
+
+            ${image ? `
+                <div class="facebook-media">
+                    <img src="${image}" alt="Post image" class="facebook-image" />
+                </div>
+            ` : ''}
+
+            <footer class="facebook-footer" aria-label="Facebook social actions">
+                <div class="facebook-reactions" aria-hidden="true">
+                    <span class="facebook-reaction-dot facebook-like">👍</span>
+                    <span class="facebook-reaction-dot facebook-love">❤</span>
+                    <span class="facebook-reaction-dot facebook-care">😊</span>
+                    <span class="facebook-reaction-count">0</span>
+                </div>
+
+                <div class="facebook-actions">
+                    <button class="facebook-action-btn" type="button" aria-label="Like">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M9.7 10.8V6.9c0-1.8 1.3-3.3 3-3.3.6 0 1.1.3 1.4.8.2.3.3.7.3 1.1v2.9h4.1c1.2 0 2.1 1 2.1 2.2 0 .2 0 .5-.1.7l-1.2 5.9c-.2 1.1-1.2 1.9-2.4 1.9H9.7M3.5 10.8h4.2v8.3H3.5z"/>
+                        </svg>
+                        <span>Like</span>
+                    </button>
+
+                    <button class="facebook-action-btn" type="button" aria-label="Comment">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M12 4C6.5 4 2.1 7.5 2.1 12c0 2.1.9 4.1 2.4 5.6L4 21l3.8-1.7c1.3.4 2.7.6 4.2.6 5.5 0 9.9-3.5 9.9-7.9S17.5 4 12 4Z"/>
+                        </svg>
+                        <span>Comment</span>
+                    </button>
+
+                    <button class="facebook-action-btn" type="button" aria-label="Share">
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M14 5 21 12l-7 7v-4.2c-4.2 0-7.3 1.1-10 5.2.8-5.9 3.7-11.2 10-12.4V5Z"/>
+                        </svg>
+                        <span>Share</span>
+                    </button>
+                </div>
+            </footer>
+        </article>
     `;
 }
 
@@ -1800,6 +2064,8 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
             contentHTML = renderLinkedIn(label, username, header, body, image);
         } else if (provider === 'Discord') {
             contentHTML = renderDiscord(label, username, header, body, image);
+        } else if (provider === 'Facebook') {
+            contentHTML = renderFacebook(label, username, header, body, image);
         } else if (provider === 'Instagram') {
             contentHTML = renderInstagram(label, username, header, body, image);
         } else {
@@ -1828,9 +2094,10 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
 
         const card = document.createElement('div');
         const isInstagram = provider === 'Instagram';
+        const isFacebook = provider === 'Facebook';
 
-        card.className = `preview-card-social${isInstagram ? ' preview-card-instagram' : ''}`;
-        card.innerHTML = isInstagram
+        card.className = `preview-card-social${isInstagram ? ' preview-card-instagram' : ''}${isFacebook ? ' preview-card-facebook' : ''}`;
+        card.innerHTML = isInstagram || isFacebook
             ? contentHTML
             : `
                 <div class="preview-platform">${provider} • ${label}</div>

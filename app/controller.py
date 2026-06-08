@@ -32,6 +32,13 @@ from auth.bluesky_auth import *
 from auth.linkedin_auth import *
 from auth.reddit_auth import *
 from auth.instagram_auth import *
+from auth.facebook_auth import (
+    build_facebook_account,
+    create_facebook_token,
+    get_facebook_auth_url,
+    get_facebook_pages,
+    request_facebook_long_lived_token,
+)
 
 from post.mastodon_post import upload_post_mastodon, upload_post_mastodon_text
 from post.wordpress_post import publish_post_wordpress, publish_post_wordpress_with_featured_image, publish_post_wordpress_rest
@@ -39,6 +46,7 @@ from post.bluesky_post import publish_post_bluesky, publish_post_bluesky_text
 from post.linkedin_post import publish_post_linkedin_text, publish_post_linkedin_with_image
 from post.reddit_post import publish_post_reddit_text
 from post.instagram_post import publish_post_instagram
+from post.facebook_post import publish_post_facebook
 
 
 ####################### -<<[]>>-- #######################
@@ -192,6 +200,8 @@ def general_upload_post(tokens, text, title, image_path=None):
                 publish_post_reddit_text(title, text, account)
             elif account.provider == "Instagram":
                 publish_post_instagram(account, title, text, image_path)
+            elif account.provider == "Facebook":
+                publish_post_facebook(account, title, text, image_path)
             elif account.provider == "Discord":
                 from post.discord_post import send_discord_message, send_discord_message_with_image
                 webhook_url = account.access_token
@@ -269,6 +279,50 @@ def save_or_update_reddit_account(username, client_id, client_secret, subreddit,
     )
     tokens.append(new_account)
     save(tokens)
+
+
+def _copy_meta_account_fields(existing, new_token):
+    existing.access_token = new_token.access_token
+    existing.token_type = new_token.token_type
+    existing.scope = new_token.scope
+    existing.issued_at = new_token.issued_at
+    existing.access_expires_at = new_token.access_expires_at
+    existing.client_id = new_token.client_id
+    existing.client_secret = new_token.client_secret
+    existing.facebook_page_id = new_token.facebook_page_id
+    existing.facebook_page_token = new_token.facebook_page_token
+    existing.instagram_user_id = new_token.instagram_user_id
+    existing.username = new_token.username
+    existing.account_label = new_token.account_label
+    existing.provider_user_id = new_token.provider_user_id
+    existing.email = new_token.email
+
+
+def _upsert_meta_account(tokens, new_token, provider):
+    existing = None
+
+    for token in tokens:
+        if token.provider != provider:
+            continue
+
+        if token.provider_user_id and token.provider_user_id == new_token.provider_user_id:
+            existing = token
+            break
+
+        if provider == "Instagram" and token.instagram_user_id and token.instagram_user_id == new_token.instagram_user_id:
+            existing = token
+            break
+
+        if provider == "Facebook" and token.facebook_page_id and token.facebook_page_id == new_token.facebook_page_id:
+            existing = token
+            break
+
+    if existing:
+        _copy_meta_account_fields(existing, new_token)
+    else:
+        tokens.append(new_token)
+
+    return tokens
 
 
 def register_and_auth_wordpress(provider, username, client_id, client_secret):
@@ -610,34 +664,7 @@ def setup_instagram_account_auth(username, client_id, client_secret, code, selec
     if username:
         new_token.account_label = username
 
-    existing = None
-    for token in tokens:
-        if token.provider != "Instagram":
-            continue
-        if token.provider_user_id and token.provider_user_id == new_token.provider_user_id:
-            existing = token
-            break
-        if token.instagram_user_id and token.instagram_user_id == new_token.instagram_user_id:
-            existing = token
-            break
-
-    if existing:
-        existing.access_token = new_token.access_token
-        existing.token_type = new_token.token_type
-        existing.scope = new_token.scope
-        existing.issued_at = new_token.issued_at
-        existing.access_expires_at = new_token.access_expires_at
-        existing.client_id = new_token.client_id
-        existing.client_secret = new_token.client_secret
-        existing.facebook_page_id = new_token.facebook_page_id
-        existing.instagram_user_id = new_token.instagram_user_id
-        existing.username = new_token.username
-        existing.account_label = new_token.account_label
-        existing.provider_user_id = new_token.provider_user_id
-        existing.email = new_token.email
-    else:
-        tokens.append(new_token)
-
+    tokens = _upsert_meta_account(tokens, new_token, "Instagram")
     save(tokens)
 
 
@@ -674,35 +701,98 @@ def setup_instagram_account_from_token(
     if username:
         new_token.account_label = username
 
-    existing = None
-    for token in tokens:
-        if token.provider != "Instagram":
-            continue
-        if token.provider_user_id and token.provider_user_id == new_token.provider_user_id:
-            existing = token
-            break
-        if token.instagram_user_id and token.instagram_user_id == new_token.instagram_user_id:
-            existing = token
-            break
-
-    if existing:
-        existing.access_token = new_token.access_token
-        existing.token_type = new_token.token_type
-        existing.scope = new_token.scope
-        existing.issued_at = new_token.issued_at
-        existing.access_expires_at = new_token.access_expires_at
-        existing.client_id = new_token.client_id
-        existing.client_secret = new_token.client_secret
-        existing.facebook_page_id = new_token.facebook_page_id
-        existing.instagram_user_id = new_token.instagram_user_id
-        existing.username = new_token.username
-        existing.account_label = new_token.account_label
-        existing.provider_user_id = new_token.provider_user_id
-        existing.email = new_token.email
-    else:
-        tokens.append(new_token)
-
+    tokens = _upsert_meta_account(tokens, new_token, "Instagram")
     save(tokens)
+
+
+def setup_facebook_account(client_id):
+    """
+    Opens the Facebook OAuth URL in the browser.
+    """
+
+    auth_url = get_facebook_auth_url(client_id)
+
+    if not webbrowser.open(auth_url, new=1, autoraise=True):
+        subprocess.run(
+            f'start "" "{auth_url}"',
+            shell=True
+        )
+
+    return 1
+
+
+def setup_facebook_account_auth(username, client_id, client_secret, code, selected_page_id=None):
+    """
+    Completes Facebook OAuth and persists the selected page account.
+    """
+
+    tokens = load()
+
+    new_token = create_facebook_token(
+        client_id,
+        client_secret,
+        code,
+        selected_page_id
+    )
+
+    if username:
+        new_token.account_label = username
+
+    tokens = _upsert_meta_account(tokens, new_token, "Facebook")
+    save(tokens)
+
+
+def setup_facebook_account_from_token(
+    username,
+    client_id,
+    client_secret,
+    access_token,
+    expires_in=None,
+    selected_page_id=None
+):
+    """
+    Creates or updates a Facebook account from an existing long-lived token.
+    """
+
+    tokens = load()
+
+    new_token = build_facebook_account(
+        access_token,
+        client_id=client_id,
+        client_secret=client_secret,
+        expires_in=expires_in,
+        selected_page_id=selected_page_id
+    )
+
+    if username:
+        new_token.account_label = username
+
+    tokens = _upsert_meta_account(tokens, new_token, "Facebook")
+    save(tokens)
+
+
+def list_facebook_pages(client_id, client_secret, code):
+    """
+    Returns available Facebook Pages for page selection.
+    """
+
+    token_data = request_facebook_long_lived_token(
+        client_id,
+        client_secret,
+        code
+    )
+
+    access_token = token_data.get("access_token")
+    if not access_token:
+        raise InputValueError("No access token received.")
+
+    accounts = get_facebook_pages(access_token)
+    token_payload = {
+        "access_token": access_token,
+        "expires_in": token_data.get("expires_in")
+    }
+
+    return accounts, token_payload
 
 
 def list_instagram_pages(client_id, client_secret, code):
