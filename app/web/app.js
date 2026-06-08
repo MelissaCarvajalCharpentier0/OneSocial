@@ -151,7 +151,7 @@ closeEditorBtn.addEventListener('click', () => {
     scheduledSection.classList.remove('hidden');
 
     resetPublishStatusCalendar();
-    const scheduleBtn = document.querySelector('.calendar-post-button');
+    const scheduleBtn = document.getElementById('calendar-schedule-btn');
     scheduleBtn.textContent = 'Schedule Post';
 
     loadScheduledPosts();
@@ -394,15 +394,15 @@ document.addEventListener('click', async (e) => {
         }
 
         const post = result.post;
-        console.log('Loaded post for editing:', post);
         accountState.selected.clear();
 
         currentImage = post.image_preview || null;
+        nameImage = post.image || null;
         const fileNameLabel = document.getElementById('calendar-file-name');
 
         if (currentImage) {
             fileNameLabel.textContent =
-                currentImage.split(/[\\/]/).pop();
+                nameImage.split(/[\\/]/).pop();
         } else {
             fileNameLabel.textContent = 'No file selected';
         }
@@ -427,7 +427,7 @@ document.addEventListener('click', async (e) => {
         document.getElementById('calendar-date').value = post.date || '';
         document.getElementById('calendar-time').value = post.time || '';
 
-        const scheduleBtn = document.querySelector('.calendar-post-button');
+        const scheduleBtn = document.getElementById('calendar-schedule-btn');
         scheduleBtn.textContent = 'Save Changes';
 
         updateAllPreviews();
@@ -455,9 +455,26 @@ function toggleLinkSidebar(show) {
     }
 }
 
-overlay.addEventListener('click', () => {
-    toggleLinkSidebar(false);
+
+
+
+// ==================== SCHEDULE POST CHECKBOX ====================
+const scheduleCheckbox = document.getElementById('schedule-post-checkbox');
+const scheduleFields = document.getElementById('create-schedule-fields');
+const scheduleCreateButton = document.getElementById('schedule-create-btn');
+const publishButton = document.getElementById('publish-post-btn');
+
+scheduleCheckbox.addEventListener('change', () => {
+    const scheduled = scheduleCheckbox.checked;
+
+    scheduleFields.classList.toggle('hidden', !scheduled);
+    scheduleCreateButton.classList.toggle('hidden', !scheduled);
+    publishButton.classList.toggle('hidden', scheduled);
 });
+
+
+
+
 
 showLinkBtn.addEventListener('click', () => toggleLinkSidebar(true));
 closeLinkBtn.addEventListener('click', () => toggleLinkSidebar(false));
@@ -1046,6 +1063,8 @@ document.getElementById('link-instagram-btn').addEventListener('click', async ()
         showLinkStatus('reddit-status', 'Error: ' + err, 'error');
     }
 }); */
+
+
 //discord: Link account
 document.getElementById('link-discord-btn').addEventListener('click', async () => {
     const label = document.getElementById('discord-label').value.trim();
@@ -1093,8 +1112,8 @@ function showStatus(message, type) {
     if (!statusBar || !statusText) return;
     statusText.textContent = message;
     statusBar.classList.remove('hidden');
-    statusBar.classList.remove('success', 'error', 'info');
-    statusBar.classList.add(type);
+    statusText.classList.remove('success', 'error', 'info');
+    statusText.classList.add(type);
 
     setTimeout(() => {
         statusBar.classList.add('hidden');
@@ -1111,12 +1130,7 @@ function showCalendarStatus(message, type) {
 
     statusText.textContent = message;
     statusBar.classList.remove('hidden');
-    statusText.classList.remove(
-        'success',
-        'error',
-        'info'
-    );
-
+    statusText.classList.remove('success', 'error', 'info');
     statusText.classList.add(type);
 
     setTimeout(() => {
@@ -1363,11 +1377,6 @@ function openModal({ title, bodyHTML, confirmText = "OK", danger = false }) {
             close();
             resolve(true); 
         };
-
-        modalOverlay.onclick = () => {
-            close();
-            resolve(null);
-        };
     });
 }
 
@@ -1470,7 +1479,23 @@ eel.expose(clearForm);
 function clearForm() {
     document.getElementById('post-header').value = '';
     document.getElementById('post-body').value = '';
-    document.getElementById('post-time').value = '';
+    fileNameCreate.textContent = "No file selected";
+    currentImage = null;
+    updateAllPreviews();
+    updateCounters();
+    syncSidebarHeight();
+}
+
+eel.expose(clearForm);
+function clearCreateScheduleForm() {
+    document.getElementById('post-header').value = '';
+    document.getElementById('post-body').value = '';
+    document.getElementById('create-schedule-time').value = '';
+    document.getElementById('create-schedule-date').value = '';
+    document.getElementById('schedule-post-checkbox').checked = false;
+    document.getElementById('create-schedule-fields').classList.add('hidden');
+    document.getElementById('schedule-create-btn').classList.add('hidden');
+    document.getElementById('publish-post-btn').classList.remove('hidden');
     fileNameCreate.textContent = "No file selected";
     currentImage = null;
     updateAllPreviews();
@@ -1977,6 +2002,7 @@ function renderBluesky(label, username, header, body, image) {
         </div>
     `;
 }
+
 function renderDiscord(label, username, header, body, image) {
     // Set defaults
     const badgeText = 'APP';
@@ -1985,16 +2011,17 @@ function renderDiscord(label, username, header, body, image) {
     const bodyText = body ? body : '';
     
     return `
-        <div class="discord-preview" style="display: flex; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #313338; font-size: 15px; padding: 5px 10px; line-height: 1.4;">
+        <div class="discord-preview" style="display: flex; font-family: 'gg sans', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #313338; font-size: 15px; padding: 5px 10px; line-height: 1.4; border-radius: 10px;">
             
-            <div class="discord-preview-content" style="display: flex; flex-direction: column;">
+            <div class="discord-preview-content" style="display: flex; flex-direction: column; padding: 8px;">
                 
                 <!-- Line 1: Tag, Username, and Title (Header) inline -->
-                <div style="display: flex; align-items: center; flex-wrap: wrap;">
-                    <span class="discord-label" style="background-color: #5865F2; color: white; font-size: 10px; font-weight: bold; border-radius: 3px; padding: 2px 4px; margin-right: 6px; line-height: 1;">${badgeText}</span>
-                    <span class="discord-username" style="font-weight: 600; color: white; margin-right: 6px;">${displayName}</span>
-                    ${titleText ? `<span class="discord-title" style="color: #dbdee1;">${titleText}</span>` : ''}
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span class="discord-username" style="font-weight:600;color:white;">${displayName}</span>
+                    <span class="discord-label" style="background:#5865F2;color:white;font-size:10px;font-weight:bold;border-radius:3px;padding:2px 4px;line-height:1;">${badgeText}</span>
+                    <span style="color:#949ba4;font-size:12px;">${new Date().toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span>
                 </div>
+                ${titleText ? `<div class="discord-title" style="color:#dbdee1;font-weight:500;">${titleText}</div>` : ''}
                 
                 <!-- Line 2: Body text on its own line -->
                 ${bodyText ? `<div class="discord-body" style="color: #dbdee1; margin-top: 2px; margin-left: 2px;">${bodyText}</div>` : ''}
@@ -2306,33 +2333,45 @@ async function savePost() {
 }
 
 
-async function schedulePost() {
+async function schedulePost(headerP = 'calendar-post-header', bodyP = 'calendar-post-body', dateP = 'calendar-date', timeP = 'calendar-time', imageInputIdP = 'calendar-image-input', place = 1) {
     loadScheduledPosts();
 
-    const header = document.getElementById('calendar-post-header').value;
-    const body = document.getElementById('calendar-post-body').value;
-    const date = document.getElementById('calendar-date').value;
-    const time = document.getElementById('calendar-time').value;
+    const header = document.getElementById(headerP).value;
+    const body = document.getElementById(bodyP).value;
+    const date = document.getElementById(dateP).value;
+    const time = document.getElementById(timeP).value;
 
     const scheduled_time = `${date}T${time}`;
     const selectedAccounts = getSelectedAccountsPayload();
 
     if (!header && !body) {
-        showCalendarStatus('Please add a header or body to your post', 'error');
+        if (place === 1) {
+            showCalendarStatus('Please add a header or body to your post', 'error');
+        } else {
+            showStatus('Please add a header or body to your post', 'error');
+        }
         return;
     }
 
     if (selectedAccounts.length === 0) {
-        showCalendarStatus('Select at least one account before saving', 'error');
+        if (place === 1) {
+            showCalendarStatus('Select at least one account before saving', 'error');
+        } else {             
+            showStatus('Select at least one account before saving', 'error');
+        }
         return;
     }
 
     if (!date || !time) {
-        showCalendarStatus('Select a scheduled time before saving', 'error');
+        if (place === 1) {
+            showCalendarStatus('Select a scheduled date and time before saving', 'error');
+        } else {
+            showStatus('Select a scheduled date and time before saving', 'error');
+        }
         return;
     }
 
-    const fileInput = document.getElementById('calendar-image-input');
+    const fileInput = document.getElementById(imageInputIdP);
     let imageData = null;
     let imageName = null;
 
@@ -2347,28 +2386,60 @@ async function schedulePost() {
                 resolve();
             };
         });
+    } 
+    
+    if (editingPostId && fileInput.files.length === 0) {
+        const result = await eel.get_scheduled_post(editingPostId)();
+        const post = result.post;
+        imageData = post.image_preview || null;
+        imageName = post.image || null;
     }
 
-    showCalendarStatus('Saving post...', 'info');
+    if (place === 1) {
+        showCalendarStatus('Saving post...', 'info');
+    } else {
+        showStatus('Saving post...', 'info');
+    }
+
     try {
         const result = await eel.save_post(header, body, selectedAccounts, scheduled_time, imageData, imageName, editingPostId)();
 
         if (result && result.success) {
             const successMessage = result.message || 'Post saved successfully';
-            showCalendarStatus(successMessage, 'success');
-            clearCalendarForm();
+
+            if (place === 1) {
+                showCalendarStatus(successMessage, 'success');
+                clearCalendarForm();
+            } else {
+                showStatus(successMessage, 'success');
+                clearCreateScheduleForm();
+            }
+
             selectAllAccounts();
             editingPostId = null;
             return;
         }
-        showCalendarStatus((result && result.message) || 'Error saving post', 'error');
+
+        if (place === 1) {
+            showCalendarStatus((result && result.message) || 'Error saving post', 'error');
+        } else {
+            showStatus((result && result.message) || 'Error saving post', 'error');
+        }
+
     } catch (err) {
-        showCalendarStatus('Error saving post: ' + err, 'error');
+        if (place === 1) {
+            showCalendarStatus('Error saving post: ' + err, 'error');
+        } else {
+            showStatus('Error saving post: ' + err, 'error');
+        }
     }
 }
+
+
 // ------------------------------------------------------------------
 // Exportar / Importar
 // ------------------------------------------------------------------
+
 // Esperar a que el DOM esté cargado
 document.addEventListener('DOMContentLoaded', () => {
     // Botón Exportar
@@ -2382,6 +2453,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (importBtn) {
         importBtn.addEventListener('click', importAllData);
     }
+
+    // Botón Reset
+    const resetBtn = document.getElementById('reset-app-btn');
+    if (resetBtn) {
+        resetBtn.addEventListener('click', resetAppData);
+    }
 });
 
 // ------------------------------------------------------------------
@@ -2389,67 +2466,545 @@ document.addEventListener('DOMContentLoaded', () => {
 // ------------------------------------------------------------------
 async function exportAllData() {
     try {
-        const allData = await eel.export_all_data()();
-        const dataStr = JSON.stringify(allData, null, 2);
-        const blob = new Blob([dataStr], {type: "application/json"});
+        const response = await eel.export_all_data()();
+
+        if (!response || !response.success) {
+            showNotification(
+                response?.message || "OneSocial could not export your backup file.",
+                "error",
+                `
+                    <p>
+                        Please try again from Settings.
+                    </p>
+                `
+            );
+            return;
+        }
+
+        const backup = response.backup;
+        const dataStr = JSON.stringify(backup, null, 2);
+
+        const blob = new Blob(
+            [dataStr],
+            { type: "application/json" }
+        );
+
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
+
+        const timestamp = new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replaceAll(":", "-");
+
         a.href = url;
-        a.download = `onesocial_backup_${new Date().toISOString().slice(0,19)}.json`;
+        a.download = `onesocial_backup_${timestamp}.json`;
+
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
+
         URL.revokeObjectURL(url);
-        showNotification("Exportación completada", "success");
+
+        const accountCount = backup.counts?.accounts ?? 0;
+        const postCount = backup.counts?.scheduled_posts ?? 0;
+        const warningCount = backup.counts?.warnings ?? 0;
+
+        showNotification(
+            "Your OneSocial backup file was downloaded from Settings.",
+            "success",
+            `
+                <p>
+                    This backup includes:
+                </p>
+
+                <p>
+                    <b>${accountCount}</b> linked account(s)<br>
+                    <b>${postCount}</b> scheduled post(s)
+                    ${warningCount > 0 ? `<br><b>${warningCount}</b> warning(s)` : ''}
+                </p>
+
+                ${
+                    warningCount > 0
+                        ? `<p>Some files could not be included, but the backup was still created.</p>`
+                        : ''
+                }
+
+                <p>
+                    Keep this file private because it may contain account tokens.
+                </p>
+            `
+        );
+
     } catch (err) {
         console.error(err);
-        showNotification("Error al exportar", "error");
+
+        showNotification(
+            "OneSocial could not export your backup file.",
+            "error",
+            `
+                <p>
+                    Please try again from Settings. If the problem continues,
+                    check the console for technical details.
+                </p>
+            `
+        );
     }
 }
+
 
 // ------------------------------------------------------------------
 // Importar (abre selector de archivos)
 // ------------------------------------------------------------------
 function importAllData() {
     const input = document.createElement('input');
+
     input.type = 'file';
     input.accept = 'application/json';
+
     input.onchange = async (event) => {
         const file = event.target.files[0];
+
         if (!file) return;
+
         const reader = new FileReader();
+
         reader.onload = async (e) => {
             try {
                 const importedJson = JSON.parse(e.target.result);
-                const response = await eel.import_all_data(importedJson)();
-                if (response.status === 'ok') {
-                    showNotification("Importación exitosa. Recargando...", "success");
-                    // Recargar la interfaz (listado de cuentas, publicaciones, etc.)
-                    if (typeof loadAccounts === 'function') await loadAccounts();
-                    if (typeof loadScheduledPosts === 'function') await loadScheduledPosts();
-                    if (typeof applyTheme === 'function') applyTheme(); // si aplica tema
-                } else {
-                    showNotification("Error en la importación", "error");
+                const confirmed = await showImportWarning();
+
+                if (!confirmed) {
+                    return;
                 }
+
+                const response = await eel.import_all_data(importedJson)();
+
+                if (!response || !response.success) {
+                    showNotification(
+                        response?.message || 'OneSocial could not import this backup file.',
+                        'error',
+                        `
+                            <p>
+                                Make sure the selected file is a valid OneSocial backup.
+                            </p>
+                        `,
+                        'import'
+                    );
+
+                    return;
+                }
+
+                accountState.selected.clear();
+                accountState.hasLoaded = false;
+
+                if (typeof loadAccounts === 'function') {
+                    await loadAccounts();
+                }
+
+                if (typeof loadScheduledPosts === 'function') {
+                    await loadScheduledPosts();
+                }
+
+                updateAllPreviews();
+
+                const counts = response.counts || {};
+                const accountCount = counts.accounts ?? 0;
+                const postCount = counts.scheduled_posts ?? 0;
+                const warningCount = counts.warnings ?? 0;
+
+                showNotification(
+                    'The selected OneSocial backup was restored.',
+                    'success',
+                    `
+                        <p>
+                            Imported data:
+                        </p>
+
+                        <p>
+                            <b>${accountCount}</b> linked account(s)<br>
+                            <b>${postCount}</b> scheduled post(s)
+                            ${warningCount > 0 ? `<br><b>${warningCount}</b> warning(s)` : ''}
+                        </p>
+
+                        ${
+                            warningCount > 0
+                                ? `<p>Some files could not be fully restored, but the import completed.</p>`
+                                : ''
+                        }
+
+                        <p>
+                            Existing local data was replaced with the selected backup.
+                        </p>
+                    `,
+                    'import'
+                );
+
             } catch (err) {
                 console.error(err);
-                showNotification("Archivo inválido o error al importar", "error");
+
+                showNotification(
+                    'The selected file could not be read as a valid backup.',
+                    'error',
+                    `
+                        <p>
+                            Please select a valid OneSocial JSON backup file.
+                        </p>
+                    `,
+                    'import'
+                );
             }
         };
+
         reader.readAsText(file);
     };
+
     input.click();
 }
 
-// Pequeña ayuda para notificaciones (ajústala si ya existe)
-function showNotification(msg, type) {
-    // Ejemplo simple con alert, pero puedes usar un toast
-    alert(`${type.toUpperCase()}: ${msg}`);
+
+// ------------------------------------------------------------------
+// Resetear datos locales 
+// ------------------------------------------------------------------
+async function resetAppData() {
+    const confirmed = await showResetWarning();
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        const response = await eel.reset_app_data()();
+
+        if (!response || !response.success) {
+            showNotification(
+                response?.message || 'OneSocial could not reset local data.',
+                'error',
+                `
+                    <p>
+                        Please try again. If the problem continues,
+                        check the console for technical details.
+                    </p>
+                `,
+                'reset'
+            );
+
+            return;
+        }
+
+        accountState.accountsByProvider = {};
+        accountState.selected.clear();
+        accountState.hasLoaded = false;
+        accountState.collapsedProviders.clear();
+
+        currentImage = null;
+        editingPostId = null;
+        publishResults = [];
+
+        clearForm();
+        clearCalendarForm();
+
+        if (typeof loadAccounts === 'function') {
+            await loadAccounts();
+        }
+
+        if (typeof loadScheduledPosts === 'function') {
+            await loadScheduledPosts();
+        }
+
+        updateAllPreviews();
+
+        const deletedCount = response.counts?.deleted_items ?? 0;
+
+        showNotification(
+            'All local OneSocial data was removed.',
+            'success',
+            `
+                <p>
+                    Removed local items:
+                </p>
+
+                <p>
+                    <b>${deletedCount}</b> file(s) or folder(s) removed from .onesocial
+                </p>
+
+                <p>
+                    OneSocial recreated an empty data file and empty posts/images folders.
+                </p>
+            `,
+            'reset'
+        );
+
+    } catch (err) {
+        console.error(err);
+
+        showNotification(
+            'OneSocial could not reset local data.',
+            'error',
+            `
+                <p>
+                    Please try again from Settings.
+                </p>
+            `,
+            'reset'
+        );
+    }
+}
+
+
+function showImportWarning() {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('settings-notification-overlay');
+        const modal = document.getElementById('settings-notification-modal');
+        const icon = document.getElementById('settings-notification-icon');
+        const title = document.getElementById('settings-notification-title');
+        const subtitle = document.getElementById('settings-notification-subtitle');
+        const body = document.getElementById('settings-notification-body');
+        const confirmBtn = document.getElementById('settings-notification-close-btn');
+        const cancelBtn = document.getElementById('settings-notification-cancel-btn');
+
+        if (!overlay || !modal || !icon || !title || !subtitle || !body || !confirmBtn || !cancelBtn) {
+            const confirmed = confirm(
+                'Importing this backup will replace linked accounts and add the backup scheduled posts to your current scheduled posts. Continue?'
+            );
+
+            resolve(confirmed);
+            return;
+        }
+
+        icon.textContent = '⚠';
+        icon.className = 'settings-notification-icon error';
+
+        title.textContent = 'Import backup?';
+        subtitle.textContent = 'This action will change your local OneSocial data.';
+
+        body.innerHTML = `
+            <p>
+                Importing this backup will:
+            </p>
+
+            <p>
+                <b>Replace your linked accounts</b><br>
+                Your current account list will be replaced by the accounts from the backup.
+            </p>
+
+            <p>
+                <b>Add scheduled posts</b><br>
+                Scheduled posts from the backup will be added to your current scheduled posts.
+                Existing scheduled posts will be kept.
+            </p>
+        `;
+
+        confirmBtn.textContent = 'Import backup';
+        cancelBtn.textContent = 'Cancel';
+
+        cancelBtn.classList.remove('hidden');
+
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+
+        const close = (result) => {
+            overlay.classList.add('hidden');
+            modal.classList.add('hidden');
+            cancelBtn.classList.add('hidden');
+            confirmBtn.textContent = 'OK';
+
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+            overlay.onclick = null;
+
+            resolve(result);
+        };
+
+        confirmBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+        overlay.onclick = () => close(false);
+    });
+}
+
+
+function showNotification(message, type = 'info', detailsHTML = '', action = 'export') {
+    const overlay = document.getElementById('settings-notification-overlay');
+    const modal = document.getElementById('settings-notification-modal');
+    const icon = document.getElementById('settings-notification-icon');
+    const title = document.getElementById('settings-notification-title');
+    const subtitle = document.getElementById('settings-notification-subtitle');
+    const body = document.getElementById('settings-notification-body');
+    const closeBtn = document.getElementById('settings-notification-close-btn');
+
+    if (!overlay || !modal || !icon || !title || !subtitle || !body || !closeBtn) {
+        alert(`${type.toUpperCase()}: ${message}`);
+        return;
+    }
+
+    const config = {
+        export: {
+            success: {
+                icon: '⬇',
+                title: 'Backup exported',
+                subtitle: 'Your OneSocial data backup was created successfully.'
+            },
+            error: {
+                icon: '⚠',
+                title: 'Export failed',
+                subtitle: 'OneSocial could not export your backup.'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Export status',
+                subtitle: 'OneSocial is preparing your backup.'
+            }
+        },
+
+        import: {
+            success: {
+                icon: '⬆',
+                title: 'Backup imported',
+                subtitle: 'Your OneSocial data was restored successfully.'
+            },
+            error: {
+                icon: '⚠',
+                title: 'Import failed',
+                subtitle: 'OneSocial could not restore this backup.'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Import status',
+                subtitle: 'OneSocial is restoring your backup.'
+            }
+        },
+
+        reset: {
+            success: {
+                icon: '⚠',
+                title: 'Application reset',
+                subtitle: 'Your local OneSocial data was removed successfully.'
+            },
+            error: {
+                icon: '⚠',
+                title: 'Reset failed',
+                subtitle: 'OneSocial could not remove local data.'
+            },
+            info: {
+                icon: 'ℹ',
+                title: 'Reset status',
+                subtitle: 'OneSocial is resetting local data.'
+            }
+        }
+    };
+
+    const selected =
+        config[action]?.[type]
+        || config.export[type]
+        || config.export.info;
+
+    icon.textContent = selected.icon;
+    icon.className = `settings-notification-icon ${type}`;
+
+    title.textContent = selected.title;
+    subtitle.textContent = selected.subtitle;
+
+    body.innerHTML = `
+        <p>${escapeHTML(message)}</p>
+        ${detailsHTML || ''}
+    `;
+
+    overlay.classList.remove('hidden');
+    modal.classList.remove('hidden');
+
+    const close = () => {
+        overlay.classList.add('hidden');
+        modal.classList.add('hidden');
+    };
+
+    closeBtn.onclick = close;
+    overlay.onclick = close;
+
+    document.addEventListener('keydown', function handleEscape(event) {
+        if (event.key === 'Escape') {
+            close();
+            document.removeEventListener('keydown', handleEscape);
+        }
+    });
+}
+
+
+function showResetWarning() {
+    return new Promise((resolve) => {
+        const overlay = document.getElementById('settings-notification-overlay');
+        const modal = document.getElementById('settings-notification-modal');
+        const icon = document.getElementById('settings-notification-icon');
+        const title = document.getElementById('settings-notification-title');
+        const subtitle = document.getElementById('settings-notification-subtitle');
+        const body = document.getElementById('settings-notification-body');
+        const confirmBtn = document.getElementById('settings-notification-close-btn');
+        const cancelBtn = document.getElementById('settings-notification-cancel-btn');
+
+        if (!overlay || !modal || !icon || !title || !subtitle || !body || !confirmBtn || !cancelBtn) {
+            const confirmed = confirm(
+                'This will delete all linked accounts, scheduled posts, images, provider secrets, and local OneSocial data. Continue?'
+            );
+
+            resolve(confirmed);
+            return;
+        }
+
+        icon.textContent = '⚠';
+        icon.className = 'settings-notification-icon error';
+
+        title.textContent = 'Reset OneSocial?';
+        subtitle.textContent = 'This action will delete all local application data.';
+
+        body.innerHTML = `
+            <p>
+                Resetting OneSocial will permanently remove:
+            </p>
+
+            <p>
+                <b>All linked accounts</b><br>
+                <b>All scheduled posts</b><br>
+                <b>All saved post images</b><br>
+                <b>Provider secret files</b><br>
+                <b>All local files inside .onesocial</b>
+            </p>
+
+            <p>
+                This cannot be undone unless you exported a backup first.
+            </p>
+        `;
+
+        confirmBtn.textContent = 'Reset application';
+        cancelBtn.textContent = 'Cancel';
+
+        cancelBtn.classList.remove('hidden');
+
+        overlay.classList.remove('hidden');
+        modal.classList.remove('hidden');
+
+        const close = (result) => {
+            overlay.classList.add('hidden');
+            modal.classList.add('hidden');
+
+            cancelBtn.classList.add('hidden');
+            confirmBtn.textContent = 'OK';
+
+            confirmBtn.onclick = null;
+            cancelBtn.onclick = null;
+            overlay.onclick = null;
+
+            resolve(result);
+        };
+
+        confirmBtn.onclick = () => close(true);
+        cancelBtn.onclick = () => close(false);
+        overlay.onclick = () => close(false);
+    });
 }
 
 // Exponer funciones al ámbito global si las necesitas desde botones HTML
 window.exportAllData = exportAllData;
 window.importAllData = importAllData;
+window.resetAppData = resetAppData;
 
 function initializeEventListeners() {
     ['ig-client-id', 'ig-client-secret', 'ig-code'].forEach((id) => {
@@ -2470,6 +3025,16 @@ function initializeEventListeners() {
     });
     
     document.getElementById('post-body').addEventListener('input', () => {
+        updateCounters();
+        updateAllPreviews();
+    });
+
+    document.getElementById('calendar-post-header').addEventListener('input', () => {
+        updateCounters();
+        updateAllPreviews();
+    });
+    
+    document.getElementById('calendar-post-body').addEventListener('input', () => {
         updateCounters();
         updateAllPreviews();
     });

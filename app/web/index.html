@@ -80,7 +80,39 @@
                     <span id="file-name">No file selected</span>
                 </div>
 
-                <button class="post-button" onclick="createPost()">
+                <div class="form-divider"></div>
+
+                <div class="schedule-toggle">
+                    <label class="schedule-checkbox">
+                        <input type="checkbox" id="schedule-post-checkbox">
+                        <span class="schedule-slider"></span>
+                        <span class="schedule-text">Schedule this post</span>
+                    </label>
+                </div>
+
+                <div id="create-schedule-fields" class="hidden">
+
+                    <div class="calendar-row">
+
+                        <div class="calendar-form-group">
+                            <label>Date</label>
+                            <input type="date" id="create-schedule-date">
+                        </div>
+
+                        <div class="calendar-form-group">
+                            <label>Time</label>
+                            <input type="time" id="create-schedule-time">
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <button id="schedule-create-btn" type="button" class="calendar-post-button hidden" onclick="schedulePost('post-header', 'post-body', 'create-schedule-date', 'create-schedule-time', 'image-input', 2)">
+                    Schedule Post
+                </button>
+
+                <button id="publish-post-btn" class="post-button" onclick="createPost()">
                     Publish Post
                 </button>
                 
@@ -119,184 +151,187 @@
                 <div id="preview-container" class="preview-container"></div>
             </aside>      
 
-            <!-- Right Sidebar: Link Accounts (hidden by default) -->
+            <!-- Link Accounts (hidden by default) -->
             <aside id="link-sidebar" class="link-sidebar hidden-sidebar">
-                <div class="sidebar-header">
-                    <div class="sidebar-title">Link Accounts</div>
-                    <button id="close-link-sidebar" class="close-sidebar-btn">&times;</button>
-                </div>
-                <div class="sidebar-subtitle">Connect new social accounts</div>
-            
-                <!-- Mastodon Section -->
-                <div class="link-section">
-                    <button id="toggle-mastodon-form" class="link-provider-btn">
-                        <span>Mastodon</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="mastodon-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="mastodon-username" placeholder="e.g., @user@mastodon.social">
-                        </div>
-
-                        <button id="get-mastodon-url-btn" class="secondary-btn">Connect & Get URL</button>
-
-                        <div class="form-group">
-                            <label>Auth Code (If Prompted)</label>
-                            <input type="text" id="mastodon-code" placeholder="Paste the code from OAuth">
-                        </div>
-                        
-                        <button id="link-mastodon-btn" class="link-action-btn">Link with Auth Code</button>
-                        <div id="mastodon-status" class="link-status"></div>
+                <div class="link-sidebar-bg">
+                    <div class="sidebar-header">
+                        <div class="sidebar-title-link">Link Accounts</div>
+                        <button id="close-link-sidebar" class="close-sidebar-btn">&times;</button>
                     </div>
+                    <div class="sidebar-subtitle-link">Connect new social accounts</div>
                 </div>
-            
-                <!-- WordPress Section -->
-                <div class="link-section">
-                    <button id="toggle-wordpress-form" class="link-provider-btn">
-                        <span>WordPress</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="wordpress-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="wp-username" placeholder="Display name for this account">
+
+                <div class="link-sidebar-content">
+                    <!-- Mastodon Section -->
+                    <div class="link-section">
+                        <button id="toggle-mastodon-form" class="link-provider-btn">
+                            <span>Mastodon</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="mastodon-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="mastodon-username" placeholder="e.g., @user@mastodon.social">
+                            </div>
+
+                            <button id="get-mastodon-url-btn" class="secondary-btn">Connect & Get URL</button>
+
+                            <div class="form-group">
+                                <label>Auth Code (If Prompted)</label>
+                                <input type="text" id="mastodon-code" placeholder="Paste the code from OAuth">
+                            </div>
+                            
+                            <button id="link-mastodon-btn" class="link-action-btn">Link with Auth Code</button>
+                            <div id="mastodon-status" class="link-status"></div>
                         </div>
-                        <div class="form-group">
-                            <label>Client ID</label>
-                            <input type="text" id="wp-client-id" placeholder="WordPress Client ID">
-                        </div>
-                        <div class="form-group">
-                            <label>Client Secret</label>
-                            <input type="text" id="wp-client-secret" placeholder="WordPress Client Secret">
-                        </div>
-                        <button id="link-wordpress-btn" class="link-action-btn">Link WordPress Account</button>
-                        <div id="wordpress-status" class="link-status"></div>
                     </div>
-                </div>
                 
-                <!-- WordPress Self-Hosted Section -->
-                <div class="link-section">
-                    <button id="toggle-wordpress-rest-form" class="link-provider-btn">
-                        <span>WordPress (Self‑Hosted)</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="wordpress-rest-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Site URL</label>
-                            <input type="text" id="wp-rest-url" placeholder="https://yoursite.com">
+                    <!-- WordPress Section -->
+                    <div class="link-section">
+                        <button id="toggle-wordpress-form" class="link-provider-btn">
+                            <span>WordPress</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="wordpress-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="wp-username" placeholder="Display name for this account">
+                            </div>
+                            <div class="form-group">
+                                <label>Client ID</label>
+                                <input type="text" id="wp-client-id" placeholder="WordPress Client ID">
+                            </div>
+                            <div class="form-group">
+                                <label>Client Secret</label>
+                                <input type="text" id="wp-client-secret" placeholder="WordPress Client Secret">
+                            </div>
+                            <button id="link-wordpress-btn" class="link-action-btn">Link WordPress Account</button>
+                            <div id="wordpress-status" class="link-status"></div>
                         </div>
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="wp-rest-username" placeholder="Your WordPress username">
-                        </div>
-                        <div class="form-group">
-                            <label>Application Password</label>
-                            <input type="password" id="wp-rest-password" placeholder="Your application password">
-                        </div>
-                        <button id="link-wordpress-rest-btn" class="link-action-btn">Link Account</button>
-                        <div id="wordpress-rest-status" class="link-status"></div>
                     </div>
-                </div>
+                    
+                    <!-- WordPress Self-Hosted Section -->
+                    <div class="link-section">
+                        <button id="toggle-wordpress-rest-form" class="link-provider-btn">
+                            <span>WordPress (Self‑Hosted)</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="wordpress-rest-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Site URL</label>
+                                <input type="text" id="wp-rest-url" placeholder="https://yoursite.com">
+                            </div>
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="wp-rest-username" placeholder="Your WordPress username">
+                            </div>
+                            <div class="form-group">
+                                <label>Application Password</label>
+                                <input type="password" id="wp-rest-password" placeholder="Your application password">
+                            </div>
+                            <button id="link-wordpress-rest-btn" class="link-action-btn">Link Account</button>
+                            <div id="wordpress-rest-status" class="link-status"></div>
+                        </div>
+                    </div>
 
-                <!-- Bluesky Section -->
-                <div class="link-section">
-                    <button id="toggle-bluesky-form" class="link-provider-btn">
-                        <span>Bluesky</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="bluesky-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="bk-username" placeholder="e.g., user.bsky.social">
+                    <!-- Bluesky Section -->
+                    <div class="link-section">
+                        <button id="toggle-bluesky-form" class="link-provider-btn">
+                            <span>Bluesky</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="bluesky-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="bk-username" placeholder="e.g., user.bsky.social">
+                            </div>
+                            <div class="form-group">
+                                <label>App Password</label>
+                                <input type="text" id="bk-password" placeholder="App-password">
+                            </div>
+                            <button id="link-bluesky-btn" class="link-action-btn">Link Bluesky Account</button>
+                            <div id="bluesky-status" class="link-status"></div>
                         </div>
-                        <div class="form-group">
-                            <label>App Password</label>
-                            <input type="text" id="bk-password" placeholder="App-password">
-                        </div>
-                        <button id="link-bluesky-btn" class="link-action-btn">Link Bluesky Account</button>
-                        <div id="bluesky-status" class="link-status"></div>
                     </div>
-                </div>
-     
-                <!-- Reddit Section -->
-                <!-- <div class="link-section">
-                    <button id="toggle-reddit-form" class="link-provider-btn">
-                        <span>Reddit</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="reddit-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="reddit-username" placeholder="u/yourname">
+        
+                    <!-- Reddit Section -->
+                    <!-- <div class="link-section">
+                        <button id="toggle-reddit-form" class="link-provider-btn">
+                            <span>Reddit</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="reddit-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="reddit-username" placeholder="u/yourname">
+                            </div>
+                            <div class="form-group">
+                                <label>Client ID</label>
+                                <input type="text" id="reddit-client-id" placeholder="Personal use script id">
+                            </div>
+                            <div class="form-group">
+                                <label>Client Secret</label>
+                                <input type="text" id="reddit-client-secret" placeholder="Secret">
+                            </div>
+                            <div class="form-group">
+                                <label>Subreddit</label>
+                                <input type="text" id="reddit-subreddit" placeholder="test">
+                            </div>
+                            <button id="link-reddit-btn" class="link-action-btn">Link Reddit Account</button>
+                            <div id="reddit-status" class="link-status"></div>
                         </div>
-                        <div class="form-group">
-                            <label>Client ID</label>
-                            <input type="text" id="reddit-client-id" placeholder="Personal use script id">
-                        </div>
-                        <div class="form-group">
-                            <label>Client Secret</label>
-                            <input type="text" id="reddit-client-secret" placeholder="Secret">
-                        </div>
-                        <div class="form-group">
-                            <label>Subreddit</label>
-                            <input type="text" id="reddit-subreddit" placeholder="test">
-                        </div>
-                        <button id="link-reddit-btn" class="link-action-btn">Link Reddit Account</button>
-                        <div id="reddit-status" class="link-status"></div>
-                    </div>
-                </div> -->
+                    </div> -->
 
-                <!-- LinkedIn Section -->
-                <div class="link-section">
-                    <button id="toggle-linkedin-form" class="link-provider-btn">
-                        <span>LinkedIn</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="linkedin-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Username</label>
-                            <input type="text" id="ln-username" placeholder="Display name for this account">
-                        </div>
-                        <div class="form-group">
-                            <label>Client ID</label>
-                            <input type="text" id="ln-client-id" placeholder="LinkedIn Client ID">
-                        </div>
-                        <div class="form-group">
-                            <label>Client Secret</label>
-                            <input type="text" id="ln-client-secret" placeholder="LinkedIn Client Secret">
-                        </div>
-                        <button id="get-linkedin-url-btn" class="secondary-btn">Connect & Get URL</button>
+                    <!-- LinkedIn Section -->
+                    <div class="link-section">
+                        <button id="toggle-linkedin-form" class="link-provider-btn">
+                            <span>LinkedIn</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="linkedin-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="ln-username" placeholder="Display name for this account">
+                            </div>
+                            <div class="form-group">
+                                <label>Client ID</label>
+                                <input type="text" id="ln-client-id" placeholder="LinkedIn Client ID">
+                            </div>
+                            <div class="form-group">
+                                <label>Client Secret</label>
+                                <input type="text" id="ln-client-secret" placeholder="LinkedIn Client Secret">
+                            </div>
+                            <button id="get-linkedin-url-btn" class="secondary-btn">Connect & Get URL</button>
 
-                        <div class="form-group">
-                            <label>Auth Code (If Prompted)</label>
-                            <input type="text" id="ln-code" placeholder="Paste the code from OAuth">
+                            <div class="form-group">
+                                <label>Auth Code (If Prompted)</label>
+                                <input type="text" id="ln-code" placeholder="Paste the code from OAuth">
+                            </div>
+                            
+                            <button id="link-linkedin-btn" class="link-action-btn">Link with Auth Code</button>
+                            <div id="linkedin-status" class="link-status"></div>
                         </div>
-                        
-                        <button id="link-linkedin-btn" class="link-action-btn">Link with Auth Code</button>
-                        <div id="linkedin-status" class="link-status"></div>
                     </div>
-                </div>
-                
-                <!-- Discord Section -->
-                <div class="link-section">
-                    <button id="toggle-discord-form" class="link-provider-btn">
-                        <span>Discord Webhook</span>
-                        <span class="expand-icon">▼</span>
-                    </button>
-                    <div id="discord-form" class="link-form hidden-form">
-                        <div class="form-group">
-                            <label>Label (e.g., "My Server")</label>
-                            <input type="text" id="discord-label" placeholder="Display name">
+                    
+                    <!-- Discord Section -->
+                    <div class="link-section">
+                        <button id="toggle-discord-form" class="link-provider-btn">
+                            <span>Discord Webhook</span>
+                            <span class="expand-icon">▼</span>
+                        </button>
+                        <div id="discord-form" class="link-form hidden-form">
+                            <div class="form-group">
+                                <label>Label (e.g., "My Server")</label>
+                                <input type="text" id="discord-label" placeholder="Display name">
+                            </div>
+                            <div class="form-group">
+                                <label>Webhook URL</label>
+                                <input type="text" id="discord-webhook-url" placeholder="https://discord.com/api/webhooks/...">
+                            </div>
+                            <button id="link-discord-btn" class="link-action-btn">Link Discord Webhook</button>
+                            <div id="discord-status" class="link-status"></div>
                         </div>
-                        <div class="form-group">
-                            <label>Webhook URL</label>
-                            <input type="text" id="discord-webhook-url" placeholder="https://discord.com/api/webhooks/...">
-                        </div>
-                        <button id="link-discord-btn" class="link-action-btn">Link Discord Webhook</button>
-                        <div id="discord-status" class="link-status"></div>
                     </div>
-                </div>
 
                 <!-- Facebook Section -->
                 <div class="link-section">
@@ -359,24 +394,26 @@
                         </div>
                         <button id="get-instagram-url-btn" class="secondary-btn">Connect & Get URL</button>
 
-                        <div class="form-group">
-                            <label>Auth Code (If Prompted)</label>
-                            <input type="text" id="ig-code" placeholder="Paste the code from OAuth">
+                            <div class="form-group">
+                                <label>Auth Code (If Prompted)</label>
+                                <input type="text" id="ig-code" placeholder="Paste the code from OAuth">
+                            </div>
+
+                            <button id="load-instagram-pages-btn" class="secondary-btn">Load Pages</button>
+
+                            <div class="form-group">
+                                <label>Instagram Page</label>
+                                <select id="ig-page-select">
+                                    <option value="">Auto (first available)</option>
+                                </select>
+                            </div>
+
+                            <button id="link-instagram-btn" class="link-action-btn">Link with Auth Code</button>
+                            <div id="instagram-status" class="link-status"></div>
                         </div>
-
-                        <button id="load-instagram-pages-btn" class="secondary-btn">Load Pages</button>
-
-                        <div class="form-group">
-                            <label>Instagram Page</label>
-                            <select id="ig-page-select">
-                                <option value="">Auto (first available)</option>
-                            </select>
-                        </div>
-
-                        <button id="link-instagram-btn" class="link-action-btn">Link with Auth Code</button>
-                        <div id="instagram-status" class="link-status"></div>
                     </div>
                 </div>
+                
             </aside>
 
         </div>
@@ -474,7 +511,7 @@
                         <span id="calendar-file-name"> No file selected </span>
                     </div>
 
-                    <button type="button" class="calendar-post-button" onclick="schedulePost()">
+                    <button type="button" id="calendar-schedule-btn" class="calendar-post-button" onclick="schedulePost()">
                         Schedule Post
                     </button>
 
@@ -575,7 +612,6 @@
 
             </div>
 
-
         </div>
 
         <div id="settings-view" class="view hidden-view">
@@ -656,6 +692,49 @@
                         >
                             Reset
                         </button>
+                    </div>
+
+                    
+                    <!-- Settings Notification Modal -->
+                    <div id="settings-notification-overlay" class="settings-notification-overlay hidden"></div>
+
+                    <div id="settings-notification-modal" class="settings-notification-modal hidden">
+                        <div class="settings-notification-header">
+                            <div id="settings-notification-icon" class="settings-notification-icon">
+                                ⬇
+                            </div>
+
+                            <div>
+                                <h2 id="settings-notification-title">
+                                    Backup exported
+                                </h2>
+
+                                <p id="settings-notification-subtitle">
+                                    Your OneSocial data backup was created successfully.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="settings-notification-body" class="settings-notification-body"></div>
+
+                        <div class="settings-notification-actions">
+                            <button
+                                id="settings-notification-cancel-btn"
+                                class="settings-notification-cancel-btn hidden"
+                                type="button"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                id="settings-notification-close-btn"
+                                class="settings-notification-close-btn"
+                                type="button"
+                            >
+                                OK
+                            </button>
+                        </div>
+                        
                     </div>
 
                 </div>

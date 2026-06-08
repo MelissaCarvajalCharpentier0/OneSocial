@@ -20,6 +20,7 @@ import binascii
 import eel
 import os
 import sys
+import shutil
 import tkinter as tk
 from datetime import datetime
 from pathlib import Path
@@ -28,6 +29,7 @@ from controller import *
 from models.token_manager import IMAGE_FORMATS, IMAGES_FOLDER
 from post.wordpress_post import verify_wordpress_rest
 from post.Post import Post, load_post_by_id, load_posts
+from models.import_export import *
 
 from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
@@ -967,6 +969,244 @@ def get_scheduled_post(post_id):
             'success': False,
             'error_type': ErrorCategory.UNKNOWN.value,
             'message': f'Error: {str(e)}'
+        }
+
+
+@eel.expose
+def export_all_data():
+    """
+    Exports OneSocial local data into a portable JSON backup.
+
+    Includes:
+    - token store from data.dat
+    - scheduled posts
+    - scheduled post images encoded as base64
+    - basic metadata
+    """
+    try:
+        warnings = []
+
+        # Ensure data.dat exists before trying to decrypt it.
+        data_file = Path(DATA_FILE)
+
+        if not data_file.is_file():
+            load()
+
+        encrypted_data_file_base64 = base64.b64encode(
+            data_file.read_bytes()
+        ).decode("utf-8")
+
+        token_store_for_counts = decrypt_process_file(
+            DATA_FILE,
+            MASTER_KEY
+        )
+
+        scheduled_posts = []
+
+        for post in load_posts():
+            post_payload = post.to_dict()
+
+            post_payload["image_backup"] = encode_image_for_backup(
+                post_payload.get("image"),
+                warnings
+            )
+
+            scheduled_posts.append(post_payload)
+
+        backup = {
+            "app": "OneSocial",
+            "schema_version": 1,
+            "exported_at": datetime.now().isoformat(timespec="seconds"),
+            "encrypted_data_file_base64": encrypted_data_file_base64,
+            "scheduled_posts": scheduled_posts,
+            "settings": {},
+            "warnings": warnings,
+            "counts": {
+                "accounts": len(token_store_for_counts.get("tokens", [])),
+                "scheduled_posts": len(scheduled_posts),
+                "warnings": len(warnings)
+            }
+        }
+
+        return {
+            "success": True,
+            "backup": backup,
+            "message": "Export completed successfully"
+        }
+
+    except Exception as e:
+        print("ERROR EXPORTING DATA:", str(e))
+        return {
+            "success": False,
+            "error_type": ErrorCategory.UNKNOWN.value,
+            "message": f"Error exporting data: {str(e)}"
+        }
+
+
+@eel.expose
+def import_all_data(imported_data):
+    """
+    Imports a OneSocial backup file into:
+    ~/.onesocial/data.dat
+    ~/.onesocial/posts
+    ~/.onesocial/images
+
+    The account data is restored as the original encrypted data.dat file.
+    """
+    try:
+        if not isinstance(imported_data, dict):
+            raise InputValueError("Invalid backup file.")
+
+        if imported_data.get("app") != "OneSocial":
+            raise InputValueError("This is not a valid OneSocial backup.")
+
+        if imported_data.get("schema_version") != 1:
+            raise InputValueError("Unsupported backup version.")
+
+        encrypted_data_file_base64 = imported_data.get(
+            "encrypted_data_file_base64"
+        )
+
+        scheduled_posts = imported_data.get(
+            "scheduled_posts",
+            []
+        )
+
+        if (
+            not isinstance(encrypted_data_file_base64, str)
+            or not encrypted_data_file_base64.strip()
+        ):
+            raise InputValueError("Backup account data is invalid.")
+
+        if not isinstance(scheduled_posts, list):
+            raise InputValueError("Backup scheduled posts are invalid.")
+
+        try:
+            encrypted_data_bytes = base64.b64decode(
+                encrypted_data_file_base64
+            )
+
+        except (binascii.Error, ValueError) as error:
+            raise InputValueError(
+                "Backup account data could not be decoded."
+            ) from error
+
+        data_file_path = Path(DATA_FILE)
+        data_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Restore encrypted data.dat exactly as exported.
+        data_file_path.write_bytes(encrypted_data_bytes)
+
+        # Validate that restored data.dat can be decrypted by OneSocial.
+        restored_token_store = decrypt_process_file(
+            DATA_FILE,
+            MASTER_KEY
+        )
+
+        if not isinstance(restored_token_store, dict):
+            raise InputValueError("Restored account data is invalid.")
+
+        if "tokens" not in restored_token_store:
+            raise InputValueError("Restored account data has no token list.")
+
+        restore_result = restore_scheduled_posts_from_backup(
+            scheduled_posts
+        )
+
+        account_count = len(restored_token_store.get("tokens", []))
+        post_count = restore_result.get("restored_posts", 0)
+        warnings = restore_result.get("warnings", [])
+
+        return {
+            "success": True,
+            "message": "Backup imported successfully.",
+            "paths": {
+                "data_file": DATA_FILE,
+                "posts_dir": POSTS_DIR,
+                "images_dir": IMAGES_DIR
+            },
+            "warnings": warnings,
+            "counts": {
+                "accounts": account_count,
+                "scheduled_posts": post_count,
+                "warnings": len(warnings)
+            }
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR IMPORTING DATA:", str(e))
+        return serialize_error(e)
+
+    except Exception as e:
+        print("ERROR IMPORTING DATA:", str(e))
+        return {
+            "success": False,
+            "error_type": ErrorCategory.UNKNOWN.value,
+            "message": f"Error importing data: {str(e)}"
+        }
+
+
+@eel.expose
+def reset_app_data():
+    """
+    Deletes all local OneSocial data from ~/.onesocial,
+    including posts, images, data.dat and provider secret files.
+    Then recreates the minimum empty structure required by the app.
+    """
+    try:
+        onesocial_dir = Path(os.path.expanduser("~/.onesocial"))
+        data_file = onesocial_dir / "data.dat"
+        posts_dir = onesocial_dir / "posts"
+        images_dir = onesocial_dir / "images"
+
+        onesocial_dir.mkdir(parents=True, exist_ok=True)
+
+        deleted_items = []
+
+        # Delete everything inside ~/.onesocial
+        for item in list(onesocial_dir.iterdir()):
+            try:
+                if item.is_dir():
+                    shutil.rmtree(item)
+                else:
+                    item.unlink()
+
+                deleted_items.append(item.name)
+
+            except OSError as error:
+                print(f"Could not delete {item}: {error}")
+
+        # Recreate required folders
+        posts_dir.mkdir(parents=True, exist_ok=True)
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        # Recreate empty encrypted account data
+        encrypt_process_file(
+            {
+                "tokens": [],
+                "post_counter": 0
+            },
+            str(data_file),
+            MASTER_KEY
+        )
+
+        return {
+            "success": True,
+            "message": "Application data was reset successfully.",
+            "deleted_items": deleted_items,
+            "counts": {
+                "accounts": 0,
+                "scheduled_posts": 0,
+                "deleted_items": len(deleted_items)
+            }
+        }
+
+    except Exception as e:
+        print("ERROR RESETTING APP DATA:", str(e))
+        return {
+            "success": False,
+            "error_type": ErrorCategory.UNKNOWN.value,
+            "message": f"Error resetting application data: {str(e)}"
         }
 
 
