@@ -18,6 +18,57 @@ const accountState = {
     collapsedProviders: new Set()
 };
 
+// ==================== CONVERSIÓN MARKDOWN → UNICODE ====================
+// Mapeo de caracteres ASCII a Mathematical Bold / Italic / Bold-Italic
+const boldMap = new Map();
+const boldItalicMap = new Map();
+const italicMap = new Map();
+
+// Inicializar mapeo para letras mayúsculas A-Z y minúsculas a-z
+for (let i = 0; i < 26; i++) {
+    const upper = String.fromCharCode(65 + i);
+    const lower = String.fromCharCode(97 + i);
+    // Negrita: U+1D400 + i (A), U+1D41A + i (a)
+    boldMap.set(upper, String.fromCodePoint(0x1D400 + i));
+    boldMap.set(lower, String.fromCodePoint(0x1D41A + i));
+    // Cursiva: U+1D434 + i (A), U+1D44E + i (a)
+    italicMap.set(upper, String.fromCodePoint(0x1D434 + i));
+    italicMap.set(lower, String.fromCodePoint(0x1D44E + i));
+    // Negrita Cursiva: U+1D468 + i (A), U+1D482 + i (a)
+    boldItalicMap.set(upper, String.fromCodePoint(0x1D468 + i));
+    boldItalicMap.set(lower, String.fromCodePoint(0x1D482 + i));
+}
+// Números 0-9 para negrita (solo negrita, no itálica)
+for (let i = 0; i <= 9; i++) {
+    boldMap.set(String(i), String.fromCodePoint(0x1D7CE + i));
+}
+
+function convertTextToUnicode(text, styleMap) {
+    let result = '';
+    for (let ch of text) {
+        result += styleMap.get(ch) || ch;
+    }
+    return result;
+}
+
+function markdownToUnicode(text) {
+    if (!text) return '';
+    // 1. Procesar negrita cursiva (***...***) primero
+    let converted = text.replace(/\*\*\*(.*?)\*\*\*/g, (_, content) => {
+        return convertTextToUnicode(content, boldItalicMap);
+    });
+    // 2. Procesar negrita (**...**)
+    converted = converted.replace(/\*\*(.*?)\*\*/g, (_, content) => {
+        return convertTextToUnicode(content, boldMap);
+    });
+    // 3. Procesar cursiva (*...*)
+    converted = converted.replace(/\*(.*?)\*/g, (_, content) => {
+        return convertTextToUnicode(content, italicMap);
+    });
+    return converted;
+}
+// ====================================================================
+
 function escapeHTML(value) {
     return String(value ?? '')
         .replaceAll('&', '&amp;')
@@ -2082,9 +2133,13 @@ function renderDiscord(label, username, header, body, image) {
     `;
 }
 
+// ==================== VISTA PREVIA CON CONVERSIÓN MARKDOWN → UNICODE ====================
 function updatePreview(containerId = 'preview-container', headerId = 'post-header', bodyId = 'post-body') {
-    const header = escapeHTML(document.getElementById(headerId).value);
-    const body = escapeHTML(document.getElementById(bodyId).value);
+    const rawHeader = document.getElementById(headerId).value;
+    const rawBody = document.getElementById(bodyId).value;
+    // Convertir Markdown → Unicode, luego escapar HTML
+    const header = escapeHTML(markdownToUnicode(rawHeader));
+    const body = escapeHTML(markdownToUnicode(rawBody));
     const container = document.getElementById(containerId);
     container.innerHTML = '';
 
@@ -2147,13 +2202,11 @@ function updatePreview(containerId = 'preview-container', headerId = 'post-heade
         card.className = `preview-card-social${isInstagram ? ' preview-card-instagram' : ''}${isFacebook ? ' preview-card-facebook' : ''}`;
         card.innerHTML = isInstagram || isFacebook
             ? contentHTML
-            : `
-                <div class="preview-platform">${provider} • ${label}</div>
-                ${contentHTML}
-            `;
+            : `<div class="preview-platform">${provider} • ${label}</div>${contentHTML}`;
         container.appendChild(card);
     });
 }
+// =======================================================================================
 
 document.addEventListener('click', (event) => {
     const moreButton = event.target.closest('.instagram-caption-more');
@@ -2226,9 +2279,13 @@ function showPublishResults(results, statusBarId = 'publish-status-bar', statusT
 }
 
 
+// ==================== CREAR POST (PUBLICACIÓN INMEDIATA) ====================
 async function createPost() {
-    const header = document.getElementById('post-header').value.trim();
-    const body = document.getElementById('post-body').value.trim();
+    const rawHeader = document.getElementById('post-header').value.trim();
+    const rawBody = document.getElementById('post-body').value.trim();
+    // Convertir a Unicode para publicación inmediata
+    const header = markdownToUnicode(rawHeader);
+    const body = markdownToUnicode(rawBody);
     const selectedAccounts = getSelectedAccountsPayload();
     
     if (!header && !body) {
@@ -2325,6 +2382,7 @@ async function createPost() {
         );
     }
 }
+// =======================================================================================
 
 async function savePost() {
     const header = document.getElementById('post-header').value.trim();
@@ -2384,8 +2442,12 @@ async function savePost() {
 async function schedulePost(headerP = 'calendar-post-header', bodyP = 'calendar-post-body', dateP = 'calendar-date', timeP = 'calendar-time', imageInputIdP = 'calendar-image-input', place = 1) {
     loadScheduledPosts();
 
-    const header = document.getElementById(headerP).value;
-    const body = document.getElementById(bodyP).value;
+    const rawHeader = document.getElementById(headerP).value.trim();
+    const rawBody = document.getElementById(bodyP).value.trim();
+    // Convertir a Unicode para publicación inmediata
+    const header = markdownToUnicode(rawHeader);
+    const body = markdownToUnicode(rawBody);
+
     const date = document.getElementById(dateP).value;
     const time = document.getElementById(timeP).value;
 
