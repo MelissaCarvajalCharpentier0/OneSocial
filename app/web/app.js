@@ -2442,8 +2442,12 @@ async function savePost() {
 async function schedulePost(headerP = 'calendar-post-header', bodyP = 'calendar-post-body', dateP = 'calendar-date', timeP = 'calendar-time', imageInputIdP = 'calendar-image-input', place = 1) {
     loadScheduledPosts();
 
-    const header = document.getElementById(headerP).value;
-    const body = document.getElementById(bodyP).value;
+    const rawHeader = document.getElementById(headerP).value.trim();
+    const rawBody = document.getElementById(bodyP).value.trim();
+    // Convertir a Unicode para publicación inmediata
+    const header = markdownToUnicode(rawHeader);
+    const body = markdownToUnicode(rawBody);
+
     const date = document.getElementById(dateP).value;
     const time = document.getElementById(timeP).value;
 
