@@ -1338,7 +1338,8 @@ function renderAccountList(containerId = 'account-list', summaryId = 'account-su
             LinkedIn: { icon: 'icons/LinkedIn_logo.png', border: '#0077B5' },
             Instagram: { icon: 'icons/Instagram_logo.png', border: '#E1306C' },
             // Reddit: { icon: 'icons/default.png', border: '#ff4500' }
-            Discord: { icon: 'icons/Discord_logo.png', border: '#5865F2' } 
+            Discord: { icon: 'icons/Discord_logo.png', border: '#5865F2' },
+            Facebook: { icon: 'icons/Facebook_logo.png', border: '#1877F2' }
         };
         const data = styles[provider] || { icon: 'icons/default.png'};
         const displayName = provider.charAt(0).toUpperCase() + provider.slice(1);
@@ -2247,7 +2248,8 @@ function showPublishResults(results, statusBarId = 'publish-status-bar', statusT
         Bluesky: 'icons/Bluesky_logo.png',
         LinkedIn: 'icons/LinkedIn_logo.png',
         Discord: 'icons/Discord_logo.png',
-        Instagram: 'icons/Instagram_logo.png'
+        Instagram: 'icons/Instagram_logo.png',
+        Facebook: 'icons/Facebook_logo.png'
     };
 
     const sorted = [
