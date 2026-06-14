@@ -221,8 +221,8 @@ def main():
             self_destruct()
     else:
         print("Uninstallation cancelled by user.")
-        msg = "Uninstallation cancelled by user."
-        messagebox.showinfo("CANCELED", msg, icon='warning')
+        #msg = "Uninstallation cancelled by user."
+        #messagebox.showinfo("CANCELED", msg, icon='warning')
         sys.exit(0)
 
 if __name__ == "__main__":
