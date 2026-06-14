@@ -4,9 +4,19 @@ import sys
 import tempfile
 import subprocess
 import tkinter as tk
+from pathlib import Path
+from time import sleep
 from tkinter import messagebox
 
 TASK_NAME = "OneSocial_Scheduler"
+
+def get_install_dir():
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    return Path(local_app_data) / "Programs" / "OneSocial"
+
+def get_data_dir():
+    user_profile = os.environ.get("USERPROFILE")
+    return Path(user_profile) / ".onesocial"
 
 def clean_app_data():
     """Deletes the .onesocial directory in the user's home folder."""
@@ -15,8 +25,10 @@ def clean_app_data():
         try:
             shutil.rmtree(data_dir)
             print(f"Successfully removed directory: {data_dir}")
+            return True
         except Exception as e:
             print(f"Error removing {data_dir}: {e}")
+            return False
 
 def clean_app_exe():
     """Deletes the main OneSocial.exe file."""
@@ -27,8 +39,10 @@ def clean_app_exe():
         try:
             os.remove(exe_path)
             print(f"Successfully removed file: {exe_path}")
+            return True
         except Exception as e:
             print(f"Error removing {exe_path}: {e}")
+            return False
 
 def clean_scheduler_exe():
     """Deletes the main OneSocialScheduler.exe file."""
@@ -39,10 +53,22 @@ def clean_scheduler_exe():
         try:
             os.remove(exe_path)
             print(f"Successfully removed file: {exe_path}")
+            return True
         except Exception as e:
             print(f"Error removing {exe_path}: {e}")
+            return False
 
-def run_hidden(args: list[str]) -> subprocess.CompletedProcess:
+def scheduler_task_exists():
+    result = run_hidden([
+        "schtasks",
+        "/Query",
+        "/TN",
+        TASK_NAME
+    ])
+
+    return result.returncode == 0
+
+def run_hidden(args: list[str]) -> subprocess.CompletedProcess: #Process from os type
     creationflags = 0
     if os.name == "nt":
         creationflags = subprocess.CREATE_NO_WINDOW
@@ -54,9 +80,33 @@ def run_hidden(args: list[str]) -> subprocess.CompletedProcess:
         creationflags=creationflags,
     )
 
-def remove_scheduler_task_if_exists() -> None:
-    run_hidden(["schtasks", "/End", "/TN", TASK_NAME])
-    run_hidden(["schtasks", "/Delete", "/TN", TASK_NAME, "/F"])
+def remove_scheduler_task_if_exists():
+    try:
+        if not scheduler_task_exists():
+            return True
+
+        run_hidden([
+            "schtasks",
+            "/End",
+            "/TN",
+            TASK_NAME
+        ])
+
+        result = run_hidden([
+            "schtasks",
+            "/Delete",
+            "/TN",
+            TASK_NAME,
+            "/F"
+        ])
+
+        if result.returncode != 0:
+            return False
+
+        return not scheduler_task_exists()
+
+    except Exception:
+        return False
 
 def self_destruct():
     """Creates a temporary batch script to delete the uninstaller itself."""
@@ -80,18 +130,99 @@ del "%~f0"
     sys.exit()
 
 def main():
-    # Confirmation dialog
     root = tk.Tk()
-    root.withdraw()  # Hide the main window
+    root.withdraw()
+
+    STATE = "SUCCESS"
+
     msg = "This will remove OneSocial and all your saved account data. Are you sure you want to proceed?"
     if messagebox.askyesno("Uninstall OneSocial", msg, icon='warning'):
-        clean_app_data()
-        clean_scheduler_exe()
-        clean_app_exe()
-        remove_scheduler_task_if_exists()
-        self_destruct()
+
+        ####################################
+        ###   App Executable Deletion   ####
+        ####################################
+
+        retrys = 5
+        result = False
+        while (retrys > 0):
+            result = clean_app_exe()
+            retrys = 0 if result else retrys-1
+        
+        
+        ####################################
+
+        if not result:
+            STATE = "RETRY"
+            msg = "An error occurred deleting the executable. Close the app and try again."
+            messagebox.showerror("ERROR: App still open", msg, icon='error')
+
+
+
+        ####################################
+        ####   App Scheduler Deletion   ####
+        ####################################
+
+        retrys = 10
+        result = False
+        task = False
+        while (retrys > 0):
+
+            if not task:
+                task = remove_scheduler_task_if_exists()
+                if not result:
+                    result = clean_scheduler_exe()
+
+            retrys = 0 if result and task else retrys-1
+
+            if retrys > 0:
+                sleep(0.5)
+
+        ####################################
+
+        if not result: #Scheduler.exe not deleted
+            if not task: #Windows task not deleted
+                STATE = "RETRY"
+                msg = "An error occurred deleting the scheduler executable and task. Try again later."
+                messagebox.showerror("ERROR: Scheduler process not deleted", msg, icon='error')
+            else: #Windows task deleted succesfully
+                STATE = "ERROR"
+                msg = "An error occurred deleting the scheduler executable. Delete it manually on " + str(get_install_dir()) + ". The subprocess was deleted succesfully."
+                messagebox.showerror("ERROR: Scheduler still open", msg, icon='error')
+        
+        else: #Scheduler.exe deleted succesfully
+            if not task:
+                STATE = "RETRY"
+                msg = "An error occurred deleting the scheduler task. Try again later."
+                messagebox.showerror("ERROR: Scheduler process not deleted", msg, icon='error')
+
+
+
+        ####################################
+        #####    App Data Deletion    ######
+        ####################################
+
+        retrys = 5
+        result = False
+        while (retrys > 0):
+            result = clean_app_data()
+            retrys = 0 if result else retrys-1
+        
+        ####################################
+
+        if not result:
+            STATE = "ERROR"
+            msg = "An error occurred deleting the app data. Delete manually the folder \'.onesocial\' on " + str(get_data_dir())
+            messagebox.showerror("ERROR: App Data not deleted", msg, icon='error')
+
+        if STATE == "SUCCESS":
+            msg = "The app was uninstalled succesfully."
+            messagebox.showinfo("SUCCESSFUL", msg)
+        if not STATE == "RETRY":
+            self_destruct()
     else:
         print("Uninstallation cancelled by user.")
+        msg = "Uninstallation cancelled by user."
+        messagebox.showinfo("CANCELED", msg, icon='warning')
         sys.exit(0)
 
 if __name__ == "__main__":
