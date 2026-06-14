@@ -1810,10 +1810,8 @@ function renderLinkedIn(label, username, header, body, image) {
 function renderFacebook(label, username, header, body, image) {
     const pageName = label || 'My Facebook Page';
     const avatarLetter = pageName.charAt(0).toUpperCase();
-    const text = [header, body]
-        .filter(Boolean)
-        .join('\n')
-        .trim();
+    const postHeader = header?.trim() || '';
+    const postBody = body?.trim() || '';
     const meta = getAccountMeta('Facebook', username);
     const avatarImage = meta?.profilePicture || null;
     const isVerified = Boolean(meta?.verified);
@@ -1857,8 +1855,27 @@ function renderFacebook(label, username, header, body, image) {
                 </button>
             </header>
 
-            <div class="facebook-body${text.length > 260 ? ' is-clamped' : ''}">
-                ${text || ' '}
+            <div class="facebook-body">
+                ${
+                    postHeader
+                        ? `
+                            <div class="facebook-post-header">
+                                ${postHeader}
+                            </div>
+                        `
+                        : ''
+                }
+
+                ${
+                    postBody
+                        ? `
+                            <div class="facebook-post-text">
+                                ${postBody}
+                            </div>
+                        `
+                        : ''
+                }
+
             </div>
 
             ${image ? `
@@ -1903,118 +1920,156 @@ function renderFacebook(label, username, header, body, image) {
 }
 
 function renderInstagram(label, username, header, body, image) {
-    const captionText = [header, body].filter(Boolean).join('\n').trim();
-    const cleanUsername = username ? username.replace(/^@/, '') : '';
-    const displayUsername = cleanUsername || label || 'instagram-user';
+    const postHeader = header?.trim() || '';
+    const postBody = body?.trim() || '';
+
+    const cleanUsername = username?.replace(/^@/, '') || '';
+    const displayUsername = cleanUsername || label || 'instagram_user';
+
     const avatarLetter = displayUsername.charAt(0).toUpperCase();
-    const displayCaption = captionText || 'Add a caption...';
-    const shouldClamp = displayCaption.length > 120;
-    const timeLabel = '1w';
 
     return `
         <article class="instagram-post">
-            <header class="instagram-header">
-                <div class="instagram-avatar" aria-hidden="true">
-                    <span>${avatarLetter}</span>
-                </div>
 
-                <div class="instagram-header-info">
-                    <div class="instagram-username-row">
-                        <span class="instagram-username">${displayUsername}</span>
-                        <span class="instagram-dot">•</span>
-                        <span class="instagram-time">${timeLabel}</span>
+            <header class="instagram-header">
+
+                <div class="instagram-user-section">
+
+                    <div class="instagram-avatar">
+                        <span>${avatarLetter}</span>
                     </div>
+
+                    <div class="instagram-user-info">
+                        <div class="instagram-username">
+                            ${displayUsername}
+                        </div>
+                    </div>
+
                 </div>
 
                 <button class="instagram-menu" aria-label="More options">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <circle cx="5" cy="12" r="2"></circle>
-                        <circle cx="12" cy="12" r="2"></circle>
-                        <circle cx="19" cy="12" r="2"></circle>
+                    <svg viewBox="0 0 24 24">
+                        <circle cx="12" cy="5" r="1.8"></circle>
+                        <circle cx="12" cy="12" r="1.8"></circle>
+                        <circle cx="12" cy="19" r="1.8"></circle>
                     </svg>
                 </button>
+
             </header>
 
             <div class="instagram-media">
-                <div class="instagram-carousel">
-                    <div class="instagram-media-frame">
-                        ${
-                            image
-                                ? `<img src="${image}" class="instagram-image" />`
-                                : `<div class="instagram-image-placeholder">Image required</div>`
-                        }
-                    </div>
-
-                    <button
-                        class="instagram-carousel-btn instagram-carousel-prev"
-                        aria-label="Previous"
-                        disabled
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M15 6 9 12l6 6"></path>
-                        </svg>
-                    </button>
-
-                    <button
-                        class="instagram-carousel-btn instagram-carousel-next"
-                        aria-label="Next"
-                        disabled
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="m9 6 6 6-6 6"></path>
-                        </svg>
-                    </button>
-
-                    <div class="instagram-carousel-dots" aria-hidden="true">
-                        <span class="instagram-dot-item is-active"></span>
-                    </div>
-                </div>
+                ${
+                    image
+                        ? `
+                            <img
+                                src="${image}"
+                                alt="Instagram post"
+                                class="instagram-image"
+                            />
+                        `
+                        : `
+                            <div class="instagram-image-placeholder">
+                                Image required
+                            </div>
+                        `
+                }
             </div>
 
             <div class="instagram-actions">
+
                 <div class="instagram-actions-left">
+
                     <button class="instagram-action-btn" aria-label="Like">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z"></path>
+                        <svg viewBox="0 0 24 24" class="instagram-icon">
+                            <path
+                                d="M16.792 3.904A4.989 4.989 0 0 1 21.5 9.122c0 3.072-2.652 4.959-5.197 7.222-2.512 2.243-3.865 3.469-4.303 3.752-.477-.309-2.143-1.823-4.303-3.752C5.141 14.072 2.5 12.167 2.5 9.122a4.989 4.989 0 0 1 4.708-5.218 4.21 4.21 0 0 1 3.675 1.941c.84 1.175.98 1.763 1.12 1.763s.278-.588 1.11-1.766a4.17 4.17 0 0 1 3.679-1.938Z"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linejoin="round"
+                            />
                         </svg>
                     </button>
 
                     <button class="instagram-action-btn" aria-label="Comment">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z"></path>
+                        <svg viewBox="0 0 24 24" class="instagram-icon">
+                            <path
+                                d="M20.656 17.008a9.993 9.993 0 1 0-3.59 3.615L22 22Z"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linejoin="round"
+                            />
                         </svg>
                     </button>
 
                     <button class="instagram-action-btn" aria-label="Share">
-                        <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M13.973 20.046 21.77 6.928C22.8 5.195 21.55 3 19.535 3H4.466C2.138 3 .984 5.825 2.646 7.456l4.842 4.752 1.723 7.121c.548 2.266 3.571 2.721 4.762.717Z"></path>
-                            <path d="M7.488 12.208 15.515 7.641"></path>
+                        <svg viewBox="0 0 24 24" class="instagram-icon">
+                            <line
+                                x1="22"
+                                y1="3"
+                                x2="9.218"
+                                y2="10.083"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                            />
+                            <polygon
+                                points="22 3 15 22 11 13 2 9 22 3"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linejoin="round"
+                            />
                         </svg>
                     </button>
+
                 </div>
 
-                <button class="instagram-action-btn instagram-action-save" aria-label="Save">
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M20 21 12 13.44 4 21V3h16Z"></path>
+                <button class="instagram-action-btn" aria-label="Save">
+                    <svg viewBox="0 0 24 24" class="instagram-icon">
+                        <path
+                            d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linejoin="round"
+                        />
                     </svg>
                 </button>
+
             </div>
 
-            <div class="instagram-stats">
-                <span class="instagram-stat"><strong>135.6K</strong> likes</span>
-                <span class="instagram-stat"><strong>396</strong> comments</span>
-                <span class="instagram-stat"><strong>3.5K</strong> reposts</span>
-            </div>
+            <div class="instagram-caption">
 
-            <div class="instagram-caption${shouldClamp ? '' : ' is-expanded'}">
-                <span class="instagram-caption-name">${displayUsername}</span>
-                <span class="instagram-caption-text">${displayCaption}</span>
+                <div class="instagram-caption-header">
+                    <span class="instagram-caption-name">
+                        ${displayUsername}
+                    </span>
+
+                    ${
+                        postHeader
+                            ? `
+                                <span class="instagram-caption-title">
+                                    ${postHeader}
+                                </span>
+                            `
+                            : ''
+                    }
+                </div>
+
                 ${
-                    shouldClamp
-                        ? '<button class="instagram-caption-more" type="button">more</button>'
+                    postBody
+                        ? `
+                            <div class="instagram-caption-body">
+                                ${postBody}
+                            </div>
+                        `
                         : ''
                 }
+
             </div>
+
         </article>
     `;
 }
