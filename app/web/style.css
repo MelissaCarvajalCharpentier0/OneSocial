@@ -2546,13 +2546,15 @@ textarea {
 /* ============================= */
 
 .linkedin-post {
-    background: white;
+    background: #fff;
     border: 1px solid #d9d9d9;
     border-radius: 12px;
     padding: 14px;
     max-width: 550px;
     font-family: Arial, sans-serif;
 }
+
+/* Header */
 
 .linkedin-top {
     display: flex;
@@ -2569,25 +2571,27 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 700;
     font-size: 20px;
     flex-shrink: 0;
 }
 
 .linkedin-user-info {
     flex: 1;
+    min-width: 0;
 }
 
 .linkedin-name-row {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex-wrap: wrap;
 }
 
 .linkedin-name {
     font-weight: 600;
     font-size: 15px;
-    color: black;
+    color: #000;
 }
 
 .linkedin-you {
@@ -2608,55 +2612,6 @@ textarea {
 }
 
 .linkedin-menu {
-    color: #666;
-    font-size: 22px;
-    cursor: pointer;
-}
-
-.linkedin-content {
-    margin-top: 14px;
-}
-
-.linkedin-content p {
-    margin: 0;
-    font-size: 16px;
-    line-height: 1.5;
-    color: #222;
-    white-space: pre-wrap;
-}
-
-.linkedin-image {
-    width: 100%;
-    margin-top: 12px;
-    border-radius: 10px;
-    object-fit: cover;
-}
-
-.linkedin-actions {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 14px;
-    padding-top: 10px;
-    border-top: 1px solid #e5e5e5;
-}
-
-.linkedin-actions button {
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    color: #666;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 8px 10px;
-    border-radius: 6px;
-    transition: background 0.15s ease;
-}
-
-.linkedin-actions button:hover {
-    background: #f3f3f3;
-}
-
-.linkedin-menu {
     background: transparent;
     border: none;
     color: #666;
@@ -2667,6 +2622,7 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .linkedin-menu svg {
@@ -2679,12 +2635,39 @@ textarea {
     background: #f3f3f3;
 }
 
+/* Content */
+
+.linkedin-content {
+    margin-top: 14px;
+}
+
+.linkedin-content p {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #222;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.linkedin-image {
+    width: 100%;
+    margin-top: 12px;
+    border-radius: 10px;
+    display: block;
+    object-fit: cover;
+}
+
+/* Actions */
+
 .linkedin-actions {
-    display: flex;
-    justify-content: space-around;
-    gap: 4px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+
     margin-top: 14px;
     padding-top: 10px;
+
     border-top: 1px solid #e5e5e5;
 }
 
@@ -2692,23 +2675,26 @@ textarea {
     background: transparent;
     border: none;
     cursor: pointer;
+
     color: #666;
-    font-size: 14px;
-    font-weight: 600;
-    padding: 8px 10px;
-    border-radius: 6px;
-    transition: background 0.15s ease, color 0.15s ease;
+
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    flex: 1;
-}
 
-.linkedin-action-btn svg {
-    width: 20px;
-    height: 20px;
-    fill: currentColor;
+    min-width: 0;
+
+    padding: 8px 4px;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    border-radius: 6px;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
 }
 
 .linkedin-action-btn:hover {
@@ -2716,6 +2702,18 @@ textarea {
     color: #0a66c2;
 }
 
+.linkedin-action-btn svg {
+    width: 18px;
+    height: 18px;
+    fill: currentColor;
+    flex-shrink: 0;
+}
+
+.linkedin-action-btn span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
 
 /* ============================= */
