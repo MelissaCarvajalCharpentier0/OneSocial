@@ -1280,11 +1280,24 @@ def update_display_name(provider, username, new_label):
 def connect_discord(label, webhook_url):
     """Called from the UI to link a Discord webhook."""
     try:
-        from controller import save_discord_account
-        save_discord_account(label.strip(), webhook_url.strip())
-        return {'success': True, 'message': 'Discord webhook linked'}
+        save_discord_account(label, webhook_url)
+
+        return {
+            'success': True,
+            'message': 'Discord webhook linked'
+        }
+
+    except (InputValueError, ApiError, TokenStorageError, PublishError) as e:
+        print("ERROR:", str(e))
+        return serialize_error(e)
+
     except Exception as e:
-        return {'success': False, 'message': str(e)}
+        print("ERROR:", str(e))
+        return {
+            'success': False,
+            'error_type': ErrorCategory.UNKNOWN.value,
+            'message': str(e)
+        }
 
 @eel.expose
 def get_discord_accounts():

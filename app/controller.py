@@ -32,6 +32,7 @@ from auth.bluesky_auth import *
 from auth.linkedin_auth import *
 from auth.reddit_auth import *
 from auth.instagram_auth import *
+from auth.discord_auth import validate_discord_webhook
 from auth.facebook_auth import (
     build_facebook_account,
     create_facebook_token,
@@ -624,21 +625,52 @@ def setup_linkedin_account_auth(username, client_id, client_secret, code):
 
     save(tokens)
 
+
 def save_discord_account(label: str, webhook_url: str):
     """
-    Save a Discord webhook as a Token (provider="Discord").
+    - Input:
+        - label (str): A user-friendly name for the Discord account, used for display purposes in the application.
+        - webhook_url (str): The URL of the Discord webhook, used to send messages to the specified Discord channel.
+    - Description:
+        - Validates the provided Discord webhook URL and saves the account information if valid. The function first checks 
+        that both the label and webhook URL are provided and not empty. It then calls the `validate_discord_webhook` function 
+        to verify that the webhook URL is valid and can be reached. If the validation fails, it raises an InputValueError with
+          an appropriate message. If the validation succeeds, it loads the existing tokens, removes any existing Discord account 
+          with the same label, creates a new Token object for the Discord account, and saves the updated list of tokens back to 
+          the data file.
     """
+    label = label.strip()
+    webhook_url = webhook_url.strip()
+
+    if not label:
+        raise InputValueError("Discord label is required.")
+
+    if not webhook_url:
+        raise InputValueError("Discord webhook URL is required.")
+
+    is_valid, message = validate_discord_webhook(webhook_url)
+
+    if not is_valid:
+        raise InputValueError(f"Invalid Discord webhook: {message}")
+
     tokens = load()
-    # Remove any existing account with same label (optional)
-    tokens = [t for t in tokens if not (t.provider == "Discord" and t.username == label)]
+
+    # Remove any existing Discord account with same label
+    tokens = [
+        t for t in tokens
+        if not (t.provider == "Discord" and t.username == label)
+    ]
+
     new_token = Token(
         provider="Discord",
-        username=label,                     # display label
-        access_token=webhook_url,           # store the webhook URL
+        username=label,
+        access_token=webhook_url,
         account_label=label
     )
+
     tokens.append(new_token)
     save(tokens)
+
 
 def setup_instagram_account_auth(username, client_id, client_secret, code, selected_page_id=None):
     """
