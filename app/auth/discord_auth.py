@@ -1,3 +1,17 @@
+"""
+
+=============================================================================================
+
+Name: discord_auth.py
+Description: Module for handling Discord authentication and url webhook management.
+Author: Pamela Fernández
+Date: June 2026
+Version: 1.0
+
+=============================================================================================
+
+"""
+
 import requests
 
 

@@ -25,12 +25,12 @@ import tkinter as tk
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
+
 from controller import *
 from models.token_manager import IMAGE_FORMATS, IMAGES_FOLDER
 from post.wordpress_post import verify_wordpress_rest
 from post.Post import Post, load_post_by_id, load_posts
 from models.import_export import *
-
 from models.app_errors import ErrorCategory, InputValueError, ApiError, TokenStorageError, PublishError
 
 # Get the directory where this script is located
