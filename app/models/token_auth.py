@@ -6,7 +6,7 @@ Name: token_auth.py
 Description: Module for Token structure for authentification in any social media
 Author: Josué Soto, Pamela Fernández
 Date: April 2026
-Version: 1.3
+Version: 1.7
 
 =============================================================================================
 
@@ -14,9 +14,6 @@ Version: 1.3
 
 from dataclasses import dataclass
 from typing import Optional
-
-
-
 
 
 @dataclass
@@ -44,7 +41,7 @@ class Token:
     site_id: Optional[str] = None
     server: Optional[str] = None
     subreddit: Optional[str] = None
-    webhook_url: Optional[str] = None   # for Discord
+    webhook_url: Optional[str] = None
 
     facebook_page_id: Optional[str] = None
     facebook_page_token: Optional[str] = None
@@ -52,16 +49,6 @@ class Token:
 
 
     def to_dict(self):
-        """
-    - Input: 
-        - data: list[Token] - List of Token objects for the credentials of each social network
-        - filename: str - The name of the JSON file to write the data to
-    - Effects: 
-        - Data from "data" written to a json file specified by filename
-    - Description: 
-        - Writes the data of the social networks' tokens to a unified json file 
-    """
-
 
         return {
             "provider": self.provider,

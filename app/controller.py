@@ -3,7 +3,7 @@
 =============================================================================================
 
 Name: controller.py
-Description: Main module for testing the functionalities of the project, 
+Description: Main module for the functionalities of the project, 
     including authentication and post creation on social media platforms.
 Author: Josué Soto, Pamela Fernández, Melissa Carvajal
 Date: April 2026
@@ -33,13 +33,7 @@ from auth.linkedin_auth import *
 from auth.reddit_auth import *
 from auth.instagram_auth import *
 from auth.discord_auth import validate_discord_webhook
-from auth.facebook_auth import (
-    build_facebook_account,
-    create_facebook_token,
-    get_facebook_auth_url,
-    get_facebook_pages,
-    request_facebook_long_lived_token,
-)
+from auth.facebook_auth import build_facebook_account, create_facebook_token, get_facebook_auth_url, get_facebook_pages, request_facebook_long_lived_token
 
 from post.mastodon_post import upload_post_mastodon, upload_post_mastodon_text
 from post.wordpress_post import publish_post_wordpress, publish_post_wordpress_with_featured_image, publish_post_wordpress_rest
