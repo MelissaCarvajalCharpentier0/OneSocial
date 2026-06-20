@@ -43,13 +43,37 @@ def prepare_imports() -> None:
         sys.path.insert(0, app_dir)
 
 
+def reset_log_if_new_day(log_file: Path) -> None:
+    """
+    Clears scheduler.log once per day.
+    If the log file was last modified on a previous date,
+    it is emptied before writing the new log entry.
+    """
+    if not log_file.exists():
+        return
+
+    last_modified_date = datetime.fromtimestamp(
+        log_file.stat().st_mtime
+    ).date()
+
+    today = datetime.now().date()
+
+    if last_modified_date != today:
+        log_file.write_text("", encoding="utf-8")
+
+
 def write_log(message: str) -> None:
+    """
+    Writes log to log file
+    """
     data_dir = get_data_dir()
     posts_dir = data_dir / "posts"
     log_file = data_dir / "scheduler.log"
 
     data_dir.mkdir(parents=True, exist_ok=True)
     posts_dir.mkdir(parents=True, exist_ok=True)
+
+    reset_log_if_new_day(log_file)
 
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
